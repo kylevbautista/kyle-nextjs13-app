@@ -16,7 +16,7 @@ export default function RootLayout({
         >
           <div className="flex justify-items-center">
             <div className="inline-block mx-4 my-2 hover:bg-sky-700">
-              This is The Nav Bar on Every Page - branch 2
+              NEXTJS13SSR
             </div>
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
