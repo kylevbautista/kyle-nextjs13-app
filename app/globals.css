@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#anime-card * {
+  border-color: rgb(53, 53, 53);
+}
