@@ -107,12 +107,28 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
         <div className="max-w-[135px] sm:max-w-[175px] h-[201px] sm:h-[250px] sm:max-h-[250px]">
           <a href="#">
             <img
-              className="border border-[rgb(53,53,53)] object-contain max-w-[135px] sm:max-h-[250px] sm:max-w-[175px] h-[201px] sm:h-[250px]"
+              className="
+                border 
+                border-[rgb(53,53,53)] 
+                object-contain 
+                max-w-[135px] 
+                sm:max-h-[250px] 
+                sm:max-w-[175px] 
+                h-[201px] 
+                sm:h-[250px]"
               src={jpg?.large_image_url}
             />
           </a>
         </div>
-        <div className="grid grid-rows-[25px_25px_25px_126px] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px] border-[rgb(53,53,53)]">
+        <div
+          className="
+          grid 
+          grid-rows-[25px_25px_25px_126px] 
+          sm:grid-rows-[25px_48px_48px_129px] 
+          tablet:grid-rows-[27px_27px_27px_169px] 
+          border-[rgb(53,53,53)]
+        "
+        >
           <div className="flex justify-center text-[#95ccff] border-b border-inherit">
             <p className="line-clamp-1">{getStudios(studios)}</p>
           </div>
