@@ -1,5 +1,5 @@
-import PageBase from "./home/PageBase";
-import { getSeasonNow } from "./jinkan/seasonNow";
+import PageBase from "./components/PageBase";
+import { getSeasonNow } from "../jinkan/seasonNow";
 
 export default async function Home() {
   const data = await getSeasonNow();

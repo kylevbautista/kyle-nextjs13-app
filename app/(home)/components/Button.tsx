@@ -1,5 +1,5 @@
 "use client";
-import { getSeasonNow } from "../jinkan/seasonNow";
+import { getSeasonNow } from "../../jinkan/seasonNow";
 import { useState, useEffect } from "react";
 
 export default function Button() {
