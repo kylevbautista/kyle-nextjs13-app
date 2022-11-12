@@ -5,7 +5,18 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        tablet: "820px",
+        // => @media (min-width: 820px) { ... }
+
+        laptop: "1024px",
+        // => @media (min-width: 1024px) { ... }
+
+        desktop: "1280px",
+        // => @media (min-width: 1280px) { ... }
+      },
+    },
   },
   plugins: [require("@tailwindcss/line-clamp")],
 };
