@@ -77,7 +77,7 @@ export default function CardGrid({ info, children, id }: Props) {
       });
       /* @ts-ignore */
       document.querySelector(`#anime-snopsis-${id}`).style.height = `${
-        ref?.current?.["offsetHeight"] - sum
+        ref?.current?.["offsetHeight"] + 1 - sum
       }px`;
       ("99px");
     }
