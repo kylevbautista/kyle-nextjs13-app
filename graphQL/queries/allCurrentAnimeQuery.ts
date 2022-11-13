@@ -2,14 +2,25 @@ import { gql } from "graphql-request";
 
 export default gql`
   {
-    Page(page: 1, perPage: 5) {
-      media(season: FALL, seasonYear: 2022) {
-        id
+    Page(page: 1, perPage: 25) {
+      media(season: FALL, seasonYear: 2022, sort: POPULARITY_DESC) {
+        description
+        coverImage {
+          extraLarge
+          large
+          medium
+          color
+        }
+        idMal
         title {
           romaji
           english
           native
-          userPreferred
+        }
+        studios(isMain: true) {
+          nodes {
+            name
+          }
         }
         startDate {
           year
@@ -19,20 +30,18 @@ export default gql`
         status
         episodes
         duration
-        nextAiringEpisode {
+        source
+        genres
+        upcomingEpisode: nextAiringEpisode {
           id
           episode
           timeUntilAiring
           mediaId
         }
-        airingSchedule(notYetAired: true, page: 1, perPage: 1) {
-          nodes {
+        firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
+          episode: nodes {
             airingAt
-            timeUntilAiring
             episode
-            media {
-              id
-            }
           }
         }
       }

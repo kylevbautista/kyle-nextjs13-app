@@ -1,8 +1,7 @@
 "use client";
 import { getSeasonNow } from "../../jinkan/seasonNow";
-import { graphQLClient } from "../../../graphQL/graphqlClient";
-import { useState, useEffect } from "react";
-import allCurrentAnimeQuery from "../../../graphQL/queries/allCurrentAnimeQuery";
+import { useState, useEffect, ReactNode } from "react";
+import { getStudios, unixTimeStampToDate, startTimer } from "./helpers";
 
 interface Props {
   info?: any;
@@ -11,48 +10,46 @@ interface Props {
 }
 
 export default function AnimeInfoGrid({ info, children, id }: Props) {
+  const [day, setDay] = useState<number>(0);
+  const [hours, setHour] = useState<number>(0);
+  const [minute, setMinute] = useState<number>(0);
+  const [second, setSecond] = useState<number>(0);
+  let interval: any;
+
   const {
     title,
-    images,
-    synopsis,
-    url,
+    coverImage,
+    genres,
+    studios,
+    idMal,
+    startDate,
+    status,
     episodes,
     duration,
-    aired,
+    upcomingEpisode,
+    firstEpisode,
     source,
-    studios,
-    genres,
+    description,
   } = info || {};
-  const { jpg, webp } = images || {};
 
-  const getStudios = (studios: any) => {
-    let studio = "";
-    studios?.map((obj: any) => {
-      if (studio) {
-        studio += ` x ${obj.name}`;
-      } else {
-        studio += obj.name;
-      }
-    });
-    return studio;
-  };
-
-  const getStartDate = (date: any) => {
-    const event = new Date(date);
-    const pst = event.toLocaleString();
-    return pst;
-  };
-
-  const onClick = async () => {
-    try {
-      const data = await graphQLClient.request(allCurrentAnimeQuery);
-      console.log(data);
-    } catch (err) {
-      console.log("error", err);
+  useEffect(() => {
+    if (upcomingEpisode?.timeUntilAiring) {
+      startTimer(
+        interval,
+        upcomingEpisode?.timeUntilAiring,
+        setDay,
+        setHour,
+        setMinute,
+        setSecond
+      );
     }
-  };
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div
+      id="anime-card-container"
       className="
       grid 
       grid-rows-[60px_201px_32px] 
@@ -78,7 +75,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
       >
         <div className="w-full h-full flex justify-center items-center">
           <a className="line-clamp-2 leading-4 hover:underline" href="#">
-            {title}
+            {title.romaji}
           </a>
         </div>
         <div
@@ -96,7 +93,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
                 className="hover:underline hover:text-[#95ccff]"
                 href="#"
               >
-                &nbsp;{obj.name} &nbsp;
+                &nbsp;{obj} &nbsp;
               </a>
             ))}
           </p>
@@ -104,10 +101,14 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
       </div>
 
       <div className="grid grid-cols-[auto_1fr]">
-        <div className="max-w-[135px] sm:max-w-[175px] h-[201px] sm:h-[250px] sm:max-h-[250px]">
-          <a href="#">
-            <img
-              className="
+        <div
+          id="anime-image"
+          className="max-w-[135px] sm:max-w-[175px] h-[201px] sm:h-[250px] sm:max-h-[250px] relative"
+        >
+          <div className="">
+            <a href="#">
+              <img
+                className="
                 border 
                 border-[rgb(53,53,53)] 
                 object-contain 
@@ -115,10 +116,30 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
                 sm:max-h-[250px] 
                 sm:max-w-[175px] 
                 h-[201px] 
-                sm:h-[250px]"
-              src={jpg?.large_image_url}
-            />
-          </a>
+                sm:h-[250px]
+              "
+                src={coverImage?.extraLarge}
+              />
+            </a>
+          </div>
+          <div
+            id="countDown"
+            className="
+            bg-gray-900/70 
+            absolute 
+            w-[135px] 
+            sm:w-[175px] 
+            h-[24px] 
+            top-[1px] 
+            text-xs 
+            flex 
+            justify-center 
+            items-center"
+          >
+            <p>
+              EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
+            </p>
+          </div>
         </div>
         <div
           className="
@@ -130,18 +151,20 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
         "
         >
           <div className="flex justify-center text-[#95ccff] border-b border-inherit">
-            <p className="line-clamp-1">{getStudios(studios)}</p>
+            <p className="line-clamp-1">{getStudios(studios.nodes)}</p>
           </div>
           <div className="flex justify-center text-[rgb(164,164,164)] border-b pl-1 border-inherit">
-            <p className="line-clamp-2">{getStartDate(aired?.from)}</p>
+            <p className="line-clamp-2">
+              {unixTimeStampToDate(firstEpisode?.episode[0]?.airingAt)}
+            </p>
           </div>
           <div className="flex justify-around text-[rgb(164,164,164)] border-b pl-1 border-inherit">
             <div>
-              <p className="line-clamp-2">{source}</p>
+              <p className="line-clamp-2">{source.replaceAll("_", " ")}</p>
             </div>
             <div>
               <p className="line-clamp-2">
-                {episodes ? episodes : "?"} eps x {duration?.slice(0, 2)}m
+                {episodes ? episodes : "?"} eps x {duration ? duration : "?"}m
               </p>
             </div>
           </div>
@@ -149,7 +172,14 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
             id={`anime-snopsis-${1}`}
             className="border-b pl-1 overflow-auto border-inherit"
           >
-            <div className="">{synopsis}</div>
+            {description ? (
+              <div
+                className=""
+                dangerouslySetInnerHTML={{ __html: description }}
+              ></div>
+            ) : (
+              <div>No synopsis has been added to this title.</div>
+            )}
           </div>
         </div>
       </div>
@@ -166,7 +196,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
               rounded-md
             "
         >
-          Read more
+          Read more:
         </a>
       </div>
     </div>
