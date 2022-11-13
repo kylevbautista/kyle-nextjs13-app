@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import { compareFnCountDown } from "./helpers";
@@ -27,10 +27,10 @@ export default function PageBase({ data, children }: PageBaseProps) {
     summer: graphQLPageType;
     fall: graphQLPageType;
   } = data || {};
-  const { media: winterByPopularity } = winter || {};
-  const { media: springByPopularity } = spring || {};
-  const { media: summerByPopularity } = summer || {};
-  const { media: fallByPopularity } = fall || {};
+  const { media: winterByPopularity = [] } = winter || {};
+  const { media: springByPopularity = [] } = spring || {};
+  const { media: summerByPopularity = [] } = summer || {};
+  const { media: fallByPopularity = [] } = fall || {};
 
   const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
   const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
@@ -78,6 +78,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
           fallByPopularity?.map((info: any, index: number) => (
             <AnimeInfoGrid key={index} id={index} info={info} />
           ))}
+        <AnimeInfoGrid key={1} id={1} info={{}} />
       </Grid>
     </div>
   );

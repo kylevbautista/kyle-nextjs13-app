@@ -7,7 +7,6 @@ import {
   formatSource,
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
-import star from "../../../assets/star-32.png";
 import Image from "next/image";
 
 interface Props {
@@ -211,7 +210,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
             className="border-b pl-1 overflow-auto border-inherit"
           >
             {description ? (
-              <div className="text-xs leading-5">
+              <div className="text-xs leading-[normal]">
                 <p dangerouslySetInnerHTML={{ __html: description }}></p>
               </div>
             ) : (
