@@ -1,7 +1,13 @@
 "use client";
-import { getSeasonNow } from "../../jinkan/seasonNow";
 import { useState, useEffect, ReactNode } from "react";
-import { getStudios, unixTimeStampToDate, startTimer } from "./helpers";
+import {
+  getStudios,
+  unixTimeStampToDate,
+  startTimer,
+  formatSource,
+} from "./helpers";
+import Luffy from "../../../assets/Monkey_D_Luffy.png";
+import Image from "next/image";
 
 interface Props {
   info?: any;
@@ -74,28 +80,33 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
           "
       >
         <div className="w-full h-full flex justify-center items-center">
-          <a className="line-clamp-2 leading-4 hover:underline" href="#">
-            {title.romaji}
+          <a
+            className="line-clamp-2 leading-4 hover:underline font-bold"
+            href="#"
+          >
+            {title ? title.romaji : "Title"}
           </a>
         </div>
         <div
           className="
             line-clamp-1
-            text-sm
+            text-xs
             text-[rgb(164,164,164)]
             leading-6
           "
         >
           <p>
-            {genres?.map((obj: any, index: number) => (
-              <a
-                key={index}
-                className="hover:underline hover:text-[#95ccff]"
-                href="#"
-              >
-                &nbsp;{obj} &nbsp;
-              </a>
-            ))}
+            {genres
+              ? genres.map((obj: any, index: number) => (
+                  <a
+                    key={index}
+                    className="hover:underline hover:text-[#95ccff]"
+                    href="#"
+                  >
+                    &nbsp;{obj} &nbsp;
+                  </a>
+                ))
+              : "genre"}
           </p>
         </div>
       </div>
@@ -103,34 +114,35 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
       <div className="grid grid-cols-[auto_1fr]">
         <div
           id="anime-image"
-          className="max-w-[135px] sm:max-w-[175px] h-[201px] sm:h-[250px] sm:max-h-[250px] relative"
+          className="
+            w-[135px] 
+            sm:w-[175px] 
+            h-[201px] 
+            sm:h-[250px] 
+            border-b
+            border-l
+            border-r
+            border-[rgb(53,53,53)]
+            relative"
         >
-          <div className="">
+          <div>
             <a href="#">
-              <img
-                className="
-                border 
-                border-[rgb(53,53,53)] 
-                object-contain 
-                max-w-[135px] 
-                sm:max-h-[250px] 
-                sm:max-w-[175px] 
-                h-[201px] 
-                sm:h-[250px]
-              "
-                src={coverImage?.extraLarge}
+              <Image
+                src={coverImage ? coverImage?.extraLarge : Luffy}
+                fill
+                alt=""
               />
             </a>
           </div>
           <div
             id="countDown"
             className="
-            bg-gray-900/70 
+            bg-gray-900/80 
             absolute 
-            w-[135px] 
-            sm:w-[175px] 
+            w-[133px] 
+            sm:w-[173px] 
             h-[24px] 
-            top-[1px] 
+            top-[0px] 
             text-xs 
             flex 
             justify-center 
@@ -151,16 +163,20 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
         "
         >
           <div className="flex justify-center text-[#95ccff] border-b border-inherit">
-            <p className="line-clamp-1">{getStudios(studios.nodes)}</p>
+            <p className="line-clamp-1">
+              {studios ? getStudios(studios.nodes) : "Studio"}
+            </p>
           </div>
-          <div className="flex justify-center text-[rgb(164,164,164)] border-b pl-1 border-inherit">
-            <p className="line-clamp-2">
+          <div className="flex justify-center items-center text-[rgb(164,164,164)] border-b pl-1 border-inherit">
+            <p className="line-clamp-2 text-sm">
               {unixTimeStampToDate(firstEpisode?.episode[0]?.airingAt)}
             </p>
           </div>
-          <div className="flex justify-around text-[rgb(164,164,164)] border-b pl-1 border-inherit">
-            <div>
-              <p className="line-clamp-2">{source.replaceAll("_", " ")}</p>
+          <div className="flex justify-around items-center gap-[6px] text-[rgb(164,164,164)] border-b pl-1 border-inherit text-sm">
+            <div className="p-[2px]">
+              <p className="line-clamp-2">
+                {source ? formatSource(source) : "Source"}
+              </p>
             </div>
             <div>
               <p className="line-clamp-2">
@@ -173,10 +189,9 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
             className="border-b pl-1 overflow-auto border-inherit"
           >
             {description ? (
-              <div
-                className=""
-                dangerouslySetInnerHTML={{ __html: description }}
-              ></div>
+              <div className="text-xs leading-5">
+                <p dangerouslySetInnerHTML={{ __html: description }}></p>
+              </div>
             ) : (
               <div>No synopsis has been added to this title.</div>
             )}
@@ -184,20 +199,98 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
         </div>
       </div>
 
-      <div className="h-[32px]">
-        <a
-          // href={url}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="
-              bg-blue-700
-              hover:shadow-md 
-              hover:shadow-white
-              rounded-md
-            "
-        >
-          Read more:
-        </a>
+      <div
+        id="anime-links"
+        className="h-[32px] flex flex-wrap justify-center items-center gap-2 overflow-auto"
+      >
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="eye"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="mal"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="crunchyroll"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="adb"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="fox"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="globe"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="planet"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="twitter"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="cut"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="anilist"
+          ></a>
+        </div>
+        <div className="hover:bg-blue-500 rounded-[50%]">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href={`https://myanimelist.net/anime/${idMal}`}
+            className="anisearch"
+          ></a>
+        </div>
       </div>
     </div>
   );

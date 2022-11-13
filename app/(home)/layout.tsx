@@ -21,7 +21,7 @@ export default function RootLayout({
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
             </Link>
-            <Link href="/notes" className="mx-4 my-2 hover:bg-sky-700">
+            <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Search
             </Link>
           </div>

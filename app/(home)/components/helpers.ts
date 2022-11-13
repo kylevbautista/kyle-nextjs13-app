@@ -61,6 +61,20 @@ export const startTimer = (
   }, 1000);
 };
 
+export const formatSource = (source: string) => {
+  let noUnderScore = source.replaceAll("_", " ");
+
+  const lowerCaseAllWordsExceptFirstLetters = (source: string) =>
+    source.replaceAll(
+      /\S*/g,
+      (word: string) => `${word.slice(0, 1)}${word.slice(1).toLowerCase()}`
+    );
+
+  const result = lowerCaseAllWordsExceptFirstLetters(noUnderScore);
+
+  return result;
+};
+
 export const getStudios = (studios: any) => {
   let studio = "";
   studios?.map((obj: any) => {
