@@ -7,7 +7,6 @@ import {
   formatSource,
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
-import star from "../../../assets/star-32.png";
 import Image from "next/image";
 
 interface Props {

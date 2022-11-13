@@ -1,20 +1,19 @@
 import PageBase from "./components/PageBase";
-import { getSeasonNow } from "../jinkan/seasonNow";
-import { request } from "graphql-request";
 import { graphQLClient } from "../../graphQL/graphqlClient";
-import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
 import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
-import Button from "./components/Button";
-
-// If no cache we need fallback?
 
 // export const dynamic = "force-dynamic",
 //   dynamicParams = true,
 //   revalidate = false,
-//   fetchCache = "auto",
+//   fetchCache = "force-no-store",
 //   runtime = "nodejs",
 //   preferredRegion = "auto";
 
+/**
+ * Can't invalidate cache in nextjs13 with graphqlrequest
+ * Have to use native fetch api to make graphql post request
+ * @returns data
+ */
 const getData = async () => {
   try {
     const res = await fetch("https://graphql.anilist.co", {
@@ -37,8 +36,6 @@ const getData = async () => {
 export default async function Home() {
   // const { data, errors, extensions, headers, status } =
   //   await graphQLClient.rawRequest(allCurrentAnimeQuery);
-  // console.log("data", data);
-  // console.log("headers", headers);
   const { data } = (await getData()) || {};
   return <PageBase data={data} />;
 }

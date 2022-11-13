@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import { compareFnCountDown } from "./helpers";
@@ -27,15 +27,15 @@ export default function PageBase({ data, children }: PageBaseProps) {
     summer: graphQLPageType;
     fall: graphQLPageType;
   } = data || {};
-  const { media: winterByPopularity } = winter || {};
-  const { media: springByPopularity } = spring || {};
-  const { media: summerByPopularity } = summer || {};
-  const { media: fallByPopularity } = fall || {};
+  const { media: winterByPopularity = [] } = winter || {};
+  const { media: springByPopularity = [] } = spring || {};
+  const { media: summerByPopularity = [] } = summer || {};
+  const { media: fallByPopularity = [] } = fall || {};
 
-  // const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
-  // const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
-  // const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
-  // const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
+  const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
+  const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
+  const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
+  const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
 
   return (
     <div
@@ -52,8 +52,8 @@ export default function PageBase({ data, children }: PageBaseProps) {
       <div className="w-full mb-4 flex justify-start gap-3">
         <button
           onClick={() => {
-            // setByCount(false);
-            // setByPopularity(true);
+            setByCount(false);
+            setByPopularity(true);
           }}
           className="bg-[rgb(38,38,38)] rounded-md p-2"
         >
@@ -70,14 +70,15 @@ export default function PageBase({ data, children }: PageBaseProps) {
         </button>
       </div>
       <Grid>
-        {/* {byCount &&
+        {byCount &&
           fallByCountDown?.map((info: any, index: number) => (
             <AnimeInfoGrid key={index} id={index} info={info} />
-          ))} */}
+          ))}
         {byPopularity &&
           fallByPopularity?.map((info: any, index: number) => (
             <AnimeInfoGrid key={index} id={index} info={info} />
           ))}
+        <AnimeInfoGrid key={1} id={1} info={{}} />
       </Grid>
     </div>
   );
