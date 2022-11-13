@@ -5,10 +5,10 @@ import { graphQLClient } from "../../graphQL/graphqlClient";
 import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
 import Button from "./components/Button";
 
-export const dynamic = "auto",
+export const dynamic = "force-dynamic",
   dynamicParams = true,
   revalidate = false,
-  fetchCache = "force-no-store",
+  fetchCache = "auto",
   runtime = "nodejs",
   preferredRegion = "auto";
 
