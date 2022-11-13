@@ -27,14 +27,14 @@ export default function PageBase({ data, children }: PageBaseProps) {
     summer: graphQLPageType;
     fall: graphQLPageType;
   } = data || {};
-  const { media: winterByPopularity } = winter || {};
-  const { media: springByPopularity } = spring || {};
-  const { media: summerByPopularity } = summer || {};
+  // const { media: winterByPopularity } = winter || {};
+  // const { media: springByPopularity } = spring || {};
+  // const { media: summerByPopularity } = summer || {};
   const { media: fallByPopularity } = fall || {};
 
-  const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
-  const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
-  const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
+  // const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
+  // const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
+  // const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
   const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
 
   return (
