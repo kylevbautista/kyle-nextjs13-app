@@ -32,10 +32,10 @@ export default function PageBase({ data, children }: PageBaseProps) {
   const { media: summerByPopularity } = summer || {};
   const { media: fallByPopularity } = fall || {};
 
-  const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
-  const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
-  const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
-  const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
+  // const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
+  // const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
+  // const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
+  // const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
 
   return (
     <div
@@ -70,10 +70,10 @@ export default function PageBase({ data, children }: PageBaseProps) {
         </button>
       </div>
       <Grid>
-        {byCount &&
+        {/* {byCount &&
           fallByCountDown?.map((info: any, index: number) => (
             <AnimeInfoGrid key={index} id={index} info={info} />
-          ))}
+          ))} */}
         {byPopularity &&
           fallByPopularity?.map((info: any, index: number) => (
             <AnimeInfoGrid key={index} id={index} info={info} />
