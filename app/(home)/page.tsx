@@ -4,12 +4,11 @@ import { request } from "graphql-request";
 import { graphQLClient } from "../../graphQL/graphqlClient";
 import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
 import Button from "./components/Button";
-import AnimeInfoGrid from "./components/AnimeInfoGrid";
 
 export default async function Home() {
-  const data = await getSeasonNow();
-  const data2 = await graphQLClient.request(allCurrentAnimeQuery);
-  console.log("Kylelog", data2);
+  // const data = await getSeasonNow();
+  const { data, errors, extensions, headers, status } =
+    await graphQLClient.rawRequest(allCurrentAnimeQuery);
   return <PageBase data={data} />;
-  // return <AnimeInfoGrid />;
+  // return <Button />;
 }
