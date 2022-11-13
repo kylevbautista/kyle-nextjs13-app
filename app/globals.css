@@ -128,3 +128,12 @@ x = -27px
   width: 30px;
   height: 30px;
 }
+
+.star {
+  display: block;
+  background: url(../assets/star-32.png) 2px 1px;
+  background-repeat: no-repeat;
+  background-size: 75%;
+  width: 15px;
+  height: 15px;
+}

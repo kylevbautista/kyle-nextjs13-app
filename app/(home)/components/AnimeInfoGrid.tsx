@@ -7,6 +7,7 @@ import {
   formatSource,
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
+import star from "../../../assets/star-32.png";
 import Image from "next/image";
 
 interface Props {
@@ -36,6 +37,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
     firstEpisode,
     source,
     description,
+    averageScore,
   } = info || {};
 
   useEffect(() => {
@@ -137,7 +139,7 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
           <div
             id="countDown"
             className="
-            bg-gray-900/80 
+            bg-[rgba(0,0,0,0.6)]
             absolute 
             w-[133px] 
             sm:w-[173px] 
@@ -151,6 +153,26 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
             <p>
               EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
             </p>
+          </div>
+          {/** top-left top-right bottom-right bottom-left */}
+          <div
+            id="score"
+            className="
+            bg-[rgba(0,0,0,0.6)]
+            absolute 
+            w-[65px] 
+            h-[25px] 
+            left-[8px]
+            rounded-[35px]
+            bottom-[8px] 
+            text-xs 
+            flex 
+            justify-center
+            p-1 
+            items-center"
+          >
+            <div className="star"></div>
+            <p>{averageScore ? (averageScore / 10).toFixed(1) : "N/A"}</p>
           </div>
         </div>
         <div
