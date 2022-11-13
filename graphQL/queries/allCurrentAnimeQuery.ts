@@ -2,7 +2,7 @@ import { gql } from "graphql-request";
 
 export default gql`
   {
-    Page(page: 1, perPage: 25) {
+    Page(page: 1, perPage: 50) {
       media(season: FALL, seasonYear: 2022, sort: POPULARITY_DESC) {
         description
         coverImage {
@@ -32,6 +32,7 @@ export default gql`
         duration
         source
         genres
+        averageScore
         upcomingEpisode: nextAiringEpisode {
           id
           episode
