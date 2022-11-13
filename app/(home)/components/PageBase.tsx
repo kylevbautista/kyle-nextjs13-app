@@ -28,7 +28,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
       "
     >
       <Grid>
-        {media.map((info: any, index: number) => (
+        {media?.map((info: any, index: number) => (
           <AnimeInfoGrid key={index} id={index} info={info} />
         ))}
       </Grid>
