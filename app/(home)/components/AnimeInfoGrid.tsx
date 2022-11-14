@@ -158,9 +158,9 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            <p>
+            {/* <p>
               EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
-            </p>
+            </p> */}
           </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div
@@ -199,7 +199,7 @@ export default function AnimeInfoGrid({
           </div>
           <div className="flex justify-center items-center text-[rgb(164,164,164)] border-b pl-1 border-inherit">
             <p className="line-clamp-2 text-sm">
-              {unixTimeStampToDate(firstEpisode?.episode[0]?.airingAt)}
+              {/* {unixTimeStampToDate(firstEpisode?.episode[0]?.airingAt)} */}
             </p>
           </div>
           <div className="flex justify-around items-center gap-[6px] text-[rgb(164,164,164)] border-b pl-1 border-inherit text-sm">
