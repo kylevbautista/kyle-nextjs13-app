@@ -1,7 +1,9 @@
 export const unixTimeStampToDate = (unixTimeStamp: number) => {
   const javaScriptTimeStamp: number = unixTimeStamp * 1000;
   const dateObject = new Date(javaScriptTimeStamp);
-  const time = dateObject.toLocaleTimeString();
+  const time = dateObject.toLocaleTimeString("en-US", {
+    timeZone: "America/Los_Angeles",
+  });
 
   const months = [
     "Jan",
@@ -17,12 +19,12 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
     "Nov",
     "Dec",
   ];
-  const year = dateObject.getFullYear();
-  const month = months[dateObject.getMonth()];
-  const day = dateObject.getDate();
-  const hour = dateObject.getHours();
-  const min = dateObject.getMinutes();
-  const sec = dateObject.getSeconds();
+  const year = dateObject.getUTCFullYear();
+  const month = months[dateObject.getUTCMonth()];
+  const day = dateObject.getUTCDate();
+  const hour = dateObject.getUTCHours();
+  const min = dateObject.getUTCMinutes();
+  const sec = dateObject.getUTCSeconds();
 
   let time2 =
     day + " " + month + " " + year + " " + hour + ":" + min + ":" + sec;
@@ -31,18 +33,17 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
   return ok;
 };
 
-export const getInitialTimes = (seconds:any) => {
-  if(seconds){
-  let d = Math.floor(seconds / (3600 * 24));
-  let h = Math.floor((seconds % (3600 * 24)) / 3600);
-  let m = Math.floor((seconds % 3600) / 60);
-  let s = Math.floor(seconds % 60);
-  return {d,h,m,s}
+export const getInitialTimes = (seconds: any) => {
+  if (seconds) {
+    let d = Math.floor(seconds / (3600 * 24));
+    let h = Math.floor((seconds % (3600 * 24)) / 3600);
+    let m = Math.floor((seconds % 3600) / 60);
+    let s = Math.floor(seconds % 60);
+    return { d, h, m, s };
+  } else {
+    return { d: 0, h: 0, m: 0, s: 0 };
   }
-  else{
-    return {d:0,h:0,m:0,s:0}
-  }
-}
+};
 
 export const startTimer = (
   interval: any,
@@ -71,8 +72,8 @@ export const startTimer = (
     let sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
     const time = dDisplay + hDisplay + mDisplay + sDisplay;
     seconds = seconds - 1;
-    if(info?.upcomingEpisode){
-      info.upcomingEpisode.timeUntilAiring = seconds; 
+    if (info?.upcomingEpisode) {
+      info.upcomingEpisode.timeUntilAiring = seconds;
     }
   }, 1000);
 };

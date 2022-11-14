@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode, Suspense } from "react";
 import {
   getStudios,
   unixTimeStampToDate,
@@ -8,15 +8,21 @@ import {
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 interface Props {
   info?: any;
   id?: any;
-  initialTimes?: any
+  initialTimes?: any;
   children?: React.ReactNode;
 }
 
-export default function AnimeInfoGrid({ info, children, initialTimes, id }: Props) {
+export default function AnimeInfoGrid({
+  info,
+  children,
+  initialTimes,
+  id,
+}: Props) {
   const [day, setDay] = useState<number>(initialTimes?.d || 0);
   const [hours, setHour] = useState<number>(initialTimes?.h || 0);
   const [minute, setMinute] = useState<number>(initialTimes?.m || 0);
@@ -54,7 +60,8 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
     }
 
     return () => {
-      clearInterval(interval)};
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -214,7 +221,10 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
           >
             {description ? (
               <div className="text-xs">
-                <p className="leading-5" dangerouslySetInnerHTML={{ __html: description }}></p>
+                <p
+                  className="leading-5"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                ></p>
               </div>
             ) : (
               <div>No synopsis has been added to this title.</div>
