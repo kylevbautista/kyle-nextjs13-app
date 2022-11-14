@@ -144,7 +144,7 @@ export default function AnimeInfoGrid({
               />
             </a>
           </div>
-          {/* <div
+          <div
             id="countDown"
             className="
             bg-[rgba(0,0,0,0.6)]
@@ -158,11 +158,10 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-              <p>
-                EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}
-                s
-              </p>
-          </div> */}
+            <p>
+              EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
+            </p>
+          </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div
             id="score"
