@@ -12,11 +12,16 @@ import Image from "next/image";
 interface Props {
   info?: any;
   id?: any;
-  initialTimes?: any
+  initialTimes?: any;
   children?: React.ReactNode;
 }
 
-export default function AnimeInfoGrid({ info, children, initialTimes, id }: Props) {
+export default function AnimeInfoGrid({
+  info,
+  children,
+  initialTimes,
+  id,
+}: Props) {
   const [day, setDay] = useState<number>(initialTimes?.d || 0);
   const [hours, setHour] = useState<number>(initialTimes?.h || 0);
   const [minute, setMinute] = useState<number>(initialTimes?.m || 0);
@@ -54,7 +59,8 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
     }
 
     return () => {
-      clearInterval(interval)};
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -138,7 +144,7 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
               />
             </a>
           </div>
-          <div
+          {/* <div
             id="countDown"
             className="
             bg-[rgba(0,0,0,0.6)]
@@ -155,7 +161,7 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
             <p>
               EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
             </p>
-          </div>
+          </div> */}
           {/** top-left top-right bottom-right bottom-left */}
           <div
             id="score"
@@ -214,7 +220,10 @@ export default function AnimeInfoGrid({ info, children, initialTimes, id }: Prop
           >
             {description ? (
               <div className="text-xs">
-                <p className="leading-5" dangerouslySetInnerHTML={{ __html: description }}></p>
+                <p
+                  className="leading-5"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                ></p>
               </div>
             ) : (
               <div>No synopsis has been added to this title.</div>
