@@ -8,6 +8,7 @@ import {
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 interface Props {
   info?: any;
@@ -158,9 +159,9 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            {/* <p>
+            <p>
               EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
-            </p> */}
+            </p>
           </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div
