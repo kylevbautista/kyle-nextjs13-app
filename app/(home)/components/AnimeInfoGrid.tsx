@@ -12,14 +12,15 @@ import Image from "next/image";
 interface Props {
   info?: any;
   id?: any;
+  initialTimes?: any
   children?: React.ReactNode;
 }
 
-export default function AnimeInfoGrid({ info, children, id }: Props) {
-  const [day, setDay] = useState<number>(0);
-  const [hours, setHour] = useState<number>(0);
-  const [minute, setMinute] = useState<number>(0);
-  const [second, setSecond] = useState<number>(0);
+export default function AnimeInfoGrid({ info, children, initialTimes, id }: Props) {
+  const [day, setDay] = useState<number>(initialTimes?.d || 0);
+  const [hours, setHour] = useState<number>(initialTimes?.h || 0);
+  const [minute, setMinute] = useState<number>(initialTimes?.m || 0);
+  const [second, setSecond] = useState<number>(initialTimes?.s || 0);
   let interval: any;
 
   const {
@@ -47,11 +48,13 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
         setDay,
         setHour,
         setMinute,
-        setSecond
+        setSecond,
+        info
       );
     }
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval)};
   }, []);
 
   return (
@@ -210,8 +213,8 @@ export default function AnimeInfoGrid({ info, children, id }: Props) {
             className="border-b pl-1 overflow-auto border-inherit"
           >
             {description ? (
-              <div className="text-xs leading-[normal]">
-                <p dangerouslySetInnerHTML={{ __html: description }}></p>
+              <div className="text-xs">
+                <p className="leading-5" dangerouslySetInnerHTML={{ __html: description }}></p>
               </div>
             ) : (
               <div>No synopsis has been added to this title.</div>
