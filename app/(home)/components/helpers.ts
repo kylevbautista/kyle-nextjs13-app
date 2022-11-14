@@ -19,12 +19,12 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
     "Nov",
     "Dec",
   ];
-  const year = dateObject.getFullYear();
-  const month = months[dateObject.getMonth()];
-  const day = dateObject.getDate();
-  const hour = dateObject.getHours();
-  const min = dateObject.getMinutes();
-  const sec = dateObject.getSeconds();
+  const year = dateObject.getUTCFullYear();
+  const month = months[dateObject.getUTCMonth()];
+  const day = dateObject.getUTCDate();
+  const hour = dateObject.getUTCHours();
+  const min = dateObject.getUTCMinutes();
+  const sec = dateObject.getUTCSeconds();
 
   let time2 =
     day + " " + month + " " + year + " " + hour + ":" + min + ":" + sec;
