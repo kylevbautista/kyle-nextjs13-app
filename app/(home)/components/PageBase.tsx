@@ -94,13 +94,13 @@ export default function PageBase({ data, children }: PageBaseProps) {
       "
     >
       <div className="w-full mb-4 flex justify-between gap-3 items-center">
-        <div className="flex gap-3">
+        <div className="flex gap-3 ">
           <button
             onClick={() => {
               setByCount(false);
               setByPopularity(true);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"
           >
             <p>Sort By Popularity</p>
           </button>
@@ -109,7 +109,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
               setByPopularity(false);
               setByCount(true);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"
           >
             <p>Sort By Count Down</p>
           </button>
@@ -123,7 +123,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.WINTER);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
           >
             <p>Winter</p>
           </button>
@@ -131,7 +131,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.SPRING);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
           >
             <p>Spring</p>
           </button>
@@ -139,7 +139,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.SUMMER);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
           >
             <p>Summer</p>
           </button>
@@ -147,7 +147,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.FALL);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2"
+            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
           >
             <p>Fall</p>
           </button>
