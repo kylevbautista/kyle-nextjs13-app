@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode, Suspense } from "react";
 import {
   getStudios,
   unixTimeStampToDate,
@@ -144,7 +144,7 @@ export default function AnimeInfoGrid({
               />
             </a>
           </div>
-          {/* <div
+          <div
             id="countDown"
             className="
             bg-[rgba(0,0,0,0.6)]
@@ -158,10 +158,19 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            <p>
-              EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
-            </p>
-          </div> */}
+            <Suspense
+              fallback={
+                <p>
+                  EP?: {0}d {0}h {0}m {0}s
+                </p>
+              }
+            >
+              <p>
+                EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}
+                s
+              </p>
+            </Suspense>
+          </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div
             id="score"
