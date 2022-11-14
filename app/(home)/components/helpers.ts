@@ -31,13 +31,27 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
   return ok;
 };
 
+export const getInitialTimes = (seconds:any) => {
+  if(seconds){
+  let d = Math.floor(seconds / (3600 * 24));
+  let h = Math.floor((seconds % (3600 * 24)) / 3600);
+  let m = Math.floor((seconds % 3600) / 60);
+  let s = Math.floor(seconds % 60);
+  return {d,h,m,s}
+  }
+  else{
+    return {d:0,h:0,m:0,s:0}
+  }
+}
+
 export const startTimer = (
   interval: any,
   seconds: any,
   setDay: any,
   setHour: any,
   setMinute: any,
-  setSecond: any
+  setSecond: any,
+  info: any
 ) => {
   seconds = Number(seconds);
 
@@ -56,8 +70,10 @@ export const startTimer = (
     let mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
     let sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
     const time = dDisplay + hDisplay + mDisplay + sDisplay;
-    // console.log("startTimer()", time);
     seconds = seconds - 1;
+    if(info?.upcomingEpisode){
+      info.upcomingEpisode.timeUntilAiring = seconds; 
+    }
   }, 1000);
 };
 
