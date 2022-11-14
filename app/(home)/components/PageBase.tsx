@@ -45,22 +45,6 @@ export default function PageBase({ data, children }: PageBaseProps) {
   const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
   const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
 
-  let mainByCountDown = fallByCountDown;
-  let mainByPopularity = fallByPopularity;
-  if (season === Season.WINTER) {
-    mainByCountDown = winterByCountDown;
-    mainByPopularity = winterByPopularity;
-  } else if (season === Season.SPRING) {
-    mainByCountDown = springByCountDown;
-    mainByPopularity = springByPopularity;
-  } else if (season === Season.SUMMER) {
-    mainByCountDown = summerByCountDown;
-    mainByPopularity = summerByPopularity;
-  } else if (season === Season.FALL) {
-    mainByCountDown = fallByCountDown;
-    mainByPopularity = fallByPopularity;
-  }
-
   const getSeason = (season: Season) => {
     if (season === Season.WINTER) {
       return "Winter";
@@ -177,104 +161,102 @@ export default function PageBase({ data, children }: PageBaseProps) {
         </div>
       </div>
       <Grid>
-        <Suspense fallback={<p>wtf</p>}>
-          {byCount &&
-            season === Season.WINTER &&
-            winterByCountDown?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byPopularity &&
-            season === Season.WINTER &&
-            winterByPopularity?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byCount &&
-            season === Season.SPRING &&
-            springByCountDown?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byPopularity &&
-            season === Season.SPRING &&
-            springByPopularity?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byCount &&
-            season === Season.SUMMER &&
-            summerByCountDown?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byPopularity &&
-            season === Season.SUMMER &&
-            summerByPopularity?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byCount &&
-            season === Season.FALL &&
-            fallByCountDown?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-          {byPopularity &&
-            season === Season.FALL &&
-            fallByPopularity?.map((info: any, index: number) => (
-              <AnimeInfoGrid
-                key={index}
-                id={index}
-                info={info}
-                initialTimes={getInitialTimes(
-                  info?.upcomingEpisode?.timeUntilAiring
-                )}
-              />
-            ))}
-        </Suspense>
+        {byCount &&
+          season === Season.WINTER &&
+          winterByCountDown?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byPopularity &&
+          season === Season.WINTER &&
+          winterByPopularity?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byCount &&
+          season === Season.SPRING &&
+          springByCountDown?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byPopularity &&
+          season === Season.SPRING &&
+          springByPopularity?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byCount &&
+          season === Season.SUMMER &&
+          summerByCountDown?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byPopularity &&
+          season === Season.SUMMER &&
+          summerByPopularity?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byCount &&
+          season === Season.FALL &&
+          fallByCountDown?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
+        {byPopularity &&
+          season === Season.FALL &&
+          fallByPopularity?.map((info: any, index: number) => (
+            <AnimeInfoGrid
+              key={index}
+              id={index}
+              info={info}
+              initialTimes={getInitialTimes(
+                info?.upcomingEpisode?.timeUntilAiring
+              )}
+            />
+          ))}
         <AnimeInfoGrid key={1} id={1} info={{}} />
       </Grid>
     </div>
