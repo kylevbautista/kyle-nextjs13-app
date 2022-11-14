@@ -100,7 +100,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
               setByCount(false);
               setByPopularity(true);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"
+            className={byPopularity ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"}
           >
             <p>Sort By Popularity</p>
           </button>
@@ -109,7 +109,8 @@ export default function PageBase({ data, children }: PageBaseProps) {
               setByPopularity(false);
               setByCount(true);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"
+            // className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"
+            className={byCount ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-blue-600"}
           >
             <p>Sort By Count Down</p>
           </button>
@@ -123,7 +124,8 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.WINTER);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
+            // className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
+            className={(season===Season.WINTER) ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"}
           >
             <p>Winter</p>
           </button>
@@ -131,7 +133,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.SPRING);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
+            className={(season===Season.SPRING) ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"}
           >
             <p>Spring</p>
           </button>
@@ -139,7 +141,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.SUMMER);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
+            className={(season===Season.SUMMER) ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"}
           >
             <p>Summer</p>
           </button>
@@ -147,7 +149,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             onClick={() => {
               setSeason(Season.FALL);
             }}
-            className="bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"
+            className={(season===Season.FALL) ? "rounded-md p-2 bg-neutral-700 font-bold" :"bg-[rgb(38,38,38)] rounded-md p-2 hover:bg-orange-500"}
           >
             <p>Fall</p>
           </button>
