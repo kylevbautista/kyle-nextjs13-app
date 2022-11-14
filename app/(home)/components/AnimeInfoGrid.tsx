@@ -158,18 +158,10 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            <Suspense
-              fallback={
-                <p>
-                  EP?: {0}d {0}h {0}m {0}s
-                </p>
-              }
-            >
-              <p>
+            {/* <p>
                 EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}
                 s
-              </p>
-            </Suspense>
+              </p> */}
           </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div
