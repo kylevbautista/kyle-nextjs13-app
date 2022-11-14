@@ -61,7 +61,9 @@ export default function CardGrid({ info, children, id }: Props) {
 
   const getStartDate = (date: any) => {
     const event = new Date(date);
-    const pst = event.toLocaleString();
+    const pst = event.toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+    });
     return pst;
   };
 
