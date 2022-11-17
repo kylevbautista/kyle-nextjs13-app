@@ -2,7 +2,7 @@
 import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
-import { compareFnCountDown, getInitialTimes } from "./helpers";
+import { compareFnCountDown, getInitialTimes, getCurrentSeason } from "./helpers";
 
 interface PageBaseProps {
   data?: any;
@@ -22,7 +22,7 @@ enum Season {
 export default function PageBase({ data, children }: PageBaseProps) {
   const [byCount, setByCount] = useState(true);
   const [byPopularity, setByPopularity] = useState(false);
-  const [season, setSeason] = useState<Season>(Season.FALL);
+  const [season, setSeason] = useState<Season>(getCurrentSeason());
 
   const {
     winter,
@@ -72,8 +72,8 @@ export default function PageBase({ data, children }: PageBaseProps) {
         text-white
       "
     >
-      <div className="w-full mb-4 flex justify-between gap-3 items-center">
-        <div className="flex gap-3 ">
+      <div className="w-full mb-4 flex flex-wrap justify-center laptop:justify-between gap-3 items-center">
+        <div className="flex gap-3 basis-full laptop2:flex-initial justify-center">
           <button
             onClick={() => {
               setByCount(false);
@@ -102,7 +102,7 @@ export default function PageBase({ data, children }: PageBaseProps) {
             <p>Sort By Count Down</p>
           </button>
         </div>
-        <div className="bg-[rgb(38,38,38)] w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
+        <div className="bg-[rgb(38,38,38)] w-[300px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
           <p className="text-bold font-bold">
             Sorted: {byCount ? "By Countdown" : "By Popularity"}
           </p>

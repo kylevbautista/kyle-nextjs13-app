@@ -1,3 +1,10 @@
+enum Season {
+  WINTER,
+  SPRING,
+  SUMMER,
+  FALL,
+}
+
 export const unixTimeStampToDate = (unixTimeStamp: number) => {
   const javaScriptTimeStamp: number = unixTimeStamp * 1000;
   const dateObject = new Date(javaScriptTimeStamp);
@@ -32,6 +39,28 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
 
   return ok;
 };
+
+export const getCurrentSeason = (date:any = null): Season => {
+  let month = date;
+  if(!date){
+    const dateObject = new Date();
+    month = dateObject.getUTCMonth();
+  }
+
+  if (month <=1 || month === 11){
+    return Season.WINTER;
+  } 
+  if (month>=2 && month <= 4) {
+    return Season.SPRING;
+  }
+  if(month >=5 && month <= 7){
+    return Season.SUMMER
+  }
+  if(month >=8 && month <= 10){
+    return Season.FALL
+  }
+  return Season.WINTER;
+}
 
 export const getInitialTimes = (seconds: any) => {
   if (seconds) {

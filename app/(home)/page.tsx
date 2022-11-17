@@ -15,7 +15,10 @@ import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQuer
  * @returns data
  */
 const getData = async () => {
+  
   try {
+    const dateObject = new Date();
+    const year = dateObject.getUTCFullYear();
     const res = await fetch("https://graphql.anilist.co", {
       cache: "no-store",
       method: "POST",
@@ -24,6 +27,9 @@ const getData = async () => {
       },
       body: JSON.stringify({
         query: allCurrentAnimeQueryFetch,
+        variables: {
+          year: year,
+        },
       }),
     });
     const data = await res.json();
