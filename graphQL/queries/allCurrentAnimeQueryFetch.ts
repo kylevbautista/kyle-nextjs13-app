@@ -1,6 +1,6 @@
-const query = `{
+const query = `query allCurrentAnimeQueryFetch($year: Int) {
     fall: Page(page: 1, perPage: 50) {
-      media(season: FALL, seasonYear: 2022, sort: POPULARITY_DESC) {
+      media(season: FALL, seasonYear: $year, sort: POPULARITY_DESC) {
         description
         coverImage {
           extraLarge
@@ -45,7 +45,7 @@ const query = `{
       }
     }
     summer: Page(page: 1, perPage: 50) {
-      media(season: SUMMER, seasonYear: 2022, sort: POPULARITY_DESC) {
+      media(season: SUMMER, seasonYear: $year, sort: POPULARITY_DESC) {
         description
         coverImage {
           extraLarge
@@ -90,7 +90,7 @@ const query = `{
       }
     }
     spring: Page(page: 1, perPage: 50) {
-      media(season: SPRING, seasonYear: 2022, sort: POPULARITY_DESC) {
+      media(season: SPRING, seasonYear: $year, sort: POPULARITY_DESC) {
         description
         coverImage {
           extraLarge
@@ -135,7 +135,7 @@ const query = `{
       }
     }
     winter: Page(page: 1, perPage: 50) {
-      media(season: WINTER, seasonYear: 2022, sort: POPULARITY_DESC) {
+      media(season: WINTER, seasonYear: $year, sort: POPULARITY_DESC) {
         description
         coverImage {
           extraLarge
