@@ -1,6 +1,6 @@
-import PageBase from "./components/PageBase";
-import { graphQLClient } from "../../graphQL/graphqlClient";
-import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
+import PageBase from "./(home)/components/PageBase";
+import { graphQLClient } from "../graphQL/graphqlClient";
+import allCurrentAnimeQueryFetch from "../graphQL/queries/allCurrentAnimeQueryFetch";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
