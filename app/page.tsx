@@ -1,4 +1,4 @@
-import PageBase from "./(home)/components/PageBase";
+import PageBase from "./components/PageBase";
 import { graphQLClient } from "../graphQL/graphqlClient";
 import allCurrentAnimeQueryFetch from "../graphQL/queries/allCurrentAnimeQueryFetch";
 

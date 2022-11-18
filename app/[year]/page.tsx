@@ -1,7 +1,7 @@
 import PageBase from "../components/PageBase";
-import allCurrentAnimeQueryFetch from "../../../graphQL/queries/allCurrentAnimeQueryFetch";
+import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
-import { setTimeout } from "timers/promises";
+// import { setTimeout } from "timers/promises";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
