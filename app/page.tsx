@@ -1,6 +1,7 @@
 import PageBase from "./components/PageBase";
 import { graphQLClient } from "../graphQL/graphqlClient";
 import allCurrentAnimeQueryFetch from "../graphQL/queries/allCurrentAnimeQueryFetch";
+import { redirect } from "next/navigation";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -32,6 +33,7 @@ const getData = async () => {
 };
 
 export default async function Home() {
+  redirect("/2022");
   const { data } = (await getData()) || {};
   return <PageBase data={data} />;
 }
