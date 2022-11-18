@@ -33,7 +33,9 @@ const getData = async () => {
 };
 
 export default async function Home() {
-  redirect("/2022");
+  const dateObject = new Date();
+  const currentYear = dateObject.getUTCFullYear();
+  redirect(`/${currentYear}`);
   const { data } = (await getData()) || {};
   return <PageBase data={data} />;
 }
