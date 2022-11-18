@@ -1,8 +1,8 @@
 "use client";
-import { getSeasonNow } from "../../jinkan/seasonNow";
+import { getSeasonNow } from "../jinkan/seasonNow";
 import { useState, useEffect } from "react";
-import { graphQLClient } from "../../../graphQL/graphqlClient";
-import allCurrentAnimeQuery from "../../../graphQL/queries/allCurrentAnimeQuery";
+import { graphQLClient } from "../../graphQL/graphqlClient";
+import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
 
 export default function Button() {
   const onClick = async () => {
