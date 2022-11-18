@@ -8,7 +8,6 @@ import {
 } from "./helpers";
 import Luffy from "../../../assets/Monkey_D_Luffy.png";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 
 interface Props {
   info?: any;

@@ -2,7 +2,11 @@
 import React, { ReactNode, Suspense, useEffect, useState } from "react";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
-import { compareFnCountDown, getInitialTimes, getCurrentSeason } from "./helpers";
+import {
+  compareFnCountDown,
+  getInitialTimes,
+  getCurrentSeason,
+} from "./helpers";
 
 interface PageBaseProps {
   data?: any;
