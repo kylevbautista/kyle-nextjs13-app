@@ -6,7 +6,7 @@ import {
   startTimer,
   formatSource,
 } from "./helpers";
-import Luffy from "../../assets/Monkey_D_Luffy.png";
+import Luffy from "../assets/Monkey_D_Luffy.png";
 import Image from "next/image";
 
 interface Props {
