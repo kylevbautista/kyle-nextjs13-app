@@ -12,7 +12,7 @@ x = -27px
 
 .eye {
   display: block;
-  background: url(../assets/animeSprites.png) 0px 0px;
+  background: url(/assets/animeSprites.png) 0px 0px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -21,7 +21,7 @@ x = -27px
 
 .mal {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -330px;
+  background: url(/assets/animeSprites.png) 0px -330px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -29,7 +29,7 @@ x = -27px
 }
 .crunchyroll {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -360px;
+  background: url(/assets/animeSprites.png) 0px -360px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -38,7 +38,7 @@ x = -27px
 
 .adb {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -300px;
+  background: url(/assets/animeSprites.png) 0px -300px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -47,7 +47,7 @@ x = -27px
 
 .cut {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -270px;
+  background: url(/assets/animeSprites.png) 0px -270px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -56,7 +56,7 @@ x = -27px
 
 .fox {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -240px;
+  background: url(/assets/animeSprites.png) 0px -240px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -64,7 +64,7 @@ x = -27px
 }
 .globe {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -210px;
+  background: url(/assets/animeSprites.png) 0px -210px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -73,7 +73,7 @@ x = -27px
 
 .planet {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -180px;
+  background: url(/assets/animeSprites.png) 0px -180px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -82,7 +82,7 @@ x = -27px
 
 .twitter {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -150px;
+  background: url(/assets/animeSprites.png) 0px -150px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -91,7 +91,7 @@ x = -27px
 
 .dot {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -120px;
+  background: url(/assets/animeSprites.png) 0px -120px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -100,7 +100,7 @@ x = -27px
 
 .ven {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -90px;
+  background: url(/assets/animeSprites.png) 0px -90px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -109,7 +109,7 @@ x = -27px
 
 .anisearch {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -60px;
+  background: url(/assets/animeSprites.png) 0px -60px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -118,7 +118,7 @@ x = -27px
 
 .anilist {
   display: block;
-  background: url(../assets/animeSprites.png) 0px -30px;
+  background: url(/assets/animeSprites.png) 0px -30px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;
@@ -127,7 +127,7 @@ x = -27px
 
 .star {
   display: block;
-  background: url(../assets/star-32.png) 2px 1px;
+  background: url(/assets/star-32.png) 2px 1px;
   background-repeat: no-repeat;
   background-size: 75%;
   width: 15px;
