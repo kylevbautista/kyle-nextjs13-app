@@ -1,5 +1,6 @@
 import Link from "next/link";
 import "./globals.css";
+import Providers from "./providers";
 
 export default function RootLayout({
   children,
@@ -34,7 +35,7 @@ export default function RootLayout({
             </Link>
           </div>
         </nav>
-        {children}
+        <Providers>{children}</Providers>
         <footer
           id="main-nav"
           className="flex justify-between bg-[rgb(38,38,38)] text-white mt-2 h-10"
