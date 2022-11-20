@@ -1,4 +1,4 @@
-import PageBase from "../../components/PageBase";
+import PageBase from "../../components/year/PageBase";
 import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
 // import { setTimeout } from "timers/promises";

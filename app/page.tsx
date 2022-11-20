@@ -1,4 +1,4 @@
-import PageBase from "../components/PageBase";
+import PageBase from "../components/year/PageBase";
 import { graphQLClient } from "../graphQL/graphqlClient";
 import allCurrentAnimeQueryFetch from "../graphQL/queries/allCurrentAnimeQueryFetch";
 // import { redirect } from "next/navigation";
