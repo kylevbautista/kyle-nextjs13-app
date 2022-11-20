@@ -13,7 +13,6 @@ const getData = async () => {
     const dateObject = new Date();
     const year = dateObject.getUTCFullYear();
     const res = await fetch("https://graphql.anilist.co", {
-      next: { revalidate: 10 },
       method: "POST",
       headers: {
         "Content-Type": "application/json",
