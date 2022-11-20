@@ -4,6 +4,7 @@ import {
   getStudios,
   unixTimeStampToDate,
   startTimerFromTimeStamp,
+  getInitialTimesFromTimeStamp,
   formatSource,
 } from "./helpers";
 import Luffy from "/public/assets/Monkey_D_Luffy.png";
@@ -22,10 +23,23 @@ export default function AnimeInfoGrid({
   initialTimes,
   id,
 }: Props) {
-  const [day, setDay] = useState<number>(initialTimes?.d || 0);
-  const [hours, setHour] = useState<number>(initialTimes?.h || 0);
-  const [minute, setMinute] = useState<number>(initialTimes?.m || 0);
-  const [second, setSecond] = useState<number>(initialTimes?.s || 0);
+  const [day, setDay] = useState<number>(
+    getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
+      ?.d || 0
+  );
+  const [hours, setHour] = useState<number>(
+    getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
+      ?.h || 0
+  );
+  const [minute, setMinute] = useState<number>(
+    getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
+      ?.m || 0
+  );
+  const [second, setSecond] = useState<number>(
+    getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
+      ?.s || 0
+  );
+  const [isHydrated, setIsHydrated] = useState<Boolean>(false);
   let interval: any;
 
   const {
@@ -47,6 +61,7 @@ export default function AnimeInfoGrid({
   } = info || {};
 
   useEffect(() => {
+    setIsHydrated(true);
     if (upcomingEpisode?.timeUntilAiring) {
       startTimerFromTimeStamp(
         interval,
@@ -159,9 +174,12 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            <p>
-              EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}s
-            </p>
+            {isHydrated && (
+              <p>
+                EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}
+                s
+              </p>
+            )}
           </div>
           {/** top-left top-right bottom-right bottom-left */}
           <div

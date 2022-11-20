@@ -73,13 +73,7 @@ export const getInitialTimes = (seconds: any) => {
     return { d: 0, h: 0, m: 0, s: 0 };
   }
 };
-export const getInitialTimesFromTimeStamp = (
-  unixTimeStamp: any = 0,
-  setDay: any,
-  setHour: any,
-  setMinute: any,
-  setSecond: any
-) => {
+export const getInitialTimesFromTimeStamp = (unixTimeStamp: any = 0) => {
   if (unixTimeStamp) {
     const currentTimeStamp = Math.floor(Date.now() / 1000);
     let secondsLeft = unixTimeStamp - currentTimeStamp;
@@ -87,17 +81,9 @@ export const getInitialTimesFromTimeStamp = (
     let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
     let m = Math.floor((secondsLeft % 3600) / 60);
     let s = Math.floor(secondsLeft % 60);
-    setDay(d);
-    setHour(h);
-    setMinute(m);
-    setSecond(s);
-    // return { d, h, m, s };
+    return { d, h, m, s };
   } else {
-    setDay(0);
-    setHour(0);
-    setMinute(0);
-    setSecond(0);
-    // return { d: 0, h: 0, m: 0, s: 0 };
+    return { d: 0, h: 0, m: 0, s: 0 };
   }
 };
 
@@ -154,6 +140,9 @@ export const startTimerFromTimeStamp = (
     setHour(h);
     setMinute(m);
     setSecond(s);
+    if (secondsLeft <= 0) {
+      clearInterval(interval);
+    }
   }, 1000);
 };
 

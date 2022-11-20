@@ -25,7 +25,6 @@ const getData = async () => {
       }),
     });
     const data = await res.json();
-    console.log("fuckyea");
     return data;
   } catch (err) {
     console.log(err);
