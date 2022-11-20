@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, ReactNode, Suspense } from "react";
+import { useState, useEffect, useContext } from "react";
+import { HydrationContext } from "../common/HydrationProvider";
 import {
   getStudios,
   unixTimeStampToDate,
@@ -40,6 +41,7 @@ export default function AnimeInfoGrid({
       ?.s || 0
   );
   const [isHydrated, setIsHydrated] = useState<Boolean>(false);
+  const hydrated = useContext(HydrationContext);
   let interval: any;
 
   const {
@@ -61,7 +63,6 @@ export default function AnimeInfoGrid({
   } = info || {};
 
   useEffect(() => {
-    setIsHydrated(true);
     if (upcomingEpisode?.timeUntilAiring) {
       startTimerFromTimeStamp(
         interval,
@@ -174,7 +175,7 @@ export default function AnimeInfoGrid({
             justify-center 
             items-center"
           >
-            {isHydrated && (
+            {hydrated && (
               <p>
                 EP{upcomingEpisode?.episode}: {day}d {hours}h {minute}m {second}
                 s
