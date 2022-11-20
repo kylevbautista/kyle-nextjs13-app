@@ -40,27 +40,27 @@ export const unixTimeStampToDate = (unixTimeStamp: number) => {
   return ok;
 };
 
-export const getCurrentSeason = (date:any = null): Season => {
+export const getCurrentSeason = (date: any = null): Season => {
   let month = date;
-  if(!date){
+  if (!date) {
     const dateObject = new Date();
     month = dateObject.getUTCMonth();
   }
 
-  if (month <=1 || month === 11){
+  if (month <= 1 || month === 11) {
     return Season.WINTER;
-  } 
-  if (month>=2 && month <= 4) {
+  }
+  if (month >= 2 && month <= 4) {
     return Season.SPRING;
   }
-  if(month >=5 && month <= 7){
-    return Season.SUMMER
+  if (month >= 5 && month <= 7) {
+    return Season.SUMMER;
   }
-  if(month >=8 && month <= 10){
-    return Season.FALL
+  if (month >= 8 && month <= 10) {
+    return Season.FALL;
   }
   return Season.WINTER;
-}
+};
 
 export const getInitialTimes = (seconds: any) => {
   if (seconds) {
@@ -71,6 +71,33 @@ export const getInitialTimes = (seconds: any) => {
     return { d, h, m, s };
   } else {
     return { d: 0, h: 0, m: 0, s: 0 };
+  }
+};
+export const getInitialTimesFromTimeStamp = (
+  unixTimeStamp: any = 0,
+  setDay: any,
+  setHour: any,
+  setMinute: any,
+  setSecond: any
+) => {
+  if (unixTimeStamp) {
+    const currentTimeStamp = Math.floor(Date.now() / 1000);
+    let secondsLeft = unixTimeStamp - currentTimeStamp;
+    let d = Math.floor(secondsLeft / (3600 * 24));
+    let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
+    let m = Math.floor((secondsLeft % 3600) / 60);
+    let s = Math.floor(secondsLeft % 60);
+    setDay(d);
+    setHour(h);
+    setMinute(m);
+    setSecond(s);
+    // return { d, h, m, s };
+  } else {
+    setDay(0);
+    setHour(0);
+    setMinute(0);
+    setSecond(0);
+    // return { d: 0, h: 0, m: 0, s: 0 };
   }
 };
 
@@ -104,6 +131,29 @@ export const startTimer = (
     if (info?.upcomingEpisode) {
       info.upcomingEpisode.timeUntilAiring = seconds;
     }
+  }, 1000);
+};
+
+export const startTimerFromTimeStamp = (
+  interval: any,
+  unixTimeStamp: any = 0,
+  setDay: any,
+  setHour: any,
+  setMinute: any,
+  setSecond: any,
+  info: any
+) => {
+  interval = setInterval(() => {
+    const currentTimeStamp = Math.floor(Date.now() / 1000);
+    let secondsLeft = unixTimeStamp - currentTimeStamp;
+    let d = Math.floor(secondsLeft / (3600 * 24));
+    let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
+    let m = Math.floor((secondsLeft % 3600) / 60);
+    let s = Math.floor(secondsLeft % 60);
+    setDay(d);
+    setHour(h);
+    setMinute(m);
+    setSecond(s);
   }, 1000);
 };
 

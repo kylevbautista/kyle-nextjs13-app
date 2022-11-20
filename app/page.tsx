@@ -1,4 +1,4 @@
-import PageBase from "./components/PageBase";
+import PageBase from "../components/year/PageBase";
 import { graphQLClient } from "../graphQL/graphqlClient";
 import allCurrentAnimeQueryFetch from "../graphQL/queries/allCurrentAnimeQueryFetch";
 // import { redirect } from "next/navigation";
@@ -13,7 +13,6 @@ const getData = async () => {
     const dateObject = new Date();
     const year = dateObject.getUTCFullYear();
     const res = await fetch("https://graphql.anilist.co", {
-      cache: "no-store",
       method: "POST",
       headers: {
         "Content-Type": "application/json",

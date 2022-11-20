@@ -14,6 +14,17 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    const dateObject = new Date();
+    const year = dateObject.getUTCFullYear();
+    return [
+      {
+        source: "/",
+        destination: `/${year}`,
+        permanent: false,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

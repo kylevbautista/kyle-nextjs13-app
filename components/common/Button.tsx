@@ -1,5 +1,5 @@
 "use client";
-import { getSeasonNow } from "../jinkan/seasonNow";
+import { getSeasonNow } from "../../jinkan/seasonNow";
 import { useState, useEffect } from "react";
 import { graphQLClient } from "../../graphQL/graphqlClient";
 import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
