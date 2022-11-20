@@ -3,7 +3,7 @@ import { useState, useEffect, ReactNode, Suspense } from "react";
 import {
   getStudios,
   unixTimeStampToDate,
-  startTimer,
+  startTimerFromTimeStamp,
   formatSource,
 } from "./helpers";
 import Luffy from "/public/assets/Monkey_D_Luffy.png";
@@ -39,6 +39,7 @@ export default function AnimeInfoGrid({
     episodes,
     duration,
     upcomingEpisode,
+    upComingAirDate,
     firstEpisode,
     source,
     description,
@@ -47,9 +48,9 @@ export default function AnimeInfoGrid({
 
   useEffect(() => {
     if (upcomingEpisode?.timeUntilAiring) {
-      startTimer(
+      startTimerFromTimeStamp(
         interval,
-        upcomingEpisode?.timeUntilAiring,
+        upComingAirDate?.episode[0]?.airingAt,
         setDay,
         setHour,
         setMinute,

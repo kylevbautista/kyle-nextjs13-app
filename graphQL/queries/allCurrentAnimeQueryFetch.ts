@@ -36,6 +36,13 @@ const query = `query allCurrentAnimeQueryFetch($year: Int) {
           timeUntilAiring
           mediaId
         }
+        upComingAirDate: airingSchedule(notYetAired: true,page: 1, perPage: 1) {
+          episode: nodes{
+            airingAt
+            timeUntilAiring
+            episode
+          }
+        }
         firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
           episode: nodes {
             airingAt
