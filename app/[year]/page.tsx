@@ -49,7 +49,7 @@ export default async function AnimeInfoByYear({ params }: any) {
     redirect("/");
   }
   const { data } = (await getDataByYear(params.year)) || {};
-  return <PageBase data={data} />;
+  return <PageBase year={params.year} data={data} />;
 }
 
 /**

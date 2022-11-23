@@ -1,9 +1,24 @@
-enum Season {
+export enum Season {
   WINTER,
   SPRING,
   SUMMER,
   FALL,
 }
+
+export const getSeasonFromEnum = (season: Season) => {
+  if (season === Season.WINTER) {
+    return "Winter";
+  }
+  if (season === Season.SPRING) {
+    return "Spring";
+  }
+  if (season === Season.SUMMER) {
+    return "Summer";
+  }
+  if (season === Season.FALL) {
+    return "Fall";
+  }
+};
 
 export const unixTimeStampToDate = (unixTimeStamp: number) => {
   const javaScriptTimeStamp: number = unixTimeStamp * 1000;
@@ -129,21 +144,23 @@ export const startTimerFromTimeStamp = (
   setSecond: any,
   info: any
 ) => {
-  interval = setInterval(() => {
-    const currentTimeStamp = Math.floor(Date.now() / 1000);
-    let secondsLeft = unixTimeStamp - currentTimeStamp;
-    let d = Math.floor(secondsLeft / (3600 * 24));
-    let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
-    let m = Math.floor((secondsLeft % 3600) / 60);
-    let s = Math.floor(secondsLeft % 60);
-    setDay(d);
-    setHour(h);
-    setMinute(m);
-    setSecond(s);
-    if (secondsLeft <= 0) {
-      clearInterval(interval);
-    }
-  }, 1000);
+  if (unixTimeStamp > Math.floor(Date.now() / 1000)) {
+    interval = setInterval(() => {
+      const currentTimeStamp = Math.floor(Date.now() / 1000);
+      let secondsLeft = unixTimeStamp - currentTimeStamp;
+      let d = Math.floor(secondsLeft / (3600 * 24));
+      let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
+      let m = Math.floor((secondsLeft % 3600) / 60);
+      let s = Math.floor(secondsLeft % 60);
+      setDay(d);
+      setHour(h);
+      setMinute(m);
+      setSecond(s);
+      if (secondsLeft <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+  }
 };
 
 export const formatSource = (source: string) => {
