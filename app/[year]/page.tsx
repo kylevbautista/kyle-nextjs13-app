@@ -38,15 +38,16 @@ const getDataByYear = async (year: any) => {
 
 export default async function AnimeInfoByYear({ params }: any) {
   const regExExpression = /^\d{4}$/;
+  const dateObject = new Date();
+  const currentYear = dateObject.getUTCFullYear();
+
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
-    const dateObject = new Date();
-    const currentYear = dateObject.getUTCFullYear();
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      redirect("/");
+      redirect(`/${currentYear}`);
     }
   } else {
-    redirect("/");
+    redirect(`/${currentYear}`);
   }
   const { data } = (await getDataByYear(params.year)) || {};
   return <PageBase year={params.year} data={data} />;
