@@ -90,10 +90,17 @@ export default function SeasonSelector({
     : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
 
   useEffect(() => {
+    const dateObject = new Date();
+    const currentYear = dateObject.getUTCFullYear();
     const prevYear = parseInt(year) - 1;
     const nextYear = parseInt(year) + 1;
-    router.prefetch(`/${prevYear}`);
-    router.prefetch(`/${nextYear}`);
+
+    if (!(nextYear > currentYear + 1)) {
+      router.prefetch(`/${nextYear}`);
+    }
+    if (!(prevYear < currentYear - 5)) {
+      router.prefetch(`/${prevYear}`);
+    }
   }, []);
 
   return (
