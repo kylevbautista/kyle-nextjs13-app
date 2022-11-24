@@ -13,6 +13,7 @@ const nextConfig = {
         hostname: "s4.anilist.co",
       },
     ],
+    unoptimized: true,
   },
   async redirects() {
     const dateObject = new Date();
