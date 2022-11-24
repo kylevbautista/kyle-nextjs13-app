@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, Dispatch, SetStateAction } from "react";
+
+import { useState, Dispatch, SetStateAction, useEffect } from "react";
 import { getCurrentSeason, Season, getSeasonFromEnum } from "./helpers";
 
 interface PageProps {
@@ -21,6 +22,24 @@ export default function SeasonSelector({
   setSeason,
 }: PageProps) {
   const router = useRouter();
+
+  // const [loading, setLoading] = useState(false);
+
+  // useEffect(() => {
+  //   const handleStart = (url) => url !== router.asPath && setLoading(true);
+  //   const handleComplete = (url) => url === router.asPath && setLoading(false);
+
+  //   router.events.on("routeChangeStart", handleStart);
+  //   router.events.on("routeChangeComplete", handleComplete);
+  //   router.events.on("routeChangeError", handleComplete);
+
+  //   return () => {
+  //     router.events.off("routeChangeStart", handleStart);
+  //     router.events.off("routeChangeComplete", handleComplete);
+  //     router.events.off("routeChangeError", handleComplete);
+  //   };
+  // });
+  // console.log("asdfa", router);
 
   const displaySeasonText = {
     0: {

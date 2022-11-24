@@ -1,7 +1,6 @@
 import PageBase from "../../components/year/PageBase";
 import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 // import { setTimeout } from "timers/promises";
 
 /**
@@ -51,11 +50,7 @@ export default async function AnimeInfoByYear({ params }: any) {
     redirect(`/${currentYear}`);
   }
   const { data } = (await getDataByYear(params.year)) || {};
-  return (
-    <Suspense fallback={<p className="text-white">wtf......</p>}>
-      <PageBase year={params.year} data={data} />
-    </Suspense>
-  );
+  return <PageBase year={params.year} data={data} />;
 }
 
 /**
