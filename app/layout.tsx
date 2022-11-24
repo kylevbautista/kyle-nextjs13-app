@@ -13,7 +13,7 @@ export default function RootLayout({
       <body className="grid grid-rows-[auto_1fr_auto] min-h-screen bg-[rgb(18,18,18)]">
         <nav
           id="main-nav"
-          className="flex justify-between bg-[rgb(38,38,38)] text-white mb-2"
+          className="flex justify-between bg-[rgb(38,38,38)] text-white mb-2 sticky top-0 z-[1]"
         >
           <div className="flex justify-items-center">
             <div className="inline-block mx-4 my-2 hover:bg-sky-700">
