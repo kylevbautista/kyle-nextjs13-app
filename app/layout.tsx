@@ -9,7 +9,9 @@ export default function RootLayout({
 }) {
   return (
     <html>
-      <head></head>
+      <head>
+        <meta name="viewport" content="initial-scale=1.0, width=device-width" />
+      </head>
       <body className="grid grid-rows-[auto_1fr_auto] min-h-screen bg-[rgb(18,18,18)]">
         <nav
           id="main-nav"
