@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import { Season, getSeasonFromEnum } from "./helpers";
 
 interface PageProps {
@@ -88,6 +88,13 @@ export default function SeasonSelector({
   const byCountDownStyles = !byPopularity
     ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
     : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
+
+  useEffect(() => {
+    const prevYear = parseInt(year) - 1;
+    const nextYear = parseInt(year) + 1;
+    router.prefetch(`/${prevYear}`);
+    router.prefetch(`/${nextYear}`);
+  }, []);
 
   return (
     <div className="text-white flex flex-wrap justify-center items-end gap-5">
