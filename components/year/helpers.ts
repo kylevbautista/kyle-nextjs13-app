@@ -89,7 +89,7 @@ export const getInitialTimes = (seconds: any) => {
   }
 };
 export const getInitialTimesFromTimeStamp = (unixTimeStamp: any = 0) => {
-  if (unixTimeStamp) {
+  if (unixTimeStamp && unixTimeStamp > Math.floor(Date.now() / 1000)) {
     const currentTimeStamp = Math.floor(Date.now() / 1000);
     let secondsLeft = unixTimeStamp - currentTimeStamp;
     let d = Math.floor(secondsLeft / (3600 * 24));
