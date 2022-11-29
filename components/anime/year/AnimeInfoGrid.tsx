@@ -240,13 +240,19 @@ export default function AnimeInfoGrid({
           >
             {description ? (
               <div className="text-xs">
-                <p
-                  className="leading-5"
-                  dangerouslySetInnerHTML={{ __html: description }}
-                ></p>
+                {hydrated ? (
+                  <p
+                    className="leading-5"
+                    dangerouslySetInnerHTML={{ __html: description }}
+                  ></p>
+                ) : (
+                  <p className="leading-5">{description}</p>
+                )}
               </div>
             ) : (
-              <div>No synopsis has been added to this title.</div>
+              <div className="text-xs">
+                No synopsis has been added to this title.
+              </div>
             )}
           </div>
         </div>

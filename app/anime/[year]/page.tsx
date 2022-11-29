@@ -7,33 +7,33 @@ import { redirect } from "next/navigation";
  * Have to use native fetch api to make graphql post request
  * @returns data
  */
-const getDataByYear = async (year: any) => {
-  // await setTimeout(1000);
-  const parsedYear = parseInt(year);
-  try {
-    const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
-      next: { revalidate: 30 },
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: allCurrentAnimeQueryFetch,
-        variables: {
-          year: parsedYear,
-        },
-      }),
-    });
-    const data = await res.json();
-    // console.log(
-    //   `getDataByYear ${parsedYear}`,
-    //   res.headers.get("x-ratelimit-remaining")
-    // );
-    return data;
-  } catch (err) {
-    console.log(err);
-  }
-};
+// const getDataByYear = async (year: any) => {
+//   // await setTimeout(1000);
+//   const parsedYear = parseInt(year);
+//   try {
+//     const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
+//       next: { revalidate: 30 },
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({
+//         query: allCurrentAnimeQueryFetch,
+//         variables: {
+//           year: parsedYear,
+//         },
+//       }),
+//     });
+//     const data = await res.json();
+//     // console.log(
+//     //   `getDataByYear ${parsedYear}`,
+//     //   res.headers.get("x-ratelimit-remaining")
+//     // );
+//     return data;
+//   } catch (err) {
+//     console.log(err);
+//   }
+// };
 
 export default async function AnimeInfoByYear({ params }: any) {
   const regExExpression = /^\d{4}$/;
@@ -48,8 +48,9 @@ export default async function AnimeInfoByYear({ params }: any) {
   } else {
     redirect(`/anime/${currentYear}`);
   }
-  const { data } = (await getDataByYear(params.year)) || {};
-  return <PageBase year={params.year} data={data} />;
+  // const { data } = (await getDataByYear(params.year)) || {};
+  // return <PageBase year={params.year} data={data} />;
+  return <div></div>;
 }
 
 /**

@@ -20,6 +20,22 @@ export const getSeasonFromEnum = (season: Season) => {
   }
 };
 
+export const getSeasonFromParams = (season: string) => {
+  if (season === "winter") {
+    return Season.WINTER;
+  }
+  if (season === "spring") {
+    return Season.SPRING;
+  }
+  if (season === "summer") {
+    return Season.SUMMER;
+  }
+  if (season === "fall") {
+    return Season.FALL;
+  }
+  return Season.WINTER;
+};
+
 export const unixTimeStampToDate = (unixTimeStamp: number) => {
   const javaScriptTimeStamp: number = unixTimeStamp * 1000;
   const dateObject = new Date(javaScriptTimeStamp);
@@ -75,6 +91,27 @@ export const getCurrentSeason = (date: any = null): Season => {
     return Season.FALL;
   }
   return Season.WINTER;
+};
+export const getCurrentSeasonPath = (date: any = null): string => {
+  let month = date;
+  if (!date) {
+    const dateObject = new Date();
+    month = dateObject.getUTCMonth();
+  }
+
+  if (month <= 1 || month === 11) {
+    return "winter";
+  }
+  if (month >= 2 && month <= 4) {
+    return "spring";
+  }
+  if (month >= 5 && month <= 7) {
+    return "summer";
+  }
+  if (month >= 8 && month <= 10) {
+    return "fall";
+  }
+  return "winter";
 };
 
 export const getInitialTimes = (seconds: any) => {

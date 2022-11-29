@@ -7,11 +7,13 @@ import {
   compareFnCountDown,
   getInitialTimes,
   getCurrentSeason,
+  getSeasonFromParams,
 } from "./helpers";
 
 interface PageBaseProps {
   data?: any;
   year?: any;
+  params?: any;
   children?: ReactNode;
 }
 
@@ -25,10 +27,17 @@ enum Season {
   FALL,
 }
 
-export default function PageBase({ data, year, children }: PageBaseProps) {
+export default function PageBase({
+  data,
+  year,
+  params,
+  children,
+}: PageBaseProps) {
   const [byCount, setByCount] = useState(true);
   const [byPopularity, setByPopularity] = useState(false);
-  const [season, setSeason] = useState<Season>(getCurrentSeason());
+  const [season, setSeason] = useState<Season>(
+    getSeasonFromParams(params.season)
+  );
 
   const {
     winter,
