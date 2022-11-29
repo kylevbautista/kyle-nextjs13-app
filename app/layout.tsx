@@ -24,7 +24,7 @@ export default function RootLayout({
           className="flex justify-between bg-[rgb(38,38,38)] text-white mb-2 sticky top-0 z-[1]"
         >
           <div className="flex justify-items-center">
-            <div className="inline-block mx-4 my-2 hover:bg-sky-700">Kyle</div>
+            <div className="inline-block mx-4 my-2 cursor-default">Kyle</div>
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
             </Link>
