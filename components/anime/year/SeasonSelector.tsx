@@ -48,7 +48,7 @@ export default function SeasonSelector({
     if (parseInt(values[0]) === Season.WINTER) {
       if (event.currentTarget.id === "season-back") {
         const prevYear = parseInt(year) - 1;
-        router.push(`/${prevYear}`);
+        router.push(`/anime/${prevYear}`);
       }
       if (event.currentTarget.id === "season-forward") {
         setSeason(Season.SPRING);
@@ -76,7 +76,7 @@ export default function SeasonSelector({
       }
       if (event.currentTarget.id === "season-forward") {
         const nextYear = parseInt(year) + 1;
-        router.push(`/${nextYear}`);
+        router.push(`/anime/${nextYear}`);
       }
     }
   };
@@ -96,10 +96,10 @@ export default function SeasonSelector({
     const nextYear = parseInt(year) + 1;
 
     if (!(nextYear > currentYear + 1)) {
-      router.prefetch(`/${nextYear}`);
+      router.prefetch(`/anime/${nextYear}`);
     }
     if (!(prevYear < currentYear - 5)) {
-      router.prefetch(`/${prevYear}`);
+      router.prefetch(`/anime/${prevYear}`);
     }
   }, []);
 

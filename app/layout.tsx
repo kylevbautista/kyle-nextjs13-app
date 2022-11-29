@@ -7,6 +7,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const getCurrentYear = () => {
+    const dateObject = new Date();
+    const currentYear = dateObject.getUTCFullYear();
+    return currentYear;
+  };
   return (
     <html>
       <head>
@@ -28,7 +33,10 @@ export default function RootLayout({
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
             </Link>
-            <Link href="/anime" className="mx-4 my-2 hover:bg-sky-700">
+            <Link
+              href={`/anime/${getCurrentYear()}`}
+              className="mx-4 my-2 hover:bg-sky-700"
+            >
               カイル
             </Link>
           </div>

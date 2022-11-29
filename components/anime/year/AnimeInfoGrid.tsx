@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useContext } from "react";
-import { HydrationContext } from "../common/HydrationProvider";
+import { HydrationContext } from "../../common/HydrationProvider";
 import {
   getStudios,
   unixTimeStampToDate,
