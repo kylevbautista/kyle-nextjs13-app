@@ -1,5 +1,5 @@
-import PageBase from "../../components/year/PageBase";
-import allCurrentAnimeQueryFetch from "../../graphQL/queries/allCurrentAnimeQueryFetch";
+import PageBase from "../../../components/anime/year/PageBase";
+import allCurrentAnimeQueryFetch from "../../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
 
 /**
@@ -43,10 +43,10 @@ export default async function AnimeInfoByYear({ params }: any) {
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      redirect(`/${currentYear}`);
+      redirect(`/anime/${currentYear}`);
     }
   } else {
-    redirect(`/${currentYear}`);
+    redirect(`/anime/${currentYear}`);
   }
   const { data } = (await getDataByYear(params.year)) || {};
   return <PageBase year={params.year} data={data} />;

@@ -1,4 +1,4 @@
-import PageBase from "../components/home/PageBase";
+import PageBase from "../../components/home/PageBase";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest

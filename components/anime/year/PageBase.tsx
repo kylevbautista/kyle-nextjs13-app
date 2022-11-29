@@ -1,6 +1,6 @@
 "use client";
 import React, { ReactNode, useState } from "react";
-import Grid from "../common/Grid";
+import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import SeasonSelector from "./SeasonSelector";
 import {

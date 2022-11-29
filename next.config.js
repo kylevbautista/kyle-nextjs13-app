@@ -21,7 +21,7 @@ const nextConfig = {
     return [
       {
         source: "/anime",
-        destination: `/${year}`,
+        destination: `/anime/${year}`,
         permanent: false,
       },
     ];
