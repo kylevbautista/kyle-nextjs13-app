@@ -11,7 +11,7 @@ const getDataByYear = async (year: any) => {
   // await setTimeout(1000);
   const parsedYear = parseInt(year);
   try {
-    const res = await fetch("https://graphql.anilist.co", {
+    const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
       next: { revalidate: 30 },
       method: "POST",
       headers: {

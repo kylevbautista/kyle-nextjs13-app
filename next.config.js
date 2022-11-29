@@ -20,7 +20,7 @@ const nextConfig = {
     const year = dateObject.getUTCFullYear();
     return [
       {
-        source: "/",
+        source: "/anime",
         destination: `/${year}`,
         permanent: false,
       },
