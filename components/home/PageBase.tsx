@@ -48,6 +48,7 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center 
           min-w-full
+          opacity-0
         "
           data-observe
         >
@@ -69,6 +70,7 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center 
           min-w-full
+          opacity-0
         "
           data-observe
         >
@@ -90,6 +92,7 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center 
           min-w-full
+          opacity-0
         "
           data-observe
         >
