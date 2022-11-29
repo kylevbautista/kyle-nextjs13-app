@@ -31,7 +31,7 @@ export default function RootLayout({
               Home
             </Link>
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
-              Search
+              Shadow
             </Link>
           </div>
           <div className="flex justify-items-center">

@@ -61,7 +61,8 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center
           min-h-screen 
-          hiddenTest"
+          hiddenTest
+          duration-[2000ms]"
         data-observe
       >
         <p className="text-9xl">atomic</p>
