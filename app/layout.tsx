@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getCurrentSeasonPath } from "../components/anime/year/helpers";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -34,7 +35,7 @@ export default function RootLayout({
               Home
             </Link>
             <Link
-              href={`/anime/${getCurrentYear()}`}
+              href={`/anime/${getCurrentYear()}/${getCurrentSeasonPath()}`}
               className="mx-4 my-2 hover:bg-sky-700"
             >
               カイル

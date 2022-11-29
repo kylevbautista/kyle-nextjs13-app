@@ -48,35 +48,41 @@ export default function SeasonSelector({
     if (parseInt(values[0]) === Season.WINTER) {
       if (event.currentTarget.id === "season-back") {
         const prevYear = parseInt(year) - 1;
-        router.push(`/anime/${prevYear}`);
+        router.push(`/anime/${prevYear}/fall`);
       }
       if (event.currentTarget.id === "season-forward") {
-        setSeason(Season.SPRING);
+        // setSeason(Season.SPRING);
+        router.push(`/anime/${year}/spring`);
       }
     }
     if (parseInt(values[0]) === Season.SPRING) {
       if (event.currentTarget.id === "season-back") {
-        setSeason(Season.WINTER);
+        // setSeason(Season.WINTER);
+        router.push(`/anime/${year}/winter`);
       }
       if (event.currentTarget.id === "season-forward") {
-        setSeason(Season.SUMMER);
+        // setSeason(Season.SUMMER);
+        router.push(`/anime/${year}/summer`);
       }
     }
     if (parseInt(values[0]) === Season.SUMMER) {
       if (event.currentTarget.id === "season-back") {
-        setSeason(Season.SPRING);
+        // setSeason(Season.SPRING);
+        router.push(`/anime/${year}/spring`);
       }
       if (event.currentTarget.id === "season-forward") {
-        setSeason(Season.FALL);
+        // setSeason(Season.FALL);
+        router.push(`/anime/${year}/fall`);
       }
     }
     if (parseInt(values[0]) === Season.FALL) {
       if (event.currentTarget.id === "season-back") {
-        setSeason(Season.SUMMER);
+        // setSeason(Season.SUMMER);
+        router.push(`/anime/${year}/summer`);
       }
       if (event.currentTarget.id === "season-forward") {
         const nextYear = parseInt(year) + 1;
-        router.push(`/anime/${nextYear}`);
+        router.push(`/anime/${nextYear}/winter`);
       }
     }
   };
@@ -96,11 +102,15 @@ export default function SeasonSelector({
     const nextYear = parseInt(year) + 1;
 
     if (!(nextYear > currentYear + 1)) {
-      router.prefetch(`/anime/${nextYear}`);
+      router.prefetch(`/anime/${nextYear}/winter`);
     }
     if (!(prevYear < currentYear - 5)) {
-      router.prefetch(`/anime/${prevYear}`);
+      router.prefetch(`/anime/${prevYear}/fall`);
     }
+    router.prefetch(`/anime/${year}/winter`);
+    router.prefetch(`/anime/${year}/spring`);
+    router.prefetch(`/anime/${year}/summer`);
+    router.prefetch(`/anime/${year}/fall`);
   }, []);
 
   return (
