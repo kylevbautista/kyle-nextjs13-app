@@ -30,7 +30,7 @@ export default function RootLayout({
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
             </Link>
-            <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
+            <Link href="/anime" className="mx-4 my-2 hover:bg-sky-700">
               Shadow
             </Link>
           </div>

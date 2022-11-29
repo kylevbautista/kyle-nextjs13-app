@@ -193,7 +193,6 @@ export default function PageBase({ data, year, children }: PageBaseProps) {
               )}
             />
           ))}
-        {/* <AnimeInfoGrid key={1} id={1} info={{}} /> */}
       </Grid>
     </div>
   );

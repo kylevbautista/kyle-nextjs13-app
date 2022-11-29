@@ -9,10 +9,9 @@ export default function PageBase({ children }: PageBaseProps) {
     const observer = new IntersectionObserver((elements) => {
       elements.forEach((el) => {
         if (el.isIntersecting) {
-          console.log("Kylelog: ", el.target.classList);
-          el.target.classList.add("showTest");
+          el.target.classList.add("animate-slideInFromLeft");
         } else {
-          el.target.classList.remove("showTest");
+          el.target.classList.remove("animate-slideInFromLeft");
         }
       });
     });
@@ -31,6 +30,7 @@ export default function PageBase({ children }: PageBaseProps) {
         items-center 
         sm:p-4
         text-white
+        transition-all
       "
     >
       <div
@@ -39,10 +39,20 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center
           min-h-screen 
-          hiddenTest"
-        data-observe
+          min-w-full
+        "
       >
-        <p className="text-9xl">I</p>
+        <div
+          className=" 
+          flex 
+          justify-center 
+          items-center 
+          min-w-full
+        "
+          data-observe
+        >
+          <p className="text-9xl">I</p>
+        </div>
       </div>
       <div
         className="
@@ -50,10 +60,20 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center
           min-h-screen 
-          hiddenTest"
-        data-observe
+          min-w-full
+        "
       >
-        <p className="text-9xl">am</p>
+        <div
+          className=" 
+          flex 
+          justify-center 
+          items-center 
+          min-w-full
+        "
+          data-observe
+        >
+          <p className="text-9xl">am</p>
+        </div>
       </div>
       <div
         className="
@@ -61,11 +81,20 @@ export default function PageBase({ children }: PageBaseProps) {
           justify-center 
           items-center
           min-h-screen 
-          hiddenTest
-          duration-[2000ms]"
-        data-observe
+          min-w-full
+        "
       >
-        <p className="text-9xl">atomic</p>
+        <div
+          className=" 
+          flex 
+          justify-center 
+          items-center 
+          min-w-full
+        "
+          data-observe
+        >
+          <p className="text-9xl">atomic</p>
+        </div>
       </div>
     </div>
   );
