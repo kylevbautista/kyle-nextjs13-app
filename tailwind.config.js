@@ -20,6 +20,23 @@ module.exports = {
         desktop: "1280px",
         // => @media (min-width: 1280px) { ... }
       },
+      animation: {
+        slideInFromLeft: "slideInFromLeft 1s ease-in forwards",
+      },
+      keyframes: {
+        slideInFromLeft: {
+          "0%": {
+            opacity: 0,
+            filter: "blur(5px)",
+            transform: "translateX(-50%)",
+          },
+          "100%": {
+            opacity: 1,
+            filter: "blur(0px)",
+            transform: "translateX(0)",
+          },
+        },
+      },
     },
   },
   plugins: [require("@tailwindcss/line-clamp")],

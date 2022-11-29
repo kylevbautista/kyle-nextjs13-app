@@ -11,6 +11,12 @@ export default function RootLayout({
     <html>
       <head>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
+        <link
+          rel="icon"
+          type="image/webp"
+          sizes="200x141"
+          href="/rimuru.png"
+        ></link>
       </head>
       <body className="grid grid-rows-[auto_1fr_auto] min-h-screen bg-[rgb(18,18,18)]">
         <nav
@@ -24,8 +30,8 @@ export default function RootLayout({
             <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
               Home
             </Link>
-            <Link href="/" className="mx-4 my-2 hover:bg-sky-700">
-              Search
+            <Link href="/anime" className="mx-4 my-2 hover:bg-sky-700">
+              Shadow
             </Link>
           </div>
           <div className="flex justify-items-center">
