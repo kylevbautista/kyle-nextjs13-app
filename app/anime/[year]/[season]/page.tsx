@@ -1,15 +1,22 @@
 import PageBase from "../../../../components/anime/year/PageBase";
 import allCurrentAnimeQueryFetch from "../../../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
 
+const sleep = (ms: number) => {
+  // console.log("sleeping...");
+  return new Promise((r) => setTimeout(r, ms));
+};
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
  * Have to use native fetch api to make graphql post request
  * @returns data
  */
 const getDataByYear = async (year: any) => {
-  // await setTimeout(1000);
   const parsedYear = parseInt(year);
+  // for (let i = 0; i < 3; i++) {
+  // console.log("attempt: ", i + 1);
   try {
     const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
       next: { revalidate: 60 },
@@ -24,15 +31,29 @@ const getDataByYear = async (year: any) => {
         },
       }),
     });
-    const data = await res.json();
     // console.log(
     //   `getDataByYear ${parsedYear}`,
     //   res.headers.get("x-ratelimit-remaining")
     // );
+    // console.log("status: ", res.status);
+    if (res.status !== 200) {
+      // console.log("res: ", res);
+      // console.log("headers: ", res.headers);
+      return {};
+    }
+    const limitRemaining = Number(res.headers.get("x-ratelimit-remaining"));
+    // await sleep(500);
+    // console.log("limitRemaining: ", limitRemaining);
+    if (limitRemaining < 20) {
+      await sleep(1500);
+    }
+
+    const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
   }
+  // }
 };
 
 export default async function AnimeInfoByYear({ params }: any) {
@@ -43,12 +64,18 @@ export default async function AnimeInfoByYear({ params }: any) {
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      redirect(`/anime/${currentYear}`);
+      redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
     }
   } else {
-    redirect(`/anime/${currentYear}`);
+    redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
   }
+
   const { data } = (await getDataByYear(params.year)) || {};
+  // return (
+  //   <Suspense fallback={<div>Loading...season...</div>}>
+  //     <PageBase year={params.year} params={params} data={data} />
+  //   </Suspense>
+  // );
   return <PageBase year={params.year} params={params} data={data} />;
 }
 
