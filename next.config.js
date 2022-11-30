@@ -4,6 +4,15 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     appDir: true,
+    /**
+     * To stop rate limiting, I am forcing nextjs
+     * to ssg on 1 thread to that there is no parellel
+     * ssg builds to avoid api throttling during build.
+     *
+     * If I had unlimited access to api, I would revert the below code
+     */
+    workerThreads: false,
+    cpus: 1,
   },
   // reactStrictMode: true,
   images: {

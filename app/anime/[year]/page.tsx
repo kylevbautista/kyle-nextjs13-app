@@ -1,6 +1,7 @@
-import PageBase from "../../../components/anime/year/PageBase";
-import allCurrentAnimeQueryFetch from "../../../graphQL/queries/allCurrentAnimeQueryFetch";
+// import PageBase from "../../../components/anime/year/PageBase";
+// import allCurrentAnimeQueryFetch from "../../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
+import { getCurrentSeasonPath } from "../../../components/anime/year/helpers";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -43,14 +44,14 @@ export default async function AnimeInfoByYear({ params }: any) {
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      redirect(`/anime/${currentYear}`);
+      redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
     }
   } else {
-    redirect(`/anime/${currentYear}`);
+    redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
   }
   // const { data } = (await getDataByYear(params.year)) || {};
   // return <PageBase year={params.year} data={data} />;
-  return <div></div>;
+  return null;
 }
 
 /**
@@ -60,15 +61,15 @@ export default async function AnimeInfoByYear({ params }: any) {
  * passed, any new dyanmic routes don't get cached.
  *
  */
-export async function generateStaticParams() {
-  const dateObject = new Date();
-  const year = dateObject.getUTCFullYear();
-  const parsedYear = year.toString();
-  let paths = [];
+// export async function generateStaticParams() {
+//   const dateObject = new Date();
+//   const year = dateObject.getUTCFullYear();
+//   const parsedYear = year.toString();
+//   let paths = [];
 
-  for (let i = year - 5; i <= year + 1; i++) {
-    paths.push({ year: i.toString() });
-  }
+//   for (let i = year - 5; i <= year + 1; i++) {
+//     paths.push({ year: i.toString() });
+//   }
 
-  return paths;
-}
+//   return paths;
+// }
