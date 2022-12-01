@@ -11,6 +11,10 @@ export default function RootLayout({
   const getCurrentYear = () => {
     const dateObject = new Date();
     const currentYear = dateObject.getUTCFullYear();
+    const currentMonth = dateObject.getUTCMonth();
+    if (currentMonth === 11) {
+      return currentYear + 1;
+    }
     return currentYear;
   };
   return (

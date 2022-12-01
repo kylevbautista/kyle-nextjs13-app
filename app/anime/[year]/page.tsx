@@ -39,14 +39,21 @@ import { getCurrentSeasonPath } from "../../../components/anime/year/helpers";
 export default async function AnimeInfoByYear({ params }: any) {
   const regExExpression = /^\d{4}$/;
   const dateObject = new Date();
-  const currentYear = dateObject.getUTCFullYear();
+  let currentYear = dateObject.getUTCFullYear();
+  const currentMonth = dateObject.getUTCMonth();
 
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
+      if (currentMonth === 11) {
+        currentYear = currentYear + 1;
+      }
       redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
     }
   } else {
+    if (currentMonth === 11) {
+      currentYear = currentYear + 1;
+    }
     redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
   }
   // const { data } = (await getDataByYear(params.year)) || {};
