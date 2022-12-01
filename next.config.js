@@ -26,7 +26,11 @@ const nextConfig = {
   },
   async redirects() {
     const dateObject = new Date();
-    const year = dateObject.getUTCFullYear();
+    let year = dateObject.getUTCFullYear();
+    const currentMonth = dateObject.getUTCMonth();
+    if (currentMonth === 11) {
+      year = year + 1;
+    }
 
     const getCurrentSeasonPath = (date = null) => {
       let month = date;
