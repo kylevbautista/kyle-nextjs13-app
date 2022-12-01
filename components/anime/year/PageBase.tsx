@@ -1,8 +1,9 @@
 "use client";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useContext } from "react";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import SeasonSelector from "./SeasonSelector";
+import { HeaderContext } from "../HeaderProvider";
 import {
   compareFnCountDown,
   getInitialTimes,
@@ -33,11 +34,13 @@ export default function PageBase({
   params,
   children,
 }: PageBaseProps) {
-  const [byCount, setByCount] = useState(true);
-  const [byPopularity, setByPopularity] = useState(false);
+  const header = useContext(HeaderContext);
+  const { byCount, byPopularity, setByCount, setByPopularity } = header;
   const [season, setSeason] = useState<Season>(
     getSeasonFromParams(params.season)
   );
+  header.setHeaderYear(year);
+  header.setHeaderSeason(getSeasonFromParams(params.season));
 
   const {
     winter,
@@ -75,6 +78,10 @@ export default function PageBase({
     }
   };
 
+  const selectorDiv = !header.headerYear
+    ? "w-full mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
+    : "invisible";
+
   return (
     <div
       id="container"
@@ -87,23 +94,24 @@ export default function PageBase({
         text-white
       "
     >
-      <div className="w-full mb-4 flex flex-wrap justify-center laptop:justify-between items-center">
+      <div className={selectorDiv}>
         <SeasonSelector
           byPopularity={byPopularity}
           year={year}
           season={season}
-          setByCount={setByCount}
-          setByPopularity={setByPopularity}
-          setSeason={setSeason}
+          contextFound={header.headerYear}
         />
-        <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
-          <p className="text-bold font-bold">
-            Sorted: {byCount ? "By Countdown" : "By Popularity"}
-          </p>
-          <p className="text-bold font-bold">Season: {getSeason(season)}</p>
-          {/* <p className="text-bold font-bold">Year: {year}</p> */}
-        </div>
-        <div className="border-b border-[rgb(38,38,38)] w-full"></div>
+        {!header.headerYear && (
+          <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
+            <p className="text-bold font-bold">
+              Sorted: {byCount ? "By Countdown" : "By Popularity"}
+            </p>
+            <p className="text-bold font-bold">Season: {getSeason(season)}</p>
+          </div>
+        )}
+        {!header.headerYear && (
+          <div className="border-b border-[rgb(38,38,38)] w-full"></div>
+        )}
       </div>
       <Grid>
         {byCount &&

@@ -8,18 +8,14 @@ interface PageProps {
   byPopularity: any;
   year: any;
   season: Season;
-  setByCount: Dispatch<SetStateAction<any>>;
-  setByPopularity: Dispatch<SetStateAction<any>>;
-  setSeason: Dispatch<SetStateAction<Season>>;
+  contextFound: any;
 }
 
 export default function SeasonSelector({
   byPopularity,
   year,
   season,
-  setByCount,
-  setByPopularity,
-  setSeason,
+  contextFound,
 }: PageProps) {
   const router = useRouter();
 
@@ -42,50 +38,7 @@ export default function SeasonSelector({
     },
   };
 
-  const onClickHandler = (event: any) => {
-    let values = event.currentTarget?.value?.split(" ");
-
-    if (parseInt(values[0]) === Season.WINTER) {
-      if (event.currentTarget.id === "season-back") {
-        const prevYear = parseInt(year) - 1;
-        router.push(`/anime/${prevYear}/fall`);
-      }
-      if (event.currentTarget.id === "season-forward") {
-        // setSeason(Season.SPRING);
-        router.push(`/anime/${year}/spring`);
-      }
-    }
-    if (parseInt(values[0]) === Season.SPRING) {
-      if (event.currentTarget.id === "season-back") {
-        // setSeason(Season.WINTER);
-        router.push(`/anime/${year}/winter`);
-      }
-      if (event.currentTarget.id === "season-forward") {
-        // setSeason(Season.SUMMER);
-        router.push(`/anime/${year}/summer`);
-      }
-    }
-    if (parseInt(values[0]) === Season.SUMMER) {
-      if (event.currentTarget.id === "season-back") {
-        // setSeason(Season.SPRING);
-        router.push(`/anime/${year}/spring`);
-      }
-      if (event.currentTarget.id === "season-forward") {
-        // setSeason(Season.FALL);
-        router.push(`/anime/${year}/fall`);
-      }
-    }
-    if (parseInt(values[0]) === Season.FALL) {
-      if (event.currentTarget.id === "season-back") {
-        // setSeason(Season.SUMMER);
-        router.push(`/anime/${year}/summer`);
-      }
-      if (event.currentTarget.id === "season-forward") {
-        const nextYear = parseInt(year) + 1;
-        router.push(`/anime/${nextYear}/winter`);
-      }
-    }
-  };
+  const onClickHandler = (event: any) => {};
 
   const byPopularityStyles = byPopularity
     ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
@@ -112,6 +65,10 @@ export default function SeasonSelector({
     router.prefetch(`/anime/${year}/summer`);
     router.prefetch(`/anime/${year}/fall`);
   }, []);
+
+  if (contextFound) {
+    return null;
+  }
 
   return (
     <div className="text-white flex flex-wrap justify-center items-end gap-5">
@@ -169,22 +126,10 @@ export default function SeasonSelector({
         </button>
       </div>
       <div className="flex justify-center items-center gap-5 basis-full sm:flex-initial">
-        <div
-          className={byPopularityStyles}
-          onClick={() => {
-            setByPopularity(true);
-            setByCount(false);
-          }}
-        >
+        <div className={byPopularityStyles} onClick={onClickHandler}>
           <p className="">By Popularity</p>
         </div>
-        <div
-          className={byCountDownStyles}
-          onClick={() => {
-            setByPopularity(false);
-            setByCount(true);
-          }}
-        >
+        <div className={byCountDownStyles} onClick={onClickHandler}>
           <p className="">By Countdown</p>
         </div>
       </div>
