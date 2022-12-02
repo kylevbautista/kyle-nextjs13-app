@@ -1,4 +1,14 @@
 import Image from "next/image";
+import AnimeInfoSkeleton from "../../../components/anime/year/AnimeInfoSkeleton";
+import Grid from "../../../components/common/Grid";
+
+const skeletons = () => {
+  const numOfSkeletons = [];
+  for (let i = 0; i < 10; i++) {
+    numOfSkeletons.push(<AnimeInfoSkeleton key={i} />);
+  }
+  return numOfSkeletons;
+};
 
 export default function Loading() {
   return (
@@ -14,12 +24,7 @@ export default function Loading() {
         transition-all
       "
     >
-      <Image
-        src="/assets/cidkagenou.gif"
-        width={640}
-        height={360}
-        alt="I AM AOTMIC"
-      />
+      <Grid>{skeletons()}</Grid>
     </div>
   );
 }
