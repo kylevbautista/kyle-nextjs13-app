@@ -1,5 +1,12 @@
 "use client";
-import React, { ReactNode, useState, useContext } from "react";
+import React, {
+  ReactNode,
+  useState,
+  useContext,
+  useRef,
+  useEffect,
+} from "react";
+import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import SeasonSelector from "./SeasonSelector";
@@ -9,7 +16,9 @@ import {
   getInitialTimes,
   getCurrentSeason,
   getSeasonFromParams,
+  sliceIntoChunks,
 } from "./helpers";
+import useLazyLoad from "../utils/useLazyLoad";
 
 interface PageBaseProps {
   data?: any;
@@ -63,6 +72,51 @@ export default function PageBase({
   const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
   const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
 
+  // winter
+  const {
+    observedRefCallBack: observedWinterPopRef,
+    data: winterPopData,
+    hasMore: winterPopHasMore,
+  } = useLazyLoad(winterByPopularity);
+  const {
+    observedRefCallBack: observedWinterCountRef,
+    data: winterCountData,
+    hasMore: winterCountHasMore,
+  } = useLazyLoad(winterByCountDown);
+  // spring
+  const {
+    observedRefCallBack: observedSpringPopRef,
+    data: springPopData,
+    hasMore: springPopHasMore,
+  } = useLazyLoad(springByPopularity);
+  const {
+    observedRefCallBack: observedSpringCountRef,
+    data: springCountData,
+    hasMore: springCountHasMore,
+  } = useLazyLoad(springByCountDown);
+  // summer
+  const {
+    observedRefCallBack: observedSummerPopRef,
+    data: summerPopData,
+    hasMore: summerPopHasMore,
+  } = useLazyLoad(summerByPopularity);
+  const {
+    observedRefCallBack: observedSummerCountRef,
+    data: summerCountData,
+    hasMore: summerCountHasMore,
+  } = useLazyLoad(summerByCountDown);
+  // fall
+  const {
+    observedRefCallBack: observedFallPopRef,
+    data: fallPopData,
+    hasMore: fallPopHasMore,
+  } = useLazyLoad(fallByPopularity);
+  const {
+    observedRefCallBack: observedFallCountRef,
+    data: fallCountData,
+    hasMore: fallCountHasMore,
+  } = useLazyLoad(fallByCountDown);
+
   const getSeason = (season: Season) => {
     if (season === Season.WINTER) {
       return "Winter";
@@ -77,6 +131,26 @@ export default function PageBase({
       return "Fall";
     }
   };
+  // season === Season.FALL &&
+  //   console.log("Kylelog length", {
+  //     fallPopData: fallPopData.length,
+  //     fallCountData: fallCountData.length,
+  //   });
+  // season === Season.SUMMER &&
+  //   console.log("Kylelog length", {
+  //     summerPopData: summerPopData.length,
+  //     summerCountData: summerCountData.length,
+  //   });
+  // season === Season.SPRING &&
+  //   console.log("Kylelog length", {
+  //     springPopData: springPopData.length,
+  //     springCountData: springCountData.length,
+  //   });
+  // season === Season.WINTER &&
+  //   console.log("Kylelog length", {
+  //     winterPopData: winterPopData.length,
+  //     winterCountData: winterCountData.length,
+  //   });
 
   const selectorDiv = !header.headerYear
     ? "w-full mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
@@ -116,7 +190,7 @@ export default function PageBase({
       <Grid>
         {byCount &&
           season === Season.WINTER &&
-          winterByCountDown?.map((info: any, index: number) => (
+          winterCountData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -126,9 +200,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byCount && season === Season.WINTER && winterCountHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedWinterCountRef} />
+        )}
         {byPopularity &&
           season === Season.WINTER &&
-          winterByPopularity?.map((info: any, index: number) => (
+          winterPopData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -138,9 +215,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byPopularity && season === Season.WINTER && winterPopHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedWinterPopRef} />
+        )}
         {byCount &&
           season === Season.SPRING &&
-          springByCountDown?.map((info: any, index: number) => (
+          springCountData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -150,9 +230,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byCount && season === Season.SPRING && springCountHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedSpringCountRef} />
+        )}
         {byPopularity &&
           season === Season.SPRING &&
-          springByPopularity?.map((info: any, index: number) => (
+          springPopData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -162,9 +245,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byPopularity && season === Season.SPRING && springPopHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedSpringPopRef} />
+        )}
         {byCount &&
           season === Season.SUMMER &&
-          summerByCountDown?.map((info: any, index: number) => (
+          summerCountData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -174,9 +260,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byCount && season === Season.SUMMER && summerCountHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedSummerCountRef} />
+        )}
         {byPopularity &&
           season === Season.SUMMER &&
-          summerByPopularity?.map((info: any, index: number) => (
+          summerPopData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -186,9 +275,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byPopularity && season === Season.SUMMER && summerPopHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedSummerPopRef} />
+        )}
         {byCount &&
           season === Season.FALL &&
-          fallByCountDown?.map((info: any, index: number) => (
+          fallCountData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -198,9 +290,12 @@ export default function PageBase({
               )}
             />
           ))}
+        {byCount && season === Season.FALL && fallCountHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedFallCountRef} />
+        )}
         {byPopularity &&
           season === Season.FALL &&
-          fallByPopularity?.map((info: any, index: number) => (
+          fallPopData?.map((info: any, index: number) => (
             <AnimeInfoGrid
               key={index}
               id={index}
@@ -210,6 +305,9 @@ export default function PageBase({
               )}
             />
           ))}
+        {byPopularity && season === Season.FALL && fallPopHasMore && (
+          <AnimeInfoSkeleton forwardedRef={observedFallPopRef} />
+        )}
       </Grid>
     </div>
   );

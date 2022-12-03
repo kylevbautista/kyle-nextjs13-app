@@ -1,13 +1,11 @@
 interface Props {
-  info?: any;
-  id?: any;
-  initialTimes?: any;
-  children?: React.ReactNode;
+  forwardedRef?: any;
 }
 
-export default function AnimeInfoSkeleton() {
+export default function AnimeInfoSkeleton({ forwardedRef }: Props) {
   return (
     <div
+      ref={forwardedRef}
       id="anime-card-container"
       className="
       grid 
