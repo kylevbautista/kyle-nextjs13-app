@@ -245,6 +245,15 @@ export const getStudios = (studios: any) => {
   return studio;
 };
 
+export const sliceIntoChunks = (arr: any[], chunkSize: number = 1) => {
+  const res = [];
+  for (let i = 0; i < arr.length; i += chunkSize) {
+    const chunk = arr.slice(i, i + chunkSize);
+    res.push(chunk);
+  }
+  return res;
+};
+
 // -- jinkan --
 // const {
 //   title,
