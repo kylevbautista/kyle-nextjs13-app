@@ -1,6 +1,5 @@
 "use client";
 import { createContext, useState, useEffect, ReactNode } from "react";
-import { getCurrentSeason } from "./year/helpers";
 
 // const initialState = {
 //   headerYear: "2020",

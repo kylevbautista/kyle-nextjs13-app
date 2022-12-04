@@ -92,24 +92,42 @@ export const getCurrentSeason = (date: any = null): Season => {
   }
   return Season.WINTER;
 };
-export const getCurrentSeasonPath = (date: any = null): string => {
+export const getCurrentSeasonPath = (
+  date: any = null,
+  shifted: boolean = false
+): string => {
   let month = date;
   if (!date) {
     const dateObject = new Date();
     month = dateObject.getUTCMonth();
   }
 
-  if (month <= 1 || month === 11) {
-    return "winter";
-  }
-  if (month >= 2 && month <= 4) {
-    return "spring";
-  }
-  if (month >= 5 && month <= 7) {
-    return "summer";
-  }
-  if (month >= 8 && month <= 10) {
-    return "fall";
+  if (shifted) {
+    if (month <= 2) {
+      return "winter";
+    }
+    if (month >= 3 && month <= 5) {
+      return "spring";
+    }
+    if (month >= 6 && month <= 8) {
+      return "summer";
+    }
+    if (month >= 9 && month <= 11) {
+      return "fall";
+    }
+  } else {
+    if (month <= 1 || month === 11) {
+      return "winter";
+    }
+    if (month >= 2 && month <= 4) {
+      return "spring";
+    }
+    if (month >= 5 && month <= 7) {
+      return "summer";
+    }
+    if (month >= 8 && month <= 10) {
+      return "fall";
+    }
   }
   return "winter";
 };
