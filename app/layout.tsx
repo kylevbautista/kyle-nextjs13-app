@@ -8,11 +8,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const getCurrentYear = () => {
+  const getCurrentYear = (shifted: Boolean = false) => {
     const dateObject = new Date();
     const currentYear = dateObject.getUTCFullYear();
     const currentMonth = dateObject.getUTCMonth();
-    if (currentMonth === 11) {
+    if (currentMonth === 11 && !shifted) {
       return currentYear + 1;
     }
     return currentYear;
@@ -39,7 +39,10 @@ export default function RootLayout({
               Home
             </Link>
             <Link
-              href={`/anime/${getCurrentYear()}/${getCurrentSeasonPath()}`}
+              href={`/anime/${getCurrentYear(true)}/${getCurrentSeasonPath(
+                null,
+                true
+              )}`}
               className="mx-4 my-2 hover:bg-sky-700"
             >
               カイル

@@ -65,16 +65,16 @@ export default async function AnimeInfoByYear({ params }: any) {
   if (regExExpression.test(params.year)) {
     const parsedIntYear = parseInt(params.year);
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      if (currentMonth === 11) {
-        currentYear = currentYear + 1;
-      }
-      redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
+      // if (currentMonth === 11) {
+      //   currentYear = currentYear + 1;
+      // }
+      redirect(`/anime/${currentYear}/${getCurrentSeasonPath(null, true)}`);
     }
   } else {
-    if (currentMonth === 11) {
-      currentYear = currentYear + 1;
-    }
-    redirect(`/anime/${currentYear}/${getCurrentSeasonPath()}`);
+    // if (currentMonth === 11) {
+    //   currentYear = currentYear + 1;
+    // }
+    redirect(`/anime/${currentYear}/${getCurrentSeasonPath(null, true)}`);
   }
 
   const { data } = (await getDataByYear(params.year)) || {};

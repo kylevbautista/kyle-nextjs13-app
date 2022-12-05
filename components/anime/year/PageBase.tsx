@@ -153,7 +153,7 @@ export default function PageBase({
   //   });
 
   const selectorDiv = !header.headerYear
-    ? "w-full mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
+    ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
     : "invisible";
 
   return (
