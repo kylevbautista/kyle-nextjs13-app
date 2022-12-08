@@ -2,26 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 @layer utilities {
-  .scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
+  @media (pointer: fine) {
+    .scrollbar {
+      overflow-y: hidden;
+    }
 
-  .scrollbar::-webkit-scrollbar-track {
-    border-radius: 100vh;
-    background: transparent;
-  }
+    .scrollbar:hover {
+      overflow: auto;
+    }
+    .scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
 
-  .scrollbar::-webkit-scrollbar-thumb {
-    background: #e0cbcb;
-    border-radius: 100vh;
-  }
+    .scrollbar::-webkit-scrollbar-track {
+      border-radius: 100vh;
+      background: transparent;
+    }
 
-  .scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #c0a0b9;
-  }
+    .scrollbar::-webkit-scrollbar-thumb {
+      background: #e0cbcb;
+      border-radius: 100vh;
+    }
 
-  .scrollbar::-webkit-scrollbar-button {
-    display: none;
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #c0a0b9;
+    }
+  }
+  @media (pointer: coarse) {
+    .scrollbar {
+      overflow: auto;
+    }
   }
 }
 
