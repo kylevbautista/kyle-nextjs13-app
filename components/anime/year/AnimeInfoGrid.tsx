@@ -238,7 +238,7 @@ export default function AnimeInfoGrid({
           </div>
           <div
             id={`anime-snopsis-${1}`}
-            className="border-b pl-1 overflow-y-hidden border-inherit"
+            className="border-b pl-1 overflow-y-hidden hover:overflow-auto border-inherit"
           >
             {description ? (
               <div className="text-xs">
