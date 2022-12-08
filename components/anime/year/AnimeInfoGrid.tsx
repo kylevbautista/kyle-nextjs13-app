@@ -109,7 +109,7 @@ export default function AnimeInfoGrid({
         <div className="w-full h-full flex justify-center items-center">
           <a
             className="line-clamp-2 leading-4 hover:underline font-bold"
-            href="#"
+            href={`https://myanimelist.net/anime/${idMal}`}
           >
             {title ? title.romaji : "Title"}
           </a>
