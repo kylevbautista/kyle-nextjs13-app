@@ -108,6 +108,8 @@ export default function AnimeInfoGrid({
       >
         <div className="w-full h-full flex justify-center items-center">
           <a
+            target="_blank"
+            rel="noopener noreferrer"
             className="line-clamp-2 leading-4 hover:underline font-bold"
             href={`https://myanimelist.net/anime/${idMal}`}
           >
