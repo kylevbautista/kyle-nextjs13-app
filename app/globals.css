@@ -2,7 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 @layer utilities {
-  .scrollbar {
+  @media (pointer: fine) {
+    .scrollbar {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .scrollbar::-webkit-scrollbar-track {
+      border-radius: 100vh;
+      background: transparent;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb {
+      background: #e0cbcb;
+      border-radius: 100vh;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #c0a0b9;
+    }
+  }
+  /* .scrollbar {
     -webkit-overflow-scrolling: touch;
   }
 
@@ -20,9 +43,9 @@
     border-radius: 100vh;
   }
 
-  .scrollbar::-webkit-scrollbar-thumb:hover:active:focus {
+  .scrollbar::-webkit-scrollbar-thumb:hover {
     background: #c0a0b9;
-  }
+  } */
 }
 
 :root {

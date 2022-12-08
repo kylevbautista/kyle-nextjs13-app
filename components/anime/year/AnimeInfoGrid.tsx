@@ -239,7 +239,7 @@ export default function AnimeInfoGrid({
           <div
             id={`anime-snopsis-${1}`}
             onTouchStart={() => {}}
-            className="scrollbar border-b pl-1 pr-1 overflow-y-hidden hover:overflow-auto active:overflow-auto focus:overflow-auto border-inherit"
+            className="scrollbar border-b pl-1 pr-1 overflow-y-hidden hover:overflow-auto border-inherit"
           >
             {description ? (
               <div className="text-xs">
