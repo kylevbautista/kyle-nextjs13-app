@@ -16,12 +16,8 @@
     border-radius: 100vh;
   }
 
-  .scrollbar::-webkit-scrollbar-thumb:hover {
+  .scrollbar::-webkit-scrollbar-thumb:hover:active:focus {
     background: #c0a0b9;
-  }
-
-  .scrollbar::-webkit-scrollbar-button {
-    display: none;
   }
 }
 
