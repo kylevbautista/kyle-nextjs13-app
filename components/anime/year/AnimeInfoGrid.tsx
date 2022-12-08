@@ -106,14 +106,14 @@ export default function AnimeInfoGrid({
           text-[#95ccff]
           "
       >
-        <div className="w-full h-full flex justify-center items-center">
+        <div className="w-full h-full flex justify-center items-center text-center">
           <a
             target="_blank"
             rel="noopener noreferrer"
-            className="line-clamp-2 leading-4 hover:underline font-bold"
+            className="leading-4 hover:underline font-bold"
             href={`https://myanimelist.net/anime/${idMal}`}
           >
-            {title ? title.romaji : "Title"}
+            <p className="line-clamp-2">{title ? title.romaji : "Title"}</p>
           </a>
         </div>
         <div
@@ -238,7 +238,7 @@ export default function AnimeInfoGrid({
           </div>
           <div
             id={`anime-snopsis-${1}`}
-            className="border-b pl-1 overflow-auto border-inherit"
+            className="scrollbar border-b pl-1 pr-1 overflow-y-hidden hover:overflow-auto border-inherit"
           >
             {description ? (
               <div className="text-xs">
