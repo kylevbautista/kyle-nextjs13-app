@@ -19,7 +19,34 @@
   .scrollbar::-webkit-scrollbar-thumb:hover {
     background: #c0a0b9;
   }
+
+  .scrollbar::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  body::-webkit-scrollbar-track {
+    border-radius: 100vh;
+    background: transparent;
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background: #e0cbcb;
+    border-radius: 100vh;
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background: #c0a0b9;
+  }
+
+  body::-webkit-scrollbar-button {
+    display: none;
+  }
 }
+
 .scrollbar {
   scrollbar-gutter: stable;
 }
