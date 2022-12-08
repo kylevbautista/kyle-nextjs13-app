@@ -265,14 +265,14 @@ export default function AnimeInfoGrid({
         id="anime-links"
         className="h-[32px] flex flex-wrap justify-center items-center gap-2 overflow-auto"
       >
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        {/* <div className="hover:bg-blue-500 rounded-[50%]">
           <a
             target="_blank"
             rel="noopener noreferrer"
             href={`https://myanimelist.net/anime/${idMal}`}
             className="eye"
           ></a>
-        </div>
+        </div> */}
         <div className="hover:bg-blue-500 rounded-[50%]">
           <a
             target="_blank"
