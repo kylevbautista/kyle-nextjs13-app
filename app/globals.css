@@ -4,9 +4,12 @@
 @layer utilities {
   @media (pointer: fine) {
     .scrollbar {
-      -webkit-overflow-scrolling: touch;
+      overflow-y: hidden;
     }
 
+    .scrollbar:hover {
+      overflow: auto;
+    }
     .scrollbar::-webkit-scrollbar {
       width: 6px;
     }
@@ -25,27 +28,11 @@
       background: #c0a0b9;
     }
   }
-  /* .scrollbar {
-    -webkit-overflow-scrolling: touch;
+  @media (pointer: coarse) {
+    .scrollbar {
+      overflow: auto;
+    }
   }
-
-  .scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .scrollbar::-webkit-scrollbar-track {
-    border-radius: 100vh;
-    background: transparent;
-  }
-
-  .scrollbar::-webkit-scrollbar-thumb {
-    background: #e0cbcb;
-    border-radius: 100vh;
-  }
-
-  .scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #c0a0b9;
-  } */
 }
 
 :root {
