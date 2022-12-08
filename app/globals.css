@@ -25,6 +25,10 @@
   }
 }
 
+:root {
+  color-scheme: dark;
+}
+
 .scrollbar {
   scrollbar-gutter: stable;
 }
