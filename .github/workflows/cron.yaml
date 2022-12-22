@@ -4,7 +4,7 @@ on:
     - cron: "*/5 * * * *"
 jobs:
   cron:
-    run-on: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Hit site to refresh cache
         run: |
