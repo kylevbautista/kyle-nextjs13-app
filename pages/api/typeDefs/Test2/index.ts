@@ -4,8 +4,9 @@ export default gql`
   type TestResult {
     id: Int
     url: String
+    input: String
   }
   type Query {
-    test2: TestResult
+    test2(input: String): TestResult
   }
 `;
