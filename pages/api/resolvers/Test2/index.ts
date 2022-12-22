@@ -1,6 +1,6 @@
 const Test2 = {
   Query: {
-    test2: async (parent, args, contextValue) => {
+    test2: async (parent: any, args: any, contextValue: any) => {
       // console.log("Kylelog", contextValue.req.headers);
       try {
         const data = {
