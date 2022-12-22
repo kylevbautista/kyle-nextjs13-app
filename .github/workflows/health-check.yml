@@ -1,4 +1,4 @@
-name: Personal site cron job
+name: Health Check
 on:
   schedule:
     - cron: "*/15 * * * *"
