@@ -1,4 +1,4 @@
-name: Personal site cron job
+name: Refresh Cache
 on:
   schedule:
     - cron: "*/5 * * * *"
