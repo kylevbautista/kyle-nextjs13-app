@@ -15,6 +15,8 @@ export default function PageBase({ children }: PageBaseProps) {
     return () => signIn(provider);
   };
 
+  // Commit 1
+
   if (status === "loading") {
     return (
       <div
