@@ -6,9 +6,43 @@ interface PageBaseProps {
   children?: ReactNode;
 }
 
+const testQuery = `query testing {
+    test2 {
+      id
+      url
+    }
+  }`;
+
+const fetchGraphQLServer = async () => {
+  try {
+    const res = await fetch("api/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: testQuery,
+      }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 export default function PageBase({ children }: PageBaseProps) {
   const { data: session } = useSession();
-  // console.log("kylelog session: ", session);
+
+  const handleClick = async () => {
+    try {
+      const data = await fetchGraphQLServer();
+      console.log("Kylelog data:", data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   return (
     <div
       id="container"
@@ -20,9 +54,23 @@ export default function PageBase({ children }: PageBaseProps) {
         sm:p-4
         text-white
         transition-all
+        gap-7
       "
     >
       <LoginButton></LoginButton>
+      <button
+        className="
+          border
+          p-5
+          bg-[rgb(38,38,38)]
+          hover:bg-sky-700
+          rounded-md
+          w-72
+        "
+        onClick={handleClick}
+      >
+        Cick to send request
+      </button>
     </div>
   );
 }

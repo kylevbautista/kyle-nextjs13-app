@@ -1,4 +1,5 @@
 import PageBase from "../../components/auth/PageBase";
+import { unstable_getServerSession } from "next-auth/next";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -6,6 +7,8 @@ import PageBase from "../../components/auth/PageBase";
  * @returns data
  */
 
-export default function Home() {
+export default async function Auth() {
+  const session = await unstable_getServerSession();
+  // console.log("kylelog serverside session:", session);
   return <PageBase />;
 }
