@@ -9,7 +9,7 @@ interface PageBaseProps {
 export default function PageBase({ children }: PageBaseProps) {
   const { data: session } = useSession();
   // console.log("kylelog session: ", session);
-  // console.log("Kylelog env:", process.env.NODE_ENV);
+  console.log("Kylelog env:", process.env.NODE_ENV);
   return (
     <div
       id="container"
