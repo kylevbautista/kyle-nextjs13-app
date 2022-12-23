@@ -1,5 +1,6 @@
 import { ApolloServer } from "@apollo/server";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
+import { getSession } from "next-auth/react";
 import { GraphQLError } from "graphql";
 
 import resolvers from "./resolvers";
@@ -12,18 +13,23 @@ const server = new ApolloServer({
 
 export default startServerAndCreateNextHandler(server, {
   context: async (req, res) => {
-    // const loggedIn = true;
-    // if (!req.headers["x-api-key"]) {
-    //   throw new GraphQLError("User is not authenticated", {
-    //     extensions: {
-    //       code: "UNAUTHENTICATED",
-    //       http: { status: 401 },
-    //     },
-    //   });
-    // }
+    /**
+     * Checks if user is logged in before any request/query executed
+     * If user not logged in, throw UNAUTHENTICATED error
+     */
+    const session = await getSession({ req });
+    if (!session) {
+      throw new GraphQLError("User is not authenticated", {
+        extensions: {
+          code: "UNAUTHENTICATED",
+          http: { status: 401 },
+        },
+      });
+    }
     return {
       req,
       res,
+      session,
     };
   },
 });
