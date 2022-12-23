@@ -16,6 +16,7 @@ export default function PageBase({ children }: PageBaseProps) {
   };
 
   // Commit 1
+  // Commit 2
 
   if (status === "loading") {
     return (
