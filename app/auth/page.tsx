@@ -1,4 +1,5 @@
 import PageBase from "../../components/auth/PageBase";
+import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import { unstable_getServerSession } from "next-auth/next";
 
 /**
@@ -8,7 +9,7 @@ import { unstable_getServerSession } from "next-auth/next";
  */
 
 export default async function Auth() {
-  const session = await unstable_getServerSession();
+  const session = await unstable_getServerSession(authOptions);
   // console.log("kylelog serverside session:", session);
   return <PageBase />;
 }
