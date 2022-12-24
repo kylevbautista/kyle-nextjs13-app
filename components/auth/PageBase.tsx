@@ -1,17 +1,12 @@
 "use client";
 import React, { ReactNode, useState, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import testQuery from "../../graphql/tags/testQuery.graphql";
+import { print } from "graphql";
 import LoginButton from "./LoginButton";
 interface PageBaseProps {
   children?: ReactNode;
 }
-
-const testQuery = `query testing {
-    test2 {
-      id
-      url
-    }
-  }`;
 
 const fetchGraphQLServer = async () => {
   try {
