@@ -16,7 +16,7 @@ const fetchGraphQLServer = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: testQuery,
+        query: print(testQuery),
       }),
     });
     const data = await res.json();
