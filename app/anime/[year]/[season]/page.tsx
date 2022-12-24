@@ -1,6 +1,6 @@
 import PageBase from "../../../../components/anime/year/PageBase";
-import allCurrentAnimeQueryFetch from "../../../../graphQL/queries/allCurrentAnimeQueryFetch";
-import allCurrentAnimeQueryFetchTag from "../../../../graphQL/queries/allCurrentAnimeQueryFetchTag.graphql";
+import allCurrentAnimeQueryFetch from "../../../../graphql/queries/allCurrentAnimeQueryFetch";
+import allCurrentAnimeQueryFetchTag from "../../../../graphql/queries/allCurrentAnimeQueryFetchTag.graphql";
 import { redirect } from "next/navigation";
 import { print } from "graphql";
 import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
