@@ -1,12 +1,12 @@
 "use client";
-import { graphQLClient } from "../../graphQL/graphqlClient";
-import allCurrentAnimeQuery from "../../graphQL/queries/allCurrentAnimeQuery";
+import { graphQLClient } from "../../graphql/graphqlClient";
+import allCurrentAnimeTag from "../../graphql/queries/allCurrentAnimeTag.graphql";
 
 export default function Button() {
   const onClick = async () => {
     try {
       const { data, errors, extensions, headers, status } =
-        await graphQLClient.rawRequest(allCurrentAnimeQuery);
+        await graphQLClient.rawRequest(allCurrentAnimeTag);
       console.log(data);
       console.log("Kylelog", { headers: headers, status: status });
       console.log("time: ", data.Page.media[0].upcomingEpisode.timeUntilAiring);
