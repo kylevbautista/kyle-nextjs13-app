@@ -2,7 +2,7 @@
 import React, { ReactNode, useState, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import testQuery from "../../graphql/tags/testQuery.graphql";
-import { print } from "graphql";
+import { print as stringifyTag } from "graphql";
 import LoginButton from "./LoginButton";
 interface PageBaseProps {
   children?: ReactNode;
@@ -16,7 +16,7 @@ const fetchGraphQLServer = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: print(testQuery),
+        query: stringifyTag(testQuery),
       }),
     });
     const data = await res.json();
