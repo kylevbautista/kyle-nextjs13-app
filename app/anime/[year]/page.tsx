@@ -1,5 +1,3 @@
-// import PageBase from "../../../components/anime/year/PageBase";
-// import allCurrentAnimeQueryFetch from "../../../graphQL/queries/allCurrentAnimeQueryFetch";
 import { redirect } from "next/navigation";
 import { getCurrentSeasonPath } from "../../../components/anime/year/helpers";
 
@@ -8,33 +6,6 @@ import { getCurrentSeasonPath } from "../../../components/anime/year/helpers";
  * Have to use native fetch api to make graphql post request
  * @returns data
  */
-// const getDataByYear = async (year: any) => {
-//   // await setTimeout(1000);
-//   const parsedYear = parseInt(year);
-//   try {
-//     const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
-//       next: { revalidate: 30 },
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify({
-//         query: allCurrentAnimeQueryFetch,
-//         variables: {
-//           year: parsedYear,
-//         },
-//       }),
-//     });
-//     const data = await res.json();
-//     // console.log(
-//     //   `getDataByYear ${parsedYear}`,
-//     //   res.headers.get("x-ratelimit-remaining")
-//     // );
-//     return data;
-//   } catch (err) {
-//     console.log(err);
-//   }
-// };
 
 export default async function AnimeInfoByYear({ params }: any) {
   const regExExpression = /^\d{4}$/;

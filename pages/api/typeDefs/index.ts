@@ -1,7 +1,7 @@
 import { mergeTypeDefs } from "@graphql-tools/merge";
 
-import Test from "./Test";
-import Test2 from "./Test2";
+import Test from "./Test/index.graphql";
+import Test2 from "./Test2/index.graphql";
 
 const typesArray = [Test, Test2];
 

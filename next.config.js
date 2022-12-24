@@ -25,6 +25,15 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
+  webpack: (config, options) => {
+    config.module.rules.push({
+      test: /\.(graphql|gql)/,
+      exclude: /node_modules/,
+      loader: "graphql-tag/loader",
+    });
+
+    return config;
+  },
   async redirects() {
     const dateObject = new Date();
     let year = dateObject.getUTCFullYear();

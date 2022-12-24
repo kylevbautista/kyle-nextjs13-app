@@ -1,7 +1,7 @@
 import PageBase from "../../../../components/anime/year/PageBase";
-import allCurrentAnimeQueryFetch from "../../../../graphQL/queries/allCurrentAnimeQueryFetch";
+import allCurrentAnimeTag from "../../../../graphql/tags/allCurrentAnimeTag.graphql";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
+import { print } from "graphql";
 import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
 
 const sleep = (ms: number) => {
@@ -25,7 +25,7 @@ const getDataByYear = async (year: any) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: allCurrentAnimeQueryFetch,
+        query: print(allCurrentAnimeTag),
         variables: {
           year: parsedYear,
         },
