@@ -6,6 +6,7 @@ import React, {
   useRef,
   useEffect,
 } from "react";
+import { useRouter } from "next/navigation";
 import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "../../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
@@ -50,6 +51,7 @@ export default function PageBase({
   );
   header.setHeaderYear(year);
   header.setHeaderSeason(getSeasonFromParams(params.season));
+  const router = useRouter();
 
   const {
     winter,
@@ -158,6 +160,20 @@ export default function PageBase({
 
   useEffect(() => {
     console.log("kylelog data", data);
+    const dateObject = new Date();
+    const currentYear = dateObject.getUTCFullYear();
+    const prevYear = parseInt(year) - 1;
+    const nextYear = parseInt(year) + 1;
+    if (!(nextYear > currentYear + 1)) {
+      router.prefetch(`/anime/${nextYear}/winter`);
+    }
+    if (!(prevYear < currentYear - 5)) {
+      router.prefetch(`/anime/${prevYear}/fall`);
+    }
+    router.prefetch(`/anime/${year}/winter`);
+    router.prefetch(`/anime/${year}/spring`);
+    router.prefetch(`/anime/${year}/summer`);
+    router.prefetch(`/anime/${year}/fall`);
   }, []);
 
   return (
