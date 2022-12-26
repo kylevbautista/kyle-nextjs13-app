@@ -1,4 +1,5 @@
-// import { getToken } from "next-auth/jwt";
+import { getToken } from "next-auth/jwt";
+import TestModel from "../../../../mongodb/models/Test/test";
 
 const Test2 = {
   Query: {
@@ -7,9 +8,14 @@ const Test2 = {
       // const req = contextValue.req;
       // const secret = process.env.NEXTAUTH_SECRET;
       // const token = await getToken({ req, secret });
-      // console.log("Kylelog", contextValue.session);
+      // console.log("Kylelog sesh", contextValue.session);
       // console.log("Kylelog jwt: ", token);
       try {
+        // const poop = await TestModel.create([{ name: "uhh" }]);
+        // const poop = await TestModel.find({
+        //   userId: contextValue.session.objectId,
+        // });
+        // console.log("poop", poop);
         const data = {
           id: 2,
           url: "test2",

@@ -1,7 +1,7 @@
 "use client";
-import { useRouter } from "next/navigation";
-
-import { Dispatch, SetStateAction, useEffect } from "react";
+/**
+ * This is a skeleton for HeaderSelector.tsx when context is not found.
+ */
 import { Season, getSeasonFromEnum } from "./helpers";
 
 interface PageProps {
@@ -17,8 +17,6 @@ export default function SeasonSelector({
   season,
   contextFound,
 }: PageProps) {
-  const router = useRouter();
-
   const displaySeasonText = {
     0: {
       from: "December",
@@ -47,24 +45,6 @@ export default function SeasonSelector({
   const byCountDownStyles = !byPopularity
     ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
     : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
-
-  useEffect(() => {
-    const dateObject = new Date();
-    const currentYear = dateObject.getUTCFullYear();
-    const prevYear = parseInt(year) - 1;
-    const nextYear = parseInt(year) + 1;
-
-    if (!(nextYear > currentYear + 1)) {
-      router.prefetch(`/anime/${nextYear}/winter`);
-    }
-    if (!(prevYear < currentYear - 5)) {
-      router.prefetch(`/anime/${prevYear}/fall`);
-    }
-    router.prefetch(`/anime/${year}/winter`);
-    router.prefetch(`/anime/${year}/spring`);
-    router.prefetch(`/anime/${year}/summer`);
-    router.prefetch(`/anime/${year}/fall`);
-  }, []);
 
   if (contextFound) {
     return null;

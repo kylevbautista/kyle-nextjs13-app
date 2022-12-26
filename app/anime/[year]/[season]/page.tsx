@@ -1,5 +1,6 @@
 import PageBase from "../../../../components/anime/year/PageBase";
 import allCurrentAnimeTag from "../../../../graphql/tags/allCurrentAnimeTag.graphql";
+// import { allCurrentAnimeQueryFetchString } from "../../../../graphql/tags/allCurrentAnimeQueryFetchString";
 import { redirect } from "next/navigation";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
@@ -77,12 +78,7 @@ export default async function AnimeInfoByYear({ params }: any) {
     redirect(`/anime/${currentYear}/${getCurrentSeasonPath(null, true)}`);
   }
 
-  const { data } = (await getDataByYear(params.year)) || {};
-  // return (
-  //   <Suspense fallback={<div>Loading...season...</div>}>
-  //     <PageBase year={params.year} params={params} data={data} />
-  //   </Suspense>
-  // );
+  const { data = null } = await getDataByYear(params.year);
   return <PageBase year={params.year} params={params} data={data} />;
 }
 
