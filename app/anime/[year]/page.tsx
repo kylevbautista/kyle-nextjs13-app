@@ -27,8 +27,6 @@ export default async function AnimeInfoByYear({ params }: any) {
     // }
     redirect(`/anime/${currentYear}/${getCurrentSeasonPath(null, true)}`);
   }
-  // const { data } = (await getDataByYear(params.year)) || {};
-  // return <PageBase year={params.year} data={data} />;
   return null;
 }
 
