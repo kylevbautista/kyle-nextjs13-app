@@ -156,6 +156,10 @@ export default function PageBase({
     ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
     : "invisible";
 
+  useEffect(() => {
+    console.log("kylelog data", data);
+  }, []);
+
   return (
     <div
       id="container"
