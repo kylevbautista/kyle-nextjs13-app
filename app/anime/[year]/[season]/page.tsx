@@ -1,5 +1,6 @@
 import PageBase from "../../../../components/anime/year/PageBase";
-import allCurrentAnimeTag from "../../../../graphql/tags/allCurrentAnimeTag.graphql";
+// import allCurrentAnimeTag from "../../../../graphql/tags/allCurrentAnimeTag.graphql";
+import { allCurrentAnimeQueryFetchString } from "../../../../graphql/tags/allCurrentAnimeQueryFetchString";
 import { redirect } from "next/navigation";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
@@ -25,7 +26,7 @@ const getDataByYear = async (year: any) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: stringifyTag(allCurrentAnimeTag),
+        query: allCurrentAnimeQueryFetchString,
         variables: {
           year: parsedYear,
         },
