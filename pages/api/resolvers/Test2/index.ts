@@ -11,11 +11,11 @@ const Test2 = {
       // console.log("Kylelog sesh", contextValue.session);
       // console.log("Kylelog jwt: ", token);
       try {
-        const poop = await TestModel.create([{ name: "uhh" }]);
+        // const poop = await TestModel.create([{ name: "uhh" }]);
         // const poop = await TestModel.find({
         //   userId: contextValue.session.objectId,
         // });
-        console.log("poop", poop);
+        // console.log("poop", poop);
         const data = {
           id: 2,
           url: "test2",
