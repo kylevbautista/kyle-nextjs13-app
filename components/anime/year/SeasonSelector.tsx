@@ -54,16 +54,16 @@ export default function SeasonSelector({
     const prevYear = parseInt(year) - 1;
     const nextYear = parseInt(year) + 1;
 
-    // if (!(nextYear > currentYear + 1)) {
-    //   router.prefetch(`/anime/${nextYear}/winter`);
-    // }
-    // if (!(prevYear < currentYear - 5)) {
-    //   router.prefetch(`/anime/${prevYear}/fall`);
-    // }
-    // router.prefetch(`/anime/${year}/winter`);
-    // router.prefetch(`/anime/${year}/spring`);
-    // router.prefetch(`/anime/${year}/summer`);
-    // router.prefetch(`/anime/${year}/fall`);
+    if (!(nextYear > currentYear + 1)) {
+      router.prefetch(`/anime/${nextYear}/winter`);
+    }
+    if (!(prevYear < currentYear - 5)) {
+      router.prefetch(`/anime/${prevYear}/fall`);
+    }
+    router.prefetch(`/anime/${year}/winter`);
+    router.prefetch(`/anime/${year}/spring`);
+    router.prefetch(`/anime/${year}/summer`);
+    router.prefetch(`/anime/${year}/fall`);
   }, []);
 
   if (contextFound) {
