@@ -48,33 +48,27 @@ export default function HeaderSelector({
           router.push(`/anime/${prevYear}/fall`);
         }
         if (event.currentTarget.id === "season-forward") {
-          // setSeason(Season.SPRING);
           router.push(`/anime/${year}/spring`);
         }
       }
       if (parseInt(values[0]) === Season.SPRING) {
         if (event.currentTarget.id === "season-back") {
-          // setSeason(Season.WINTER);
           router.push(`/anime/${year}/winter`);
         }
         if (event.currentTarget.id === "season-forward") {
-          // setSeason(Season.SUMMER);
           router.push(`/anime/${year}/summer`);
         }
       }
       if (parseInt(values[0]) === Season.SUMMER) {
         if (event.currentTarget.id === "season-back") {
-          // setSeason(Season.SPRING);
           router.push(`/anime/${year}/spring`);
         }
         if (event.currentTarget.id === "season-forward") {
-          // setSeason(Season.FALL);
           router.push(`/anime/${year}/fall`);
         }
       }
       if (parseInt(values[0]) === Season.FALL) {
         if (event.currentTarget.id === "season-back") {
-          // setSeason(Season.SUMMER);
           router.push(`/anime/${year}/summer`);
         }
         if (event.currentTarget.id === "season-forward") {
@@ -92,26 +86,6 @@ export default function HeaderSelector({
   const byCountDownStyles = !byPopularity
     ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
     : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
-
-  // useEffect(() => {
-  //   const dateObject = new Date();
-  //   const currentYear = dateObject.getUTCFullYear();
-  //   const prevYear = parseInt(year) - 1;
-  //   const nextYear = parseInt(year) + 1;
-
-  //   if (year) {
-  //     if (!(nextYear > currentYear + 1)) {
-  //       router.prefetch(`/anime/${nextYear}/winter`);
-  //     }
-  //     if (!(prevYear < currentYear - 5)) {
-  //       router.prefetch(`/anime/${prevYear}/fall`);
-  //     }
-  //     router.prefetch(`/anime/${year}/winter`);
-  //     router.prefetch(`/anime/${year}/spring`);
-  //     router.prefetch(`/anime/${year}/summer`);
-  //     router.prefetch(`/anime/${year}/fall`);
-  //   }
-  // }, []);
 
   return (
     <div className="text-white flex flex-wrap justify-center items-end gap-5">

@@ -49,16 +49,10 @@ export default function RootLayout({
             </Link>
           </div>
           <div className="flex justify-items-center">
-            <Link
-              href={process.env.NODE_ENV === "development" ? "/auth" : "/"}
-              className="mx-4 my-2 hover:bg-sky-700"
-            >
+            <Link href="/auth" className="mx-4 my-2 hover:bg-sky-700">
               Log
             </Link>
-            <Link
-              href={process.env.NODE_ENV === "development" ? "/auth" : "/"}
-              className="mx-4 my-2 hover:bg-sky-700"
-            >
+            <Link href="/auth" className="mx-4 my-2 hover:bg-sky-700">
               In
             </Link>
           </div>
