@@ -1,3 +1,76 @@
+input CoverImage {
+  extraLarge: String
+  large: String
+  medium: String
+  color: String
+}
+input TitleInput {
+  romaji: String
+  english: String
+  native: String
+}
+
+input NodeName {
+  name: String
+}
+
+# type Nodes {
+#   [NodeName]
+# }
+input Studios {
+  nodes: [NodeName]
+}
+
+input StartDate {
+  year: Int
+  month: Int
+  day: Int
+}
+
+input UpcomingEpisode {
+  id: Int
+  episode: Int
+  timeUntilAiring: Int
+  mediaId: Int
+}
+
+input EpisodeAirDate {
+  airingAt: Int
+  timeUntilAiring: Int
+  episode: Int
+}
+
+input UpComingAirDate {
+  episode: [EpisodeAirDate]
+}
+
+input EpisodeFirst {
+  airingAt: Int
+  episode: Int
+}
+
+input FirstEpisode {
+  episode: [EpisodeFirst]
+}
+
+input DataInput {
+  description: String
+  coverImage: CoverImage
+  idMal: Int
+  title: TitleInput
+  studios: Studios
+  startDate: StartDate
+  status: String
+  episodes: Int
+  duration: Int
+  source: String
+  genres: [String]
+  averageScore: Int
+  upcomingEpisode: UpcomingEpisode
+  upComingAirDate: UpComingAirDate
+  firstEpisode: FirstEpisode
+}
+
 type GetAnimeList {
   id: Int
 }
@@ -10,5 +83,5 @@ type Query {
   getUserAnimeList: GetAnimeList
 }
 type Mutation {
-  addToUserAnimeList: AddAnimeList
+  addToUserAnimeList(data: DataInput): AddAnimeList
 }

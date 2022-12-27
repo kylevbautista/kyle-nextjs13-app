@@ -31,10 +31,7 @@ const AnimeList = {
       };
       const update = {
         $addToSet: {
-          following: {
-            idMal: 12345,
-            upComingAirDate: { episode: [{ airingAt: 1237 }] },
-          },
+          following: args?.data,
         },
       };
       const options = { upsert: true, new: true, setDefaultsOnInsert: true };
@@ -58,23 +55,26 @@ const AnimeList = {
             _id: contextValue?.session?.objectId || "63a6ab800a0b4b52bc40b38d",
           },
           {
-            following: { $elemMatch: { idMal: 12345 } },
+            following: { $elemMatch: { idMal: args.data.idMal } },
           }
         );
 
         const inList = users[0]?.following.length ? true : false;
         console.log(users[0].following);
+        console.log("args", args);
 
-        if (!inList) {
+        if (!inList && args?.data) {
           const res = await UserModel.updateOne(query, update, options);
           console.log("res", res);
           if (res?.modifiedCount > 0) {
+            console.log("Successfully Added to List");
             return {
               message: "Successfully Added to List",
             };
           }
         }
 
+        console.log("Already In List");
         return {
           message: "Already In List",
         };

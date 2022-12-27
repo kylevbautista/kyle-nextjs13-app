@@ -10,6 +10,30 @@ import {
 } from "./helpers";
 import Luffy from "/public/assets/Monkey_D_Luffy.png";
 import Image from "next/image";
+import { print as stringifyTag } from "graphql";
+import addToUserAnimeListMutation from "../../../graphql/tags/addToUserAnimeList.graphql";
+
+const addToUserAnimeList = async (info: any) => {
+  try {
+    const res = await fetch("/api/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: stringifyTag(addToUserAnimeListMutation),
+        variables: {
+          data: info,
+        },
+      }),
+    });
+    const { data = null } = await res.json();
+    // console.log(data?.addToUserAnimeList?.message);
+    return data;
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 interface Props {
   info?: any;
@@ -43,6 +67,10 @@ export default function AnimeInfoGrid({
   const [isHydrated, setIsHydrated] = useState<Boolean>(false);
   const hydrated = useContext(HydrationContext);
   let interval: any;
+
+  const saveToAnimeList = (info: any) => {
+    addToUserAnimeList(info);
+  };
 
   const {
     title,
@@ -346,12 +374,13 @@ export default function AnimeInfoGrid({
           ></a>
         </div>
         <div className="hover:bg-blue-500 rounded-[50%]">
-          <a
-            target="_blank"
-            rel="noopener noreferrer"
-            href={`https://myanimelist.net/anime/${idMal}`}
+          <button
+            // target="_blank"
+            // rel="noopener noreferrer"
+            // href={`https://myanimelist.net/anime/${idMal}`}
             className="anisearch"
-          ></a>
+            onClick={() => saveToAnimeList(info)}
+          ></button>
         </div>
       </div>
     </div>
