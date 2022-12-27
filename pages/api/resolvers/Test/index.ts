@@ -1,6 +1,9 @@
 const Test = {
   Query: {
-    test: () => "world",
+    test: () => {
+      console.log("INSIDE TEST 1");
+      return "world";
+    },
   },
 };
 

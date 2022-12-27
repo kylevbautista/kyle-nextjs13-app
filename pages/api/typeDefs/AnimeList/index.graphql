@@ -1,0 +1,14 @@
+type GetAnimeList {
+  id: Int
+}
+
+type AddAnimeList {
+  message: String
+}
+
+type Query {
+  getUserAnimeList: GetAnimeList
+}
+type Mutation {
+  addToUserAnimeList: AddAnimeList
+}
