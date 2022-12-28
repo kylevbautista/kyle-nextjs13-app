@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../../../../components/anime/year/helpers";
 
+export const revalidate = 60;
+
 const sleep = (ms: number) => {
   // console.log("sleeping...");
   return new Promise((r) => setTimeout(r, ms));
@@ -20,7 +22,6 @@ const getDataByYear = async (year: any) => {
   // console.log("attempt: ", i + 1);
   try {
     const res = await fetch(`${process.env.GRAPHQL_ANILIST}`, {
-      next: { revalidate: 60 },
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,10 +33,10 @@ const getDataByYear = async (year: any) => {
         },
       }),
     });
-    console.log(
-      `getDataByYear ${parsedYear}`,
-      res.headers.get("x-ratelimit-remaining")
-    );
+    // console.log(
+    //   `getDataByYear ${parsedYear}`,
+    //   res.headers.get("x-ratelimit-remaining")
+    // );
     // console.log("status: ", res.status);
     if (res.status !== 200) {
       // console.log("res: ", res);
@@ -95,12 +96,12 @@ export async function generateStaticParams() {
   const parsedYear = year.toString();
   let paths: any = [];
 
-  // for (let i = year - 5; i <= year + 1; i++) {
-  //   paths.push({ year: i.toString(), season: "winter" });
-  //   paths.push({ year: i.toString(), season: "spring" });
-  //   paths.push({ year: i.toString(), season: "summer" });
-  //   paths.push({ year: i.toString(), season: "fall" });
-  // }
+  for (let i = year - 5; i <= year + 1; i++) {
+    paths.push({ year: i.toString(), season: "winter" });
+    paths.push({ year: i.toString(), season: "spring" });
+    paths.push({ year: i.toString(), season: "summer" });
+    paths.push({ year: i.toString(), season: "fall" });
+  }
 
   return paths;
 }

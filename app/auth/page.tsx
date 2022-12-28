@@ -10,6 +10,5 @@ import { unstable_getServerSession } from "next-auth/next";
 
 export default async function Auth() {
   const session = await unstable_getServerSession(authOptions);
-  // console.log("kylelog serverside session:", session);
   return <PageBase />;
 }
