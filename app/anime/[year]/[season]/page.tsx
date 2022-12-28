@@ -95,12 +95,12 @@ export async function generateStaticParams() {
   const parsedYear = year.toString();
   let paths: any = [];
 
-  for (let i = year; i <= year; i++) {
-    paths.push({ year: i.toString(), season: "winter" });
-    paths.push({ year: i.toString(), season: "spring" });
-    paths.push({ year: i.toString(), season: "summer" });
-    paths.push({ year: i.toString(), season: "fall" });
-  }
+  // for (let i = year - 5; i <= year + 1; i++) {
+  //   paths.push({ year: i.toString(), season: "winter" });
+  //   paths.push({ year: i.toString(), season: "spring" });
+  //   paths.push({ year: i.toString(), season: "summer" });
+  //   paths.push({ year: i.toString(), season: "fall" });
+  // }
 
   return paths;
 }
