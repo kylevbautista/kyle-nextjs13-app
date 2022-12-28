@@ -69,11 +69,13 @@ export default function AnimeInfoGrid({
 
   const saveToAnimeList = async (info: any) => {
     const res = await addToUserAnimeList(info);
-    console.log(res);
-    if (res === "Successfully Added to List")
+    const message = res.addToUserAnimeList.message || "";
+    if (message === "Successfully Added to List")
       alert(`Added ${info?.title?.romaji} to your Anime List`);
-    else {
+    else if (message === "Already In List") {
       alert(`You are already following ${info?.title?.romaji}`);
+    } else {
+      alert("UnAuthorized");
     }
   };
 
