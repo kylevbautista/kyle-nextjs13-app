@@ -1,0 +1,54 @@
+query getUserAnimeListQuery {
+  getUserAnimeList {
+    list {
+      averageScore
+      coverImage {
+        color
+        extraLarge
+        large
+        medium
+      }
+      description
+      duration
+      episodes
+      firstEpisode {
+        episode {
+          airingAt
+          episode
+        }
+      }
+      genres
+      idMal
+      source
+      startDate {
+        day
+        month
+        year
+      }
+      status
+      studios {
+        nodes {
+          name
+        }
+      }
+      title {
+        english
+        native
+        romaji
+      }
+      upComingAirDate {
+        episode {
+          airingAt
+          episode
+          timeUntilAiring
+        }
+      }
+      upcomingEpisode {
+        episode
+        id
+        mediaId
+        timeUntilAiring
+      }
+    }
+  }
+}

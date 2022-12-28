@@ -32,10 +32,10 @@ const getDataByYear = async (year: any) => {
         },
       }),
     });
-    // console.log(
-    //   `getDataByYear ${parsedYear}`,
-    //   res.headers.get("x-ratelimit-remaining")
-    // );
+    console.log(
+      `getDataByYear ${parsedYear}`,
+      res.headers.get("x-ratelimit-remaining")
+    );
     // console.log("status: ", res.status);
     if (res.status !== 200) {
       // console.log("res: ", res);
@@ -93,9 +93,9 @@ export async function generateStaticParams() {
   const dateObject = new Date();
   const year = dateObject.getUTCFullYear();
   const parsedYear = year.toString();
-  let paths = [];
+  let paths: any = [];
 
-  for (let i = year - 5; i <= year + 1; i++) {
+  for (let i = year; i <= year; i++) {
     paths.push({ year: i.toString(), season: "winter" });
     paths.push({ year: i.toString(), season: "spring" });
     paths.push({ year: i.toString(), season: "summer" });
