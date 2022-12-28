@@ -33,10 +33,10 @@ const getDataByYear = async (year: any) => {
         },
       }),
     });
-    console.log(
-      `getDataByYear ${parsedYear}`,
-      res.headers.get("x-ratelimit-remaining")
-    );
+    // console.log(
+    //   `getDataByYear ${parsedYear}`,
+    //   res.headers.get("x-ratelimit-remaining")
+    // );
     // console.log("status: ", res.status);
     if (res.status !== 200) {
       // console.log("res: ", res);
