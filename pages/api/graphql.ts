@@ -1,6 +1,8 @@
 import { ApolloServer } from "@apollo/server";
 // import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { getSession } from "next-auth/react";
+import { unstable_getServerSession } from "next-auth/next";
+import { authOptions } from "./auth/[...nextauth]";
 import { GraphQLError } from "graphql";
 import { startServerAndCreateNextHandler } from "../../lib/graphqlMongooseHandler";
 
@@ -19,7 +21,7 @@ export default startServerAndCreateNextHandler(server, {
      * If user not logged in, throw UNAUTHENTICATED error
      */
     const session = await getSession({ req });
-    if (!true) {
+    if (!session) {
       throw new GraphQLError("User is not authenticated", {
         extensions: {
           code: "UNAUTHENTICATED",

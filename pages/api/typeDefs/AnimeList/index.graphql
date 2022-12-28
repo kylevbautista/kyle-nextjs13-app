@@ -1,4 +1,57 @@
-input CoverImage {
+type CoverImageOutput {
+  extraLarge: String
+  large: String
+  medium: String
+  color: String
+}
+
+type TitleOutput {
+  romaji: String
+  english: String
+  native: String
+}
+
+type NodeNameOutput {
+  name: String
+}
+
+type StudiosOutput {
+  nodes: [NodeNameOutput]
+}
+
+type StartDateOutput {
+  year: Int
+  month: Int
+  day: Int
+}
+
+type UpcomingEpisodeOutput {
+  id: Int
+  episode: Int
+  timeUntilAiring: Int
+  mediaId: Int
+}
+
+type EpisodeAirDateOutput {
+  airingAt: Int
+  timeUntilAiring: Int
+  episode: Int
+}
+
+type UpComingAirDateOutput {
+  episode: [EpisodeAirDateOutput]
+}
+
+type EpisodeFirstOutput {
+  airingAt: Int
+  episode: Int
+}
+
+type FirstEpisodeOutput {
+  episode: [EpisodeFirstOutput]
+}
+
+input CoverImageInput {
   extraLarge: String
   large: String
   medium: String
@@ -10,69 +63,84 @@ input TitleInput {
   native: String
 }
 
-input NodeName {
+input NodeNameInput {
   name: String
 }
 
-# type Nodes {
-#   [NodeName]
-# }
-input Studios {
-  nodes: [NodeName]
+input StudiosInput {
+  nodes: [NodeNameInput]
 }
 
-input StartDate {
+input StartDateInput {
   year: Int
   month: Int
   day: Int
 }
 
-input UpcomingEpisode {
+input UpcomingEpisodeInput {
   id: Int
   episode: Int
   timeUntilAiring: Int
   mediaId: Int
 }
 
-input EpisodeAirDate {
+input EpisodeAirDateInput {
   airingAt: Int
   timeUntilAiring: Int
   episode: Int
 }
 
-input UpComingAirDate {
-  episode: [EpisodeAirDate]
+input UpComingAirDateInput {
+  episode: [EpisodeAirDateInput]
 }
 
-input EpisodeFirst {
+input EpisodeFirstInput {
   airingAt: Int
   episode: Int
 }
 
-input FirstEpisode {
-  episode: [EpisodeFirst]
+input FirstEpisodeInput {
+  episode: [EpisodeFirstInput]
 }
 
 input DataInput {
   description: String
-  coverImage: CoverImage
+  coverImage: CoverImageInput
   idMal: Int
   title: TitleInput
-  studios: Studios
-  startDate: StartDate
+  studios: StudiosInput
+  startDate: StartDateInput
   status: String
   episodes: Int
   duration: Int
   source: String
   genres: [String]
   averageScore: Int
-  upcomingEpisode: UpcomingEpisode
-  upComingAirDate: UpComingAirDate
-  firstEpisode: FirstEpisode
+  upcomingEpisode: UpcomingEpisodeInput
+  upComingAirDate: UpComingAirDateInput
+  firstEpisode: FirstEpisodeInput
+}
+
+type DataOutput {
+  description: String
+  coverImage: CoverImageOutput
+  idMal: Int
+  title: TitleOutput
+  studios: StudiosOutput
+  startDate: StartDateOutput
+  status: String
+  episodes: Int
+  duration: Int
+  source: String
+  genres: [String]
+  averageScore: Int
+  upcomingEpisode: UpcomingEpisodeOutput
+  upComingAirDate: UpComingAirDateOutput
+  firstEpisode: FirstEpisodeOutput
 }
 
 type GetAnimeList {
-  id: Int
+  list: [DataOutput]
 }
 
 type AddAnimeList {

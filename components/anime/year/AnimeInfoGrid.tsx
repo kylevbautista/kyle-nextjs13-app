@@ -28,7 +28,6 @@ const addToUserAnimeList = async (info: any) => {
       }),
     });
     const { data = null } = await res.json();
-    // console.log(data?.addToUserAnimeList?.message);
     return data;
   } catch (err) {
     console.log(err);
@@ -68,8 +67,14 @@ export default function AnimeInfoGrid({
   const hydrated = useContext(HydrationContext);
   let interval: any;
 
-  const saveToAnimeList = (info: any) => {
-    addToUserAnimeList(info);
+  const saveToAnimeList = async (info: any) => {
+    const res = await addToUserAnimeList(info);
+    console.log(res);
+    if (res === "Successfully Added to List")
+      alert(`Added ${info?.title?.romaji} to your Anime List`);
+    else {
+      alert(`You are already following ${info?.title?.romaji}`);
+    }
   };
 
   const {

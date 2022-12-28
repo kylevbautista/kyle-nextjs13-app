@@ -1,20 +1,25 @@
+import { GraphQLError } from "graphql";
 import UserModel from "../../../../mongodb/models/User";
 
 const AnimeList = {
   Query: {
     getUserAnimeList: async (parent: any, args: any, contextValue: any) => {
-      console.log("Anime List Query...");
+      if (!contextValue?.session?.objectId) {
+        throw new GraphQLError("User is not authenticated", {
+          extensions: {
+            code: "UNAUTHENTICATED",
+            http: { status: 401 },
+          },
+        });
+      }
 
       try {
         const users = await UserModel.find({
-          _id: contextValue?.session?.objectId || "63a6ab800a0b4b52bc40b38d",
+          _id: contextValue?.session?.objectId,
         });
-        console.log("users", users);
-        console.log("following", users[0]?.following);
-        console.log("airdate", users[0]?.following[0]?.upComingAirDate);
 
         return {
-          id: 1234,
+          list: users[0]?.following,
         };
       } catch (err) {
         console.log(err);
@@ -24,10 +29,18 @@ const AnimeList = {
   },
   Mutation: {
     addToUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      if (!contextValue?.session?.objectId) {
+        throw new GraphQLError("User is not authenticated", {
+          extensions: {
+            code: "UNAUTHENTICATED",
+            http: { status: 401 },
+          },
+        });
+      }
       console.log("Anime List Mutation...");
 
       const query = {
-        _id: contextValue?.session?.objectId || "63a6ab800a0b4b52bc40b38d",
+        _id: contextValue?.session?.objectId,
       };
       const update = {
         $addToSet: {
@@ -52,7 +65,7 @@ const AnimeList = {
 
         const users = await UserModel.find(
           {
-            _id: contextValue?.session?.objectId || "63a6ab800a0b4b52bc40b38d",
+            _id: contextValue?.session?.objectId,
           },
           {
             following: { $elemMatch: { idMal: args.data.idMal } },
@@ -60,8 +73,8 @@ const AnimeList = {
         );
 
         const inList = users[0]?.following.length ? true : false;
-        console.log(users[0].following);
-        console.log("args", args);
+        // console.log(users[0].following);
+        // console.log("args", args);
 
         if (!inList && args?.data) {
           const res = await UserModel.updateOne(query, update, options);
