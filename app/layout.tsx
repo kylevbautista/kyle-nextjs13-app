@@ -1,4 +1,4 @@
-import "./globals.css";
+import "../styles/globals.css";
 import NavBar from "../components/common/NavBar";
 import Providers from "./providers";
 

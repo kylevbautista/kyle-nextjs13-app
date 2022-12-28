@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer utilities {
+  @media (pointer: fine) {
+    .scrollbar {
+      overflow-y: hidden;
+    }
+
+    .scrollbar:hover {
+      overflow: auto;
+    }
+    .scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .scrollbar::-webkit-scrollbar-track {
+      border-radius: 100vh;
+      background: transparent;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb {
+      background: #e0cbcb;
+      border-radius: 100vh;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #c0a0b9;
+    }
+  }
+  @media (pointer: coarse) {
+    .scrollbar {
+      overflow: auto;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+.scrollbar {
+  scrollbar-gutter: stable;
+}
+
+#anime-card * {
+  border-color: rgb(53, 53, 53);
+}
+/*
+y = -25px
+x = -27px
+*/
+
+.eye {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px 0px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.mal {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -330px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+.crunchyroll {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -360px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.adb {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -300px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.cut {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -270px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.fox {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -240px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+.globe {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -210px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.planet {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -180px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.twitter {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -150px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.dot {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -120px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.ven {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -90px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.anisearch {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -60px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.anilist {
+  display: block;
+  background: url(/assets/animeSprites.png) 0px -30px;
+  background-repeat: no-repeat;
+  background-size: 200%;
+  width: 30px;
+  height: 30px;
+}
+
+.star {
+  display: block;
+  background: url(/assets/star-32.png) 2px 1px;
+  background-repeat: no-repeat;
+  background-size: 75%;
+  width: 15px;
+  height: 15px;
+}

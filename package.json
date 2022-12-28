@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf node_modules .next",
+    "buildtw": "tailwindcss -i styles/globals.css -o styles/dist.css -w",
+    "tw:dev": "tailwindcss -m -i styles/globals.css -o styles/dist.css && next dev",
+    "tw:build": "tailwindcss -m -i styles/globals.css -o styles/dist.css && next build",
     "start:dev": "next dev",
     "resetlocal": "npm run clean && npm install"
   },
