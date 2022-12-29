@@ -1,5 +1,6 @@
 import AnimeInfoSkeleton from "../../components/animev3/AnimeInfoSkeleton";
 import Grid from "../../components/common/Grid";
+import FixLoading from "../../components/common/FixLoading";
 
 const skeletons = () => {
   const numOfSkeletons = [];
@@ -24,6 +25,7 @@ export default function Loading() {
       "
     >
       <Grid>{skeletons()}</Grid>
+      <FixLoading />
     </div>
   );
 }

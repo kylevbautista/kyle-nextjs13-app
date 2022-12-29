@@ -32,7 +32,6 @@ export default function NavBar() {
           <p>Kyle</p>
         </div>
         <Link
-          prefetch={false}
           href="/"
           className="
             block
@@ -44,7 +43,6 @@ export default function NavBar() {
           <p>Home</p>
         </Link>
         <Link
-          prefetch={false}
           href={`/anime/${getCurrentYear(true)}/${getCurrentSeasonPath(
             null,
             true
