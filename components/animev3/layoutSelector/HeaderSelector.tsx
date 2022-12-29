@@ -45,35 +45,35 @@ export function HeaderSelector({
       if (parseInt(values[0]) === Season.WINTER) {
         if (event.currentTarget.id === "season-back") {
           const prevYear = parseInt(year) - 1;
-          router.push(`/anime/${prevYear}/fall`);
+          router.replace(`/anime/${prevYear}/fall`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/spring`);
+          router.replace(`/anime/${year}/spring`);
         }
       }
       if (parseInt(values[0]) === Season.SPRING) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/winter`);
+          router.replace(`/anime/${year}/winter`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/summer`);
+          router.replace(`/anime/${year}/summer`);
         }
       }
       if (parseInt(values[0]) === Season.SUMMER) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/spring`);
+          router.replace(`/anime/${year}/spring`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/fall`);
+          router.replace(`/anime/${year}/fall`);
         }
       }
       if (parseInt(values[0]) === Season.FALL) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/summer`);
+          router.replace(`/anime/${year}/summer`);
         }
         if (event.currentTarget.id === "season-forward") {
           const nextYear = parseInt(year) + 1;
-          router.push(`/anime/${nextYear}/winter`);
+          router.replace(`/anime/${nextYear}/winter`);
         }
       }
     }
