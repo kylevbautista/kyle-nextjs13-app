@@ -20,7 +20,7 @@ export default async function Anime({ params }: any) {
   const [year = "", season = ""] = anime;
   const { redirectUrl } = routeChecker({ year: year, season: season });
   if (redirectUrl) {
-    console.log("redirecting........");
+    console.log("redirecting...");
     redirect(redirectUrl);
   }
 
