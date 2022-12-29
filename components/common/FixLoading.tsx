@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function FixLoading() {
-  const path = usePathname();
+  const path: any = usePathname();
   const router = useRouter();
 
   useEffect(() => {
