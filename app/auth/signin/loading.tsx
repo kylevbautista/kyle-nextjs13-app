@@ -1,4 +1,5 @@
 import Image from "next/image";
+import FixLoading from "../../../components/common/FixLoading";
 
 export default function Loading() {
   return (
@@ -20,6 +21,7 @@ export default function Loading() {
         height={360}
         alt="I AM AOTMIC"
       />
+      <FixLoading />
     </div>
   );
 }

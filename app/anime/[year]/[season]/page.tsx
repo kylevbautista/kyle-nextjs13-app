@@ -90,18 +90,18 @@ export default async function AnimeInfoByYear({ params }: any) {
  * passed, any new dyanmic routes don't get cached.
  *
  */
-export async function generateStaticParams() {
-  const dateObject = new Date();
-  const year = dateObject.getUTCFullYear();
-  const parsedYear = year.toString();
-  let paths: any = [];
+// export async function generateStaticParams() {
+//   const dateObject = new Date();
+//   const year = dateObject.getUTCFullYear();
+//   const parsedYear = year.toString();
+//   let paths: any = [];
 
-  for (let i = year - 5; i <= year + 1; i++) {
-    paths.push({ year: i.toString(), season: "winter" });
-    paths.push({ year: i.toString(), season: "spring" });
-    paths.push({ year: i.toString(), season: "summer" });
-    paths.push({ year: i.toString(), season: "fall" });
-  }
+//   for (let i = year - 5; i <= year + 1; i++) {
+//     paths.push({ year: i.toString(), season: "winter" });
+//     paths.push({ year: i.toString(), season: "spring" });
+//     paths.push({ year: i.toString(), season: "summer" });
+//     paths.push({ year: i.toString(), season: "fall" });
+//   }
 
-  return paths;
-}
+//   return paths;
+// }
