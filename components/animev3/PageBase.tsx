@@ -121,20 +121,28 @@ export default function PageBase({
 
       if (enablePrefetch) {
         if (season === Season.WINTER) {
+          router.prefetch(`/anime/${prevYear}/summer`);
           router.prefetch(`/anime/${prevYear}/fall`);
           router.prefetch(`/anime/${year}/spring`);
+          router.prefetch(`/anime/${year}/summer`);
         }
         if (season === Season.SPRING) {
+          router.prefetch(`/anime/${prevYear}/fall`);
           router.prefetch(`/anime/${year}/winter`);
           router.prefetch(`/anime/${year}/summer`);
-        }
-        if (season === Season.SUMMER) {
-          router.prefetch(`/anime/${year}/spring`);
           router.prefetch(`/anime/${year}/fall`);
         }
+        if (season === Season.SUMMER) {
+          router.prefetch(`/anime/${year}/winter`);
+          router.prefetch(`/anime/${year}/spring`);
+          router.prefetch(`/anime/${year}/fall`);
+          router.prefetch(`/anime/${nextYear}/winter`);
+        }
         if (season === Season.FALL) {
+          router.prefetch(`/anime/${year}/spring`);
           router.prefetch(`/anime/${year}/summer`);
           router.prefetch(`/anime/${nextYear}/winter`);
+          router.prefetch(`/anime/${nextYear}/spring`);
         }
       }
 
