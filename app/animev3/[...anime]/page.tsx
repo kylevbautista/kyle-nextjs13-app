@@ -6,7 +6,7 @@
  * /anime/...
  * Then uses regex to verify correct slugs/params
  */
-import { Suspense } from "react";
+// import { Suspense } from "react";
 import Boundary from "./Boundary";
 
 export const revalidate = 60;
@@ -16,13 +16,10 @@ export default async function Anime({ params }: any) {
   const [year = "", season = ""] = anime;
   return (
     <div>
-      <p>This is a Catch all for anime</p>
-      <Suspense fallback={<p>Loading...</p>}>
-        {/* @ts-ignore */}
-        {/* <Test /> */}
-        {/* @ts-ignore */}
-        <Boundary year={year} season={season} />
-      </Suspense>
+      {/* <Suspense fallback={<p>Loading...</p>}> */}
+      {/* @ts-ignore */}
+      <Boundary year={year} season={season} />
+      {/* </Suspense> */}
     </div>
   );
 }

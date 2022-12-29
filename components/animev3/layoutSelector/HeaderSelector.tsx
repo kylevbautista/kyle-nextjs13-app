@@ -45,47 +45,47 @@ export function HeaderSelector({
       if (parseInt(values[0]) === Season.WINTER) {
         if (event.currentTarget.id === "season-back") {
           const prevYear = parseInt(year) - 1;
-          router.push(`/animev3/${prevYear}/fall`);
+          router.push(`/anime/${prevYear}/fall`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/animev3/${year}/spring`);
+          router.push(`/anime/${year}/spring`);
         }
       }
       if (parseInt(values[0]) === Season.SPRING) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/animev3/${year}/winter`);
+          router.push(`/anime/${year}/winter`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/animev3/${year}/summer`);
+          router.push(`/anime/${year}/summer`);
         }
       }
       if (parseInt(values[0]) === Season.SUMMER) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/animev3/${year}/spring`);
+          router.push(`/anime/${year}/spring`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/animev3/${year}/fall`);
+          router.push(`/anime/${year}/fall`);
         }
       }
       if (parseInt(values[0]) === Season.FALL) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/animev3/${year}/summer`);
+          router.push(`/anime/${year}/summer`);
         }
         if (event.currentTarget.id === "season-forward") {
           const nextYear = parseInt(year) + 1;
-          router.push(`/animev3/${nextYear}/winter`);
+          router.push(`/anime/${nextYear}/winter`);
         }
       }
     }
   };
 
   const byPopularityStyles = byPopularity
-    ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
-    : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
+    ? "flex items-center h-[44px] border-b border-blue-500 cursor-pointer text-blue-500 font-bold hover:border-blue-500"
+    : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-blue-500";
 
   const byCountDownStyles = !byPopularity
-    ? "flex items-center h-[44px] border-b border-white cursor-pointer text-white font-bold hover:border-white"
-    : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-white";
+    ? "flex items-center h-[44px] border-b border-blue-500 cursor-pointer text-blue-500 font-bold hover:border-blue-500"
+    : "flex items-center h-[44px] border-b border-transparent cursor-pointer text-[rgb(164,164,164)] hover:border-blue-500";
 
   return (
     <div className="text-white flex flex-wrap justify-center items-end gap-5">

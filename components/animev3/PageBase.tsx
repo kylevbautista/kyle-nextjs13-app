@@ -5,6 +5,7 @@ import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "./../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
+import { HeaderSelectorSkeleton } from "./layoutSelector/HeaderSelectorSkeleton";
 import { getInitialTimes, getSeasonFromParams } from "./helpers";
 import { parseAniListData } from "./utils/parseAniListData";
 import useLazyLoad from "./utils/useLazyLoad";
@@ -105,6 +106,10 @@ export default function PageBase({
     }
   };
 
+  const selectorDiv = !header.headerYear
+    ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
+    : "invisible";
+
   useEffect(
     () => {
       const dateObject = new Date();
@@ -113,20 +118,20 @@ export default function PageBase({
       const nextYear = parseInt(year) + 1;
 
       if (season === Season.WINTER) {
-        router.prefetch(`/animev3/${prevYear}/fall`);
-        router.prefetch(`/animev3/${year}/spring`);
+        router.prefetch(`/anime/${prevYear}/fall`);
+        router.prefetch(`/anime/${year}/spring`);
       }
       if (season === Season.SPRING) {
-        router.prefetch(`/animev3/${year}/winter`);
-        router.prefetch(`/animev3/${year}/summer`);
+        router.prefetch(`/anime/${year}/winter`);
+        router.prefetch(`/anime/${year}/summer`);
       }
       if (season === Season.SUMMER) {
-        router.prefetch(`/animev3/${year}/spring`);
-        router.prefetch(`/animev3/${year}/fall`);
+        router.prefetch(`/anime/${year}/spring`);
+        router.prefetch(`/anime/${year}/fall`);
       }
       if (season === Season.FALL) {
-        router.prefetch(`/animev3/${year}/summer`);
-        router.prefetch(`/animev3/${nextYear}/winter`);
+        router.prefetch(`/anime/${year}/summer`);
+        router.prefetch(`/anime/${nextYear}/winter`);
       }
 
       header.setHeaderYear(year);
@@ -147,6 +152,25 @@ export default function PageBase({
         text-white
       "
     >
+      <div className={selectorDiv}>
+        <HeaderSelectorSkeleton
+          byPopularity={byPopularity}
+          year={year}
+          season={season}
+          contextFound={header.headerYear}
+        />
+        {!header.headerYear && (
+          <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
+            <p className="text-bold font-bold">
+              Sorted: {byCount ? "By Countdown" : "By Popularity"}
+            </p>
+            <p className="text-bold font-bold">Season: {getSeason(season)}</p>
+          </div>
+        )}
+        {!header.headerYear && (
+          <div className="border-b border-[rgb(38,38,38)] w-full"></div>
+        )}
+      </div>
       <Grid>
         {byCount &&
           season === Season.WINTER &&
