@@ -23,7 +23,6 @@ export const routeChecker = ({ year, season }: any) => {
   const regExExpression = /^\d{4}$/;
   const dateObject = new Date();
   let currentYear = dateObject.getUTCFullYear();
-  const currentMonth = dateObject.getUTCMonth();
 
   // If year is valid
   if (regExExpression.test(year)) {
@@ -31,9 +30,6 @@ export const routeChecker = ({ year, season }: any) => {
 
     // If year is not withing specified range, redirect
     if (parsedIntYear < currentYear - 5 || parsedIntYear > currentYear + 1) {
-      // if (currentMonth === 11) {
-      //   currentYear = currentYear + 1;
-      // }
       redirect = `/anime/${getCurrentYear({
         useUsaTime: true,
       })}/${getCurrentSeasonPath(null, true)}`;
@@ -42,9 +38,6 @@ export const routeChecker = ({ year, season }: any) => {
   }
   // If year is not valid, redirect
   else {
-    // if (currentMonth === 11) {
-    //   currentYear = currentYear + 1;
-    // }
     redirect = `/anime/${getCurrentYear({
       useUsaTime: true,
     })}/${getCurrentSeasonPath(null, true)}`;

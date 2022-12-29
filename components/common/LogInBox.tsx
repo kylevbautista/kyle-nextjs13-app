@@ -46,6 +46,7 @@ export default function LoginBox() {
   return (
     <div className="flex justify-items-center">
       <Link
+        prefetch={false}
         href="/auth"
         className="
             block
