@@ -1,19 +1,29 @@
 /**
  * Catch-all dyanmic segment
+ *
  * Cacthes:
  * /anime/year
  * /anime/year/season
  * /anime/...
- * Then uses regex to verify correct slugs/params
+ *
+ * Then uses regex (routechecker()) to verify correct slugs/params
  */
 // import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import Boundary from "./Boundary";
+import { routeChecker } from "../../../components/animev3/utils/routeChecker";
 
 export const revalidate = 60;
 
 export default async function Anime({ params }: any) {
   const { anime = [] } = params;
   const [year = "", season = ""] = anime;
+  const { redirectUrl } = routeChecker({ year: year, season: season });
+  if (redirectUrl) {
+    console.log("redirecting........");
+    redirect(redirectUrl);
+  }
+
   return (
     <div>
       {/* <Suspense fallback={<p>Loading...</p>}> */}

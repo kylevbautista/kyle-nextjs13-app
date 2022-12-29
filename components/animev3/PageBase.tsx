@@ -14,6 +14,7 @@ interface PageBaseProps {
   data?: any;
   year?: any;
   params?: any;
+  enablePrefetch?: Boolean;
   children?: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export default function PageBase({
   data,
   year,
   params,
+  enablePrefetch = true,
   children,
 }: PageBaseProps) {
   const header = useContext(HeaderContext);
@@ -117,21 +119,23 @@ export default function PageBase({
       const prevYear = parseInt(year) - 1;
       const nextYear = parseInt(year) + 1;
 
-      if (season === Season.WINTER) {
-        router.prefetch(`/anime/${prevYear}/fall`);
-        router.prefetch(`/anime/${year}/spring`);
-      }
-      if (season === Season.SPRING) {
-        router.prefetch(`/anime/${year}/winter`);
-        router.prefetch(`/anime/${year}/summer`);
-      }
-      if (season === Season.SUMMER) {
-        router.prefetch(`/anime/${year}/spring`);
-        router.prefetch(`/anime/${year}/fall`);
-      }
-      if (season === Season.FALL) {
-        router.prefetch(`/anime/${year}/summer`);
-        router.prefetch(`/anime/${nextYear}/winter`);
+      if (enablePrefetch) {
+        if (season === Season.WINTER) {
+          router.prefetch(`/anime/${prevYear}/fall`);
+          router.prefetch(`/anime/${year}/spring`);
+        }
+        if (season === Season.SPRING) {
+          router.prefetch(`/anime/${year}/winter`);
+          router.prefetch(`/anime/${year}/summer`);
+        }
+        if (season === Season.SUMMER) {
+          router.prefetch(`/anime/${year}/spring`);
+          router.prefetch(`/anime/${year}/fall`);
+        }
+        if (season === Season.FALL) {
+          router.prefetch(`/anime/${year}/summer`);
+          router.prefetch(`/anime/${nextYear}/winter`);
+        }
       }
 
       header.setHeaderYear(year);
