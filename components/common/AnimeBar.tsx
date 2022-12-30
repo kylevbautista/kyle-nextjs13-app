@@ -1,6 +1,8 @@
 "use client";
+import { useContext } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { HydrationContext } from "./HydrationProvider";
 import { getCurrentSeasonPath } from "../anime/year/helpers";
 
 const getCurrentYear = (shifted: Boolean = false) => {
@@ -15,6 +17,7 @@ const getCurrentYear = (shifted: Boolean = false) => {
 
 export function AnimeBar() {
   const pathname = usePathname();
+  const hydrated = useContext(HydrationContext);
   const values = pathname?.split("/");
   const [, anime = ""] = values || [];
   let isAnimeRoute = false;
@@ -38,7 +41,7 @@ export function AnimeBar() {
       >
         <p>カイル</p>
       </Link>
-      {isAnimeRoute && (
+      {hydrated && isAnimeRoute && (
         <Link
           href={`/topanime`}
           className="

@@ -10,12 +10,11 @@ const Boundary = async () => {
   const agregatedPagination = dataArray.map((info) => {
     return info.pagination;
   });
+  const data = aggregatedData.flat() || [];
+  const pagination = agregatedPagination[agregatedPagination.length - 1] || {};
   return (
     <div>
-      <Test
-        data={aggregatedData.flat()}
-        pagination={agregatedPagination[agregatedPagination.length - 1]}
-      />
+      <Test data={data} pagination={pagination} />
     </div>
   );
 };
