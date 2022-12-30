@@ -2,6 +2,7 @@ import Link from "next/link";
 // import { unstable_getServerSession } from "next-auth/next";
 // import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import LoginBox from "./LogInBox";
+import { AnimeBar } from "./AnimeBar";
 import { getCurrentSeasonPath } from "../anime/year/helpers";
 
 const getCurrentYear = (shifted: Boolean = false) => {
@@ -42,20 +43,7 @@ export default function NavBar() {
         >
           <p>Home</p>
         </Link>
-        <Link
-          href={`/anime/${getCurrentYear(true)}/${getCurrentSeasonPath(
-            null,
-            true
-          )}`}
-          className="
-            block
-            p-5
-            hover:bg-blue-500
-            rounded-2xl
-          "
-        >
-          <p>カイル</p>
-        </Link>
+        <AnimeBar />
       </div>
       <LoginBox />
     </nav>
