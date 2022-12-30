@@ -13,14 +13,14 @@ const mockFetch = async () => {
   });
 };
 
-export const getTopAnimeJinkan = async ({ isClient = false }) => {
+export const getTopAnimeJinkan = async ({ page = 1, isClient = false }) => {
   let baseUrl = process.env.JINKANV4_URL;
   if (isClient) {
     baseUrl = process.env.NEXT_PUBLIC_JINKANV4_URL;
   }
   try {
-    const res = await fetchWithTimeout(`${baseUrl}/top/anime`, {
-      timeout: 5000,
+    const res = await fetchWithTimeout(`${baseUrl}/top/anime?page=${page}`, {
+      timeout: 7000,
     });
     const data = await res.json();
     return data;
