@@ -1,43 +1,11 @@
 "use client";
-import React, { ReactNode, useState, useEffect } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
-import testQuery from "../../graphql/tags/testQuery.graphql";
-import { print as stringifyTag } from "graphql";
+import React, { ReactNode } from "react";
 import LoginButton from "./LoginButton";
 interface PageBaseProps {
   children?: ReactNode;
 }
 
-const fetchGraphQLServer = async () => {
-  try {
-    const res = await fetch("api/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: stringifyTag(testQuery),
-      }),
-    });
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 export default function PageBase({ children }: PageBaseProps) {
-  const { data: session } = useSession();
-
-  const handleClick = async () => {
-    try {
-      const data = await fetchGraphQLServer();
-      console.log("Kylelog data:", data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
   return (
     <div
       id="container"
@@ -53,7 +21,7 @@ export default function PageBase({ children }: PageBaseProps) {
       "
     >
       <LoginButton></LoginButton>
-      <button
+      {/* <button
         className="
           border
           p-5
@@ -65,7 +33,7 @@ export default function PageBase({ children }: PageBaseProps) {
         onClick={handleClick}
       >
         Cick to send request
-      </button>
+      </button> */}
     </div>
   );
 }

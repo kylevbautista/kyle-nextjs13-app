@@ -78,7 +78,7 @@ const AnimeList = {
 
         if (!inList && args?.data) {
           const res = await UserModel.updateOne(query, update, options);
-          console.log("res", res);
+          // console.log("res", res);
           if (res?.modifiedCount > 0) {
             console.log("Successfully Added to List");
             return {

@@ -35,7 +35,7 @@ export function HeaderSelectorWrapper({ year, season }: any) {
           setByCount={setByCount}
           setByPopularity={setByPopularity}
         />
-        <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
+        <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2 rounded-lg">
           <p className="text-bold font-bold">
             Sorted: {byCount ? "By Countdown" : "By Popularity"}
           </p>
