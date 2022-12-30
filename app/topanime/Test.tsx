@@ -33,10 +33,10 @@ const Test = ({ data, pagination }: any) => {
                     <a
                       target="_blank"
                       rel="noopener noreferrer"
-                      href={`https://myanimelist.net/anime/${anime.mal_id}`}
+                      href={`https://myanimelist.net/anime/${anime?.mal_id}`}
                     >
                       <Image
-                        src={anime.images.jpg.large_image_url}
+                        src={anime?.images?.jpg?.large_image_url}
                         fill
                         alt=""
                       />
@@ -50,7 +50,7 @@ const Test = ({ data, pagination }: any) => {
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{anime.score}</p>
+                <p className="text-2xl font-bold">{anime?.score}</p>
               </div>
             </div>
           </li>
