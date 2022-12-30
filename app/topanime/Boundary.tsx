@@ -1,21 +1,18 @@
-import { getTopAnimeJinkanInitalPages } from "../../components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import {
+  getTopAnimeJinkanInitalPages,
+  getTopAnimeJinkan,
+} from "../../components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import { parseJinkanPromiseAll } from "../../components/animev3/utils/jinkanData/parseJinkanPromiseAll";
 import { Test } from "./Test";
 
 const Boundary = async () => {
-  const dataArray =
-    (await getTopAnimeJinkanInitalPages({ pages: 2, enableLogs: false })) || [];
-  const aggregatedData = dataArray.map((info) => {
-    return info.data;
-  });
-  const agregatedPagination = dataArray.map((info) => {
-    return info.pagination;
-  });
+  // const dataArray =
+  //   (await getTopAnimeJinkanInitalPages({ pages: 2, enableLogs: false })) || [];
+  // const { data, pagination } = parseJinkanPromiseAll(dataArray);
+  const { data, pagination } = await getTopAnimeJinkan({ page: 1 });
   return (
-    <div>
-      <Test
-        data={aggregatedData.flat()}
-        pagination={agregatedPagination[agregatedPagination.length - 1]}
-      />
+    <div className="w-full laptop2:w-fit">
+      <Test data={data} pagination={pagination} />
     </div>
   );
 };

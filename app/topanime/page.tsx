@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+// import { Suspense } from "react";
 import { Boundary } from "./Boundary";
 
 export const revalidate = 60;
@@ -19,10 +19,10 @@ export default async function TopAnime() {
       <div className="pb-4">
         <p className="text-4xl">Ranking</p>
       </div>
-      <Suspense fallback={<p>Loading Top Anime...</p>}>
-        {/* @ts-ignore */}
-        <Boundary />
-      </Suspense>
+      {/* <Suspense fallback={<p>Loading Top Anime...</p>}> */}
+      {/* @ts-ignore */}
+      <Boundary />
+      {/* </Suspense> */}
     </div>
   );
 }
