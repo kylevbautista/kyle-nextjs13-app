@@ -21,19 +21,6 @@ export default function PageBase({ children }: PageBaseProps) {
       "
     >
       <LoginButton></LoginButton>
-      {/* <button
-        className="
-          border
-          p-5
-          bg-[rgb(38,38,38)]
-          hover:bg-sky-700
-          rounded-md
-          w-72
-        "
-        onClick={handleClick}
-      >
-        Cick to send request
-      </button> */}
     </div>
   );
 }
