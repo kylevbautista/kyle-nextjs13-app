@@ -152,4 +152,5 @@ type Query {
 }
 type Mutation {
   addToUserAnimeList(data: DataInput): AddAnimeList
+  updateUserAnimeList(data: [DataInput]): AddAnimeList
 }

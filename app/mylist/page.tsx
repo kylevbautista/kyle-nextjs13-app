@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import { unstable_getServerSession } from "next-auth/next";
 import PageBase from "../../components/mylist/PageBase";
-import { headers } from "next/headers";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest

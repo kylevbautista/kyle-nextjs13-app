@@ -3,9 +3,10 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
-import Grid from "../common/Grid";
-import AnimeInfoGrid from "../anime/year/AnimeInfoGrid";
 import { getInitialTimes, getCurrentSeasonPath } from "../anime/year/helpers";
+
+import { List } from "./List";
+import { Test } from "./Test";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();
@@ -71,18 +72,7 @@ export default async function PageBase({ session, children }: PageBaseProps) {
       "
     >
       {list.length ? (
-        <Grid>
-          {list?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={index}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        </Grid>
+        <List list={list} />
       ) : (
         <div>
           <div>
@@ -101,6 +91,9 @@ export default async function PageBase({ session, children }: PageBaseProps) {
           </div>
         </div>
       )}
+      <div className="mt-4">
+        <Test list={list} />
+      </div>
     </div>
   );
 }

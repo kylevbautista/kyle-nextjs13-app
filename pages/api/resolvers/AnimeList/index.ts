@@ -96,6 +96,52 @@ const AnimeList = {
         return { message: err };
       }
     },
+    updateUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      if (!contextValue?.session?.objectId) {
+        throw new GraphQLError("User is not authenticated", {
+          extensions: {
+            code: "UNAUTHENTICATED",
+            http: { status: 401 },
+          },
+        });
+      }
+      console.log("Anime List Mutation...");
+
+      const query = {
+        _id: contextValue?.session?.objectId,
+      };
+      const updateNew = {
+        $set: {
+          following: args.data,
+        },
+      };
+      const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+
+      try {
+        const users = await UserModel.find({
+          _id: contextValue?.session?.objectId,
+        });
+
+        if (args?.data) {
+          const res = await UserModel.updateOne(query, updateNew, options);
+          // console.log("res", res);
+          if (res?.modifiedCount > 0) {
+            console.log("Successfully Updated List");
+            return {
+              message: "Successfully Updated List",
+            };
+          }
+        }
+
+        console.log("Already In List");
+        return {
+          message: "Already In List",
+        };
+      } catch (err) {
+        console.log(err);
+        return { message: err };
+      }
+    },
   },
 };
 

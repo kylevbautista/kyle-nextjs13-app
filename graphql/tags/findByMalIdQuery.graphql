@@ -1,0 +1,52 @@
+query findByMalIdQuery($idMal: Int, $search: String) {
+  anime: Media(idMal: $idMal, search: $search) {
+    description
+    coverImage {
+      extraLarge
+      large
+      medium
+      color
+    }
+    idMal
+    title {
+      romaji
+      english
+      native
+    }
+    studios(isMain: true) {
+      nodes {
+        name
+      }
+    }
+    startDate {
+      year
+      month
+      day
+    }
+    status
+    episodes
+    duration
+    source
+    genres
+    averageScore
+    upcomingEpisode: nextAiringEpisode {
+      id
+      episode
+      timeUntilAiring
+      mediaId
+    }
+    upComingAirDate: airingSchedule(notYetAired: true, page: 1, perPage: 1) {
+      episode: nodes {
+        airingAt
+        timeUntilAiring
+        episode
+      }
+    }
+    firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
+      episode: nodes {
+        airingAt
+        episode
+      }
+    }
+  }
+}

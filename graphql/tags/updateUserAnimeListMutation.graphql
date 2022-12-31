@@ -1,0 +1,5 @@
+mutation updateUserAnimeListMutation($data: [DataInput]) {
+  updateUserAnimeList(data: $data) {
+    message
+  }
+}
