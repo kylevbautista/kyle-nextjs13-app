@@ -8,7 +8,6 @@ const Test = ({ data, pagination }: any) => {
   const [clientData, setClientData] = useState(data);
   useEffect(() => {
     // console.log(data);
-    // console.log(pagination);
   }, []);
 
   const handlePagination = async () => {
