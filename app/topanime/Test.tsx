@@ -14,12 +14,15 @@ const Test = ({ data, pagination }: any) => {
   const handlePagination = async () => {
     const { data: newData = [], pagination: newPagination = {} } =
       await getTopAnimeJinkan({
-        page: pagination?.current_page + 1,
+        page: page + 1,
         isClient: true,
       });
     if (newData.length) {
       setClientData((prev: []) => {
         return [...prev, ...newData];
+      });
+      setPage((prev: any) => {
+        return newPagination?.current_page || prev;
       });
     }
   };
