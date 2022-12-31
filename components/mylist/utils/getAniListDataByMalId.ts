@@ -13,20 +13,23 @@ export const getAniListDataByMalId = async ({
   enableLogs = false,
 }: any) => {
   try {
-    const res = await fetchWithTimeout(`${process.env.NEXT_PUBLIC_GRAPHQL_ANILIST}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: stringifyTag(findByMalIdQuery),
-        variables: {
-          idMal: malId,
-          search: title
+    const res = await fetchWithTimeout(
+      `${process.env.NEXT_PUBLIC_GRAPHQL_ANILIST}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }),
-      timeout: timeout,
-    });
+        body: JSON.stringify({
+          query: stringifyTag(findByMalIdQuery),
+          variables: {
+            idMal: malId,
+            search: title,
+          },
+        }),
+        timeout: timeout,
+      }
+    );
     if (enableLogs)
       console.log(
         `getAniListDataByMalId ${malId} ${title}`,
@@ -47,21 +50,23 @@ export const getAniListDataByMalId = async ({
   }
 };
 
-export const getAniListDataByMalIdList = async () => {
-  let results:any =[];
+export const getAniListDataByMalIdList = async (list: any) => {
+  let results: any = [];
   try {
-    for (let i = 0;i < 10;i++){
+    for (let i = 0; i < list.length; i++) {
+      let id = list[i]?.idMal;
+      let titleParam = list[i]?.title?.romaji;
       const { data } = await getAniListDataByMalId({
-        malId: 47917,
-        title: "Bocchi the Rock!",
-        enableLogs:true
+        malId: id,
+        title: titleParam,
+        enableLogs: true,
       });
-      const { anime = {} } = data || {}
-      results.push(anime)
+      const { anime = {} } = data || {};
+      results.push(anime);
     }
-    console.log(results)
+    return results;
+  } catch (err) {
+    console.log(err);
+    return [];
   }
-  catch(err){
-    console.log(err)
-  }
-}
+};

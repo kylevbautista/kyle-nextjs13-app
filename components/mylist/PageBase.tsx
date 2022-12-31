@@ -3,31 +3,10 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
-import Grid from "../common/Grid";
-import AnimeInfoGrid from "../anime/year/AnimeInfoGrid";
 import { getInitialTimes, getCurrentSeasonPath } from "../anime/year/helpers";
-import {
-  getAniListDataByMalId,
-  getAniListDataByMalIdList,
-} from "./utils/getAniListDataByMalId";
 
-const test = async () => {
-  // try {
-  //   const data = fetch("https://api.jikan.moe/v4/seasons/2022/fall");
-  //   const res = await (await data).json();
-  //   console.log(res)
-  // } catch (err) {
-  //   return {};
-  //   console.log(err);
-  // }
-  // const { data } = await getAniListDataByMalId({
-  //   malId: 47917,
-  //   title: "Bocchi the Rock!",
-  // });
-  // console.log(data);
-  const data = await getAniListDataByMalIdList();
-  console.log("done");
-};
+import { List } from "./List";
+import { Test } from "./Test";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();
@@ -93,18 +72,7 @@ export default async function PageBase({ session, children }: PageBaseProps) {
       "
     >
       {list.length ? (
-        <Grid>
-          {list?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={index}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        </Grid>
+        <List list={list} />
       ) : (
         <div>
           <div>
@@ -123,9 +91,9 @@ export default async function PageBase({ session, children }: PageBaseProps) {
           </div>
         </div>
       )}
-      <button className="border p-2 rounded-lg" onClick={test}>
-        <p>Show More</p>
-      </button>
+      <div className="mt-4">
+        <Test list={list} />
+      </div>
     </div>
   );
 }

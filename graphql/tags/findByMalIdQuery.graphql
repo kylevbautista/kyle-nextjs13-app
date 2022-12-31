@@ -1,11 +1,34 @@
 query findByMalIdQuery($idMal: Int, $search: String) {
   anime: Media(idMal: $idMal, search: $search) {
+    description
+    coverImage {
+      extraLarge
+      large
+      medium
+      color
+    }
     idMal
     title {
       romaji
       english
       native
     }
+    studios(isMain: true) {
+      nodes {
+        name
+      }
+    }
+    startDate {
+      year
+      month
+      day
+    }
+    status
+    episodes
+    duration
+    source
+    genres
+    averageScore
     upcomingEpisode: nextAiringEpisode {
       id
       episode
