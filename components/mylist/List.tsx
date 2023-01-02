@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import Grid from "../common/Grid";
-import AnimeInfoGrid from "../anime/year/AnimeInfoGrid";
+import AnimeInfoGrid from "../animev3/AnimeInfoGrid";
 import { getInitialTimes, getCurrentSeasonPath } from "../anime/year/helpers";
 
 interface PageBaseProps {

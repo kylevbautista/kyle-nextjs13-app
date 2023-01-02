@@ -1,5 +1,6 @@
 import { GraphQLError } from "graphql";
 import UserModel from "../../../../mongodb/models/User";
+import { removeFromUserAnimeList } from "./removeFromUserAnimeList";
 
 const AnimeList = {
   Query: {
@@ -142,6 +143,7 @@ const AnimeList = {
         return { message: err };
       }
     },
+    removeFromUserAnimeList,
   },
 };
 

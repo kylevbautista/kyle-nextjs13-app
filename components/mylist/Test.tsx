@@ -15,7 +15,6 @@ interface PageBaseProps {
 const test = async (list: any) => {
   try {
     const data = await getAniListDataByMalIdList(list);
-    console.log(data);
     if (data) {
       const { updateUserAnimeList: response = {} } =
         (await updateUserAnnimeList(data)) || {};

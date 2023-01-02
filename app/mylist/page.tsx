@@ -10,6 +10,8 @@ import PageBase from "../../components/mylist/PageBase";
  * @returns data
  */
 
+export const fetchCache = "default-no-store";
+
 export default async function MyList() {
   const session = await unstable_getServerSession(authOptions);
   if (!session) {

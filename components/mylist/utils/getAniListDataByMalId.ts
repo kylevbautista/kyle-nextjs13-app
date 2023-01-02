@@ -59,7 +59,7 @@ export const getAniListDataByMalIdList = async (list: any) => {
       const { data } = await getAniListDataByMalId({
         malId: id,
         title: titleParam,
-        enableLogs: true,
+        enableLogs: false,
       });
       const { anime = {} } = data || {};
       results.push(anime);
