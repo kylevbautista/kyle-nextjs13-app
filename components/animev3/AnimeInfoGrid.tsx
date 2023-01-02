@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useContext } from "react";
+import { useRouter } from "next/navigation";
 import { HydrationContext } from "../common/HydrationProvider";
 import {
   getStudios,
@@ -12,6 +13,8 @@ import Luffy from "/public/assets/Monkey_D_Luffy.png";
 import Image from "next/image";
 import { print as stringifyTag } from "graphql";
 import addToUserAnimeListMutation from "../../graphql/tags/addToUserAnimeList.graphql";
+import removeFromUserAnimeList from "../../graphql/tags/mutations/removeFromUserAnimeList.graphql";
+import { fetchFromGraphQLServer } from "../../graphql/utils/fetchFromGraphQLServer";
 
 const addToUserAnimeList = async (info: any) => {
   try {
@@ -31,6 +34,23 @@ const addToUserAnimeList = async (info: any) => {
     return data;
   } catch (err) {
     console.log(err);
+    return {};
+  }
+};
+
+const removeFromList = async (info: any) => {
+  try {
+    const res = await fetchFromGraphQLServer({
+      query: removeFromUserAnimeList,
+      variables: {
+        data: info,
+      },
+    });
+    const { data = null } = await res.json();
+    return data;
+  } catch (err) {
+    console.log(err);
+    return {};
   }
 };
 
@@ -47,6 +67,7 @@ export default function AnimeInfoGrid({
   initialTimes,
   id,
 }: Props) {
+  const router = useRouter();
   const [day, setDay] = useState<number>(
     getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
       ?.d || 0
@@ -77,6 +98,26 @@ export default function AnimeInfoGrid({
     } else {
       alert("UnAuthorized");
     }
+  };
+
+  const removeTest = async (info: any) => {
+    const res = await removeFromList(info);
+    const message = res.removeFromUserAnimeList.message || "";
+    if (message === "Successfully Removed From List")
+      console.log(`Removed ${info?.title?.romaji} from your Anime List`);
+    else if (message === "Did Not Remove") {
+      console.log(`Unable To Remove ${info?.title?.romaji} from List`);
+    } else {
+      console.log("UnAuthorized");
+    }
+    console.log("done");
+    const currentTime = Date.now();
+    if (!localStorage.getItem("listRefreshTime")) {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    } else {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    }
+    // router.refresh();
   };
 
   const {
@@ -373,12 +414,13 @@ export default function AnimeInfoGrid({
           ></a>
         </div>
         <div className="hover:bg-blue-500 rounded-[50%]">
-          <a
-            target="_blank"
-            rel="noopener noreferrer"
-            href={`https://myanimelist.net/anime/${idMal}`}
+          <button
+            // target="_blank"
+            // rel="noopener noreferrer"
+            // href={`https://myanimelist.net/anime/${idMal}`}
             className="anilist"
-          ></a>
+            onClick={() => removeTest(info)}
+          ></button>
         </div>
         <div className="hover:bg-blue-500 rounded-[50%]">
           <button

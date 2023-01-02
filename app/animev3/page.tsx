@@ -1,15 +1,7 @@
-/**
- * Optionl Catch-all dyanmic segment
- * Cacthes:
- * /anime,
- * /anime/year
- * /anime/year/season
- * Then uses regex to verify correct slugs/params
- */
+import { redirect } from "next/navigation";
 
-export default async function Anime({ params }: any) {
-  const { anime = [] } = params;
-  const [year = "", season = ""] = anime;
+export default async function Anime() {
+  // redirect("/anime/2022/fall");
 
   return (
     <div>
