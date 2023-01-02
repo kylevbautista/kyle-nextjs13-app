@@ -32,7 +32,7 @@ export const getAniListDataByMalId = async ({
     );
     if (enableLogs)
       console.log(
-        `getAniListDataByMalId ${malId} ${title}`,
+        `getAniListDataByMalId`,
         res.headers.get("x-ratelimit-remaining")
       );
     if (res.status !== 200) {
@@ -42,11 +42,15 @@ export const getAniListDataByMalId = async ({
     if (limitRemaining < 20) {
       await sleep(1500);
     }
+    // if (limitRemaining < 20) {
+    //   return null;
+    // }
 
     const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
+    return null;
   }
 };
 
@@ -67,6 +71,6 @@ export const getAniListDataByMalIdList = async (list: any) => {
     return results;
   } catch (err) {
     console.log(err);
-    return [];
+    return null;
   }
 };

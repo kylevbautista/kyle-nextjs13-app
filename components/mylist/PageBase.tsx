@@ -51,7 +51,13 @@ interface PageBaseProps {
 }
 
 export default function PageBase() {
-  const { data: list } = useSWR("/mylist", () => getUserAnimeListClient());
+  const { data: list, isValidating } = useSWR(
+    "/mylist",
+    () => getUserAnimeListClient(),
+    {
+      refreshInterval: 5000,
+    }
+  );
   return (
     <div
       id="container"
@@ -85,7 +91,7 @@ export default function PageBase() {
         </div>
       )}
       <div className="mt-4">
-        <Test list={list} />
+        <Test list={list} shouldRefresh={!isValidating} />
       </div>
     </div>
   );

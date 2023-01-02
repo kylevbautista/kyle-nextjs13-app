@@ -51,19 +51,6 @@ const AnimeList = {
       const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
       try {
-        // const res = UserModel.findOneAndUpdate(
-        //   query,
-        //   update,
-        //   options,
-        //   (error: any, result: any) => {
-        //     if (error) return;
-        //     console.log("KYLELOG", result);
-        //     // do something with the document
-        //   }
-        // );
-        // console.log("res", res);
-        // const res = await UserModel.findOneAndUpdate(query, update, options);
-
         const users = await UserModel.find(
           {
             _id: contextValue?.session?.objectId,
