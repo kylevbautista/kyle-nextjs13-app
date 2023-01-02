@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import { unstable_getServerSession } from "next-auth/next";
 import PageBase from "../../components/mylist/PageBase";
+import { Boundary } from "./Boundary";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -19,24 +20,9 @@ export default async function MyList() {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div
-          className="
-            flex 
-            flex-col 
-            justify-center 
-            items-center 
-            sm:p-4
-            text-white
-        "
-        >
-          <p>Loading Your Anime list...</p>
-        </div>
-      }
-    >
+    <>
       {/* @ts-ignore */}
-      <PageBase />
-    </Suspense>
+      <Boundary />
+    </>
   );
 }

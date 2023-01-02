@@ -1,7 +1,8 @@
+"use client";
 import { ReactNode } from "react";
 import Grid from "../common/Grid";
 import AnimeInfoGrid from "../animev3/AnimeInfoGrid";
-import { getInitialTimes, getCurrentSeasonPath } from "../anime/year/helpers";
+import { getInitialTimes } from "../anime/year/helpers";
 
 interface PageBaseProps {
   list?: any;
@@ -9,7 +10,7 @@ interface PageBaseProps {
   children?: ReactNode;
 }
 
-export function List({ list, session, children }: PageBaseProps) {
+export function List({ list }: PageBaseProps) {
   return (
     <>
       {list.length && (

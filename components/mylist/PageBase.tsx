@@ -1,9 +1,10 @@
+"use client";
 import { ReactNode } from "react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
-import { getInitialTimes, getCurrentSeasonPath } from "../anime/year/helpers";
+import { getCurrentSeasonPath } from "../anime/year/helpers";
+import useSWR from "swr";
 
 import { List } from "./List";
 import { Test } from "./Test";
@@ -18,32 +19,26 @@ const getCurrentYear = (shifted: Boolean = false) => {
   return currentYear;
 };
 
-const getUserAnimeList = async () => {
-  const protocol = headers().get("x-forwarded-proto") || "http";
-  const host = headers().get("host");
-  /**
-   * When using next-auth with server side calls,
-   * must add cookies to req or else getSession won't work.
-   */
-  const cookies = headers().get("cookie");
-  const baseUrl = `${protocol}://${host}`;
+const getUserAnimeListClient = async () => {
   try {
     /**
      * If calling /api routes from the server,
      * it must be an absolute url.
      * However, client side /api calls can be relative.
      */
-    const res = await fetch(`${baseUrl}/api/graphql`, {
+    const res = await fetch(`/api/graphql`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        cookie: `${cookies}`,
       },
       body: JSON.stringify({
         query: stringifyTag(getUserAnimeListQuery),
       }),
     });
-    const data = await res.json();
+    const { data = null } = await res.json();
+    if (data?.getUserAnimeList?.list) {
+      return data?.getUserAnimeList?.list;
+    }
     return data;
   } catch (err) {
     console.log(err);
@@ -55,10 +50,8 @@ interface PageBaseProps {
   children?: ReactNode;
 }
 
-export default async function PageBase({ session, children }: PageBaseProps) {
-  const { data = {} } = await getUserAnimeList();
-  const list = data?.getUserAnimeList?.list || [];
-
+export default function PageBase() {
+  const { data: list } = useSWR("/mylist", () => getUserAnimeListClient());
   return (
     <div
       id="container"
