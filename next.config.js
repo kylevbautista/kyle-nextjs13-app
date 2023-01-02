@@ -38,12 +38,18 @@ const nextConfig = {
     /**
      * Mask animev3 as anime for testing
      */
-    return [
-      {
-        source: "/anime/:slug*",
-        destination: "/animev3/:slug*", // Matched parameters can be used in the destination
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: "/anime",
+          destination: "/animev3", // Matched parameters can be used in the destination
+        },
+        {
+          source: "/anime/:slug*",
+          destination: "/animev3/:slug*", // Matched parameters can be used in the destination
+        },
+      ],
+    };
   },
   async redirects() {
     const dateObject = new Date();

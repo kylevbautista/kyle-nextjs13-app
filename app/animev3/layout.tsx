@@ -11,7 +11,7 @@ export default function AnimeRouteLayout({
   const { anime = [] } = params;
   const [year = "", season = ""] = anime;
   return (
-    <div id="anime-route">
+    <div id="animev3-route">
       <HeaderProvider>
         <HeaderSelectorWrapper year={year} season={season} />
         {children}
