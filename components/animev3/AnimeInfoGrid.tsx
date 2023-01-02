@@ -104,14 +104,20 @@ export default function AnimeInfoGrid({
     const res = await removeFromList(info);
     const message = res.removeFromUserAnimeList.message || "";
     if (message === "Successfully Removed From List")
-      alert(`Removed ${info?.title?.romaji} from your Anime List`);
+      console.log(`Removed ${info?.title?.romaji} from your Anime List`);
     else if (message === "Did Not Remove") {
-      alert(`Unable To Remove ${info?.title?.romaji} from List`);
+      console.log(`Unable To Remove ${info?.title?.romaji} from List`);
     } else {
-      alert("UnAuthorized");
+      console.log("UnAuthorized");
     }
     console.log("done");
-    router.refresh();
+    const currentTime = Date.now();
+    if (!localStorage.getItem("listRefreshTime")) {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    } else {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    }
+    // router.refresh();
   };
 
   const {
