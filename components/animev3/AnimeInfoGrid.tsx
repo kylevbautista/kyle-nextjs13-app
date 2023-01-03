@@ -98,6 +98,12 @@ export default function AnimeInfoGrid({
     } else {
       alert("UnAuthorized");
     }
+    const currentTime = Date.now();
+    if (!localStorage.getItem("listRefreshTime")) {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    } else {
+      localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
+    }
   };
 
   const removeTest = async (info: any) => {

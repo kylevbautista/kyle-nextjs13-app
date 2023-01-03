@@ -5,6 +5,7 @@ import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../anime/year/helpers";
 import useSWR from "swr";
+import { compareFnCountDown } from "../animev3/utils/parseAniListData";
 
 import { List } from "./List";
 import { Test } from "./Test";
@@ -58,6 +59,7 @@ export default function PageBase() {
       refreshInterval: 5000,
     }
   );
+  const listSorted = [...list]?.sort(compareFnCountDown);
   return (
     <div
       id="container"
@@ -70,8 +72,8 @@ export default function PageBase() {
         text-white
       "
     >
-      {list.length ? (
-        <List list={list} />
+      {listSorted.length ? (
+        <List list={listSorted} />
       ) : (
         <div>
           <div>
@@ -91,7 +93,7 @@ export default function PageBase() {
         </div>
       )}
       <div className="mt-4">
-        <Test list={list} shouldRefresh={!isValidating} />
+        <Test list={listSorted} shouldRefresh={!isValidating} />
       </div>
     </div>
   );
