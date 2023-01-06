@@ -54,7 +54,7 @@ export default function PageBase() {
         text-white
       "
     >
-      {data.length ? (
+      {data?.length ? (
         <List list={data} />
       ) : (
         <div>
