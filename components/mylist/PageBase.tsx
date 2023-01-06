@@ -6,6 +6,7 @@ import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../anime/year/helpers";
 import useSWR from "swr";
 import { compareFnCountDown } from "../animev3/utils/parseAniListData";
+import { getUserAnimeListClient } from "./utils/getUserAnimeList";
 
 import { List } from "./List";
 import { Test } from "./Test";
@@ -18,32 +19,6 @@ const getCurrentYear = (shifted: Boolean = false) => {
     return currentYear + 1;
   }
   return currentYear;
-};
-
-const getUserAnimeListClient = async () => {
-  try {
-    /**
-     * If calling /api routes from the server,
-     * it must be an absolute url.
-     * However, client side /api calls can be relative.
-     */
-    const res = await fetch(`/api/graphql`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: stringifyTag(getUserAnimeListQuery),
-      }),
-    });
-    const { data = null } = await res.json();
-    if (data?.getUserAnimeList?.list) {
-      return data?.getUserAnimeList?.list;
-    }
-    return data;
-  } catch (err) {
-    console.log(err);
-  }
 };
 
 interface PageBaseProps {

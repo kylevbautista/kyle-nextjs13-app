@@ -15,6 +15,7 @@ import { print as stringifyTag } from "graphql";
 import addToUserAnimeListMutation from "../../graphql/tags/addToUserAnimeList.graphql";
 import removeFromUserAnimeList from "../../graphql/tags/mutations/removeFromUserAnimeList.graphql";
 import { fetchFromGraphQLServer } from "../../graphql/utils/fetchFromGraphQLServer";
+import { useSWRConfig } from "swr";
 
 const addToUserAnimeList = async (info: any) => {
   try {
@@ -68,6 +69,8 @@ export default function AnimeInfoGrid({
   id,
 }: Props) {
   const router = useRouter();
+  const { cache } = useSWRConfig();
+  const { mutate } = useSWRConfig();
   const [day, setDay] = useState<number>(
     getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
       ?.d || 0
@@ -104,6 +107,17 @@ export default function AnimeInfoGrid({
     } else {
       localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
     }
+
+    if (message === "Successfully Added to List" && cache?.get("/mylist")) {
+      let placeholder = "";
+      const prevData = cache?.get("/mylist")?.data;
+      mutate("/mylist", placeholder, {
+        populateCache: (mylist) => {
+          console.log("asdf", mylist);
+          return [...prevData, info];
+        },
+      });
+    }
   };
 
   const removeTest = async (info: any) => {
@@ -124,6 +138,23 @@ export default function AnimeInfoGrid({
       localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
     }
     // router.refresh();
+    if (message === "Successfully Removed From List" && cache?.get("/mylist")) {
+      let placeholder = "";
+      const prevData = cache?.get("/mylist")?.data;
+
+      for (let i = 0; i < prevData.length; i++) {
+        if (prevData[i]?.idMal === info?.idMal) {
+          prevData.splice(i, 1);
+          break;
+        }
+      }
+      mutate("/mylist", placeholder, {
+        populateCache: (mylist) => {
+          console.log("asdf", mylist);
+          return [...prevData];
+        },
+      });
+    }
   };
 
   const {
