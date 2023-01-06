@@ -16,6 +16,7 @@ import addToUserAnimeListMutation from "../../graphql/tags/addToUserAnimeList.gr
 import removeFromUserAnimeList from "../../graphql/tags/mutations/removeFromUserAnimeList.graphql";
 import { fetchFromGraphQLServer } from "../../graphql/utils/fetchFromGraphQLServer";
 import { useSWRConfig } from "swr";
+import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
 
 const addToUserAnimeList = async (info: any) => {
   try {
@@ -118,6 +119,7 @@ export default function AnimeInfoGrid({
         },
       });
     }
+    // unixTimeStampToWeekDay(info?.firstEpisode?.episode[0]?.airingAt);
   };
 
   const removeTest = async (info: any) => {

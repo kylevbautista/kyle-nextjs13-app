@@ -1,6 +1,5 @@
-import HeaderSelector from "../../components/anime/HeaderSelector";
-import HeaderSelectorWrapper from "../../components/anime/HeaderSelectorWrapper";
-import { HeaderProvider } from "../../components/anime/HeaderProvider";
+import { HeaderProvider } from "../../components/mylist/layout/HeaderProvider";
+import { HeaderSelector } from "../../components/mylist/layout/HeaderSelector";
 
 export default function MyListLayout({
   params,
@@ -9,5 +8,24 @@ export default function MyListLayout({
   params: any;
   children: React.ReactNode;
 }) {
-  return <div id="my-list">{children}</div>;
+  return (
+    <div id="my-list">
+      {/* <div
+        id="container"
+        className="
+        flex 
+        flex-col 
+        justify-center 
+        items-center 
+        sm:pt-4 sm:px-4
+        text-white
+        border
+      "
+      ></div> */}
+      <HeaderProvider>
+        <HeaderSelector />
+        {children}
+      </HeaderProvider>
+    </div>
+  );
 }
