@@ -46,7 +46,7 @@ export function Test({ list, shouldRefresh }: PageBaseProps) {
 
     if (list.length && shouldRefresh && timeDiff > 60) {
       console.log("Updating Episode Air Dates...");
-      // test(list);
+      test(list);
       localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
     }
 
@@ -59,9 +59,9 @@ export function Test({ list, shouldRefresh }: PageBaseProps) {
 
   return (
     <>
-      <button className="border p-2 rounded-lg" onClick={() => test(list)}>
+      {/* <button className="border p-2 rounded-lg" onClick={() => test(list)}>
         <p>Refresh Your List</p>
-      </button>
+      </button> */}
     </>
   );
 }
