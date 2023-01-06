@@ -1,12 +1,15 @@
 "use client";
-import { ReactNode } from "react";
+import { ReactNode, useState, useContext } from "react";
 import Link from "next/link";
 import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../anime/year/helpers";
 import useSWR from "swr";
 import { compareFnCountDown } from "../animev3/utils/parseAniListData";
-
+import { getUserAnimeListClient } from "./utils/getUserAnimeList";
+import { unixTimeStampToWeekDay } from "../animev3/utils/timeStampHelpers";
+import { getSortedData } from "./utils/getSortedData";
+import { HeaderContext } from "./layout/HeaderProvider";
 import { List } from "./List";
 import { Test } from "./Test";
 
@@ -20,38 +23,15 @@ const getCurrentYear = (shifted: Boolean = false) => {
   return currentYear;
 };
 
-const getUserAnimeListClient = async () => {
-  try {
-    /**
-     * If calling /api routes from the server,
-     * it must be an absolute url.
-     * However, client side /api calls can be relative.
-     */
-    const res = await fetch(`/api/graphql`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: stringifyTag(getUserAnimeListQuery),
-      }),
-    });
-    const { data = null } = await res.json();
-    if (data?.getUserAnimeList?.list) {
-      return data?.getUserAnimeList?.list;
-    }
-    return data;
-  } catch (err) {
-    console.log(err);
-  }
-};
-
 interface PageBaseProps {
   session?: any;
   children?: ReactNode;
 }
 
 export default function PageBase() {
+  // const [option, setOption] = useState("Any");
+  const header = useContext(HeaderContext);
+  const { option, setOption } = header;
   const { data: list, isValidating } = useSWR(
     "/mylist",
     () => getUserAnimeListClient(),
@@ -60,6 +40,8 @@ export default function PageBase() {
     }
   );
   const listSorted = [...list]?.sort(compareFnCountDown);
+  const { data } = getSortedData({ option, listSorted });
+
   return (
     <div
       id="container"
@@ -72,12 +54,16 @@ export default function PageBase() {
         text-white
       "
     >
-      {listSorted.length ? (
-        <List list={listSorted} />
+      {data.length ? (
+        <List list={data} />
       ) : (
         <div>
           <div>
-            <p>Nothing in your anime watch list </p>
+            {option === "Any" ? (
+              <p>Nothing in your anime watch list </p>
+            ) : (
+              <p>Nothing Airing on {option}</p>
+            )}
           </div>
           <div>
             <Link

@@ -2,7 +2,7 @@
 import { ReactNode, useEffect } from "react";
 import { getAniListDataByMalIdList } from "./utils/getAniListDataByMalId";
 import { updateUserAnnimeList } from "./utils/updateUserList";
-
+// import { getUserAnimeListClient } from "./utils/getUserAnimeList";
 interface PageBaseProps {
   list?: any;
   shouldRefresh?: any;
@@ -11,6 +11,7 @@ interface PageBaseProps {
 
 const test = async (list: any, hidden = true) => {
   try {
+    // const listBetter = await getUserAnimeListClient();
     const data = await getAniListDataByMalIdList(list);
     if (data) {
       const { updateUserAnimeList: response = {} } =
