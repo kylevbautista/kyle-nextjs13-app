@@ -77,6 +77,19 @@ export default function PageBase({ children }: PageBaseProps) {
           rounded-md
           w-72
         "
+        onClick={handleOAuthSignIn("google")}
+      >
+        <p>SIGN IN WITH GOOGLE</p>
+      </button>
+      <button
+        className="
+          border
+          p-5
+          bg-[rgb(38,38,38)]
+          hover:bg-sky-700
+          rounded-md
+          w-72
+        "
         onClick={handleOAuthSignIn("github")}
       >
         <p>SIGN IN WITH GITHUB</p>
