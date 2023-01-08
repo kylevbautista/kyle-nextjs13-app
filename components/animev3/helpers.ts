@@ -191,7 +191,7 @@ export const startTimer = (
 };
 
 export const startTimerFromTimeStamp = (
-  interval: any,
+  intervalRef: any,
   unixTimeStamp: any = 0,
   setDay: any,
   setHour: any,
@@ -200,7 +200,7 @@ export const startTimerFromTimeStamp = (
   info: any
 ) => {
   if (unixTimeStamp > Math.floor(Date.now() / 1000)) {
-    interval = setInterval(() => {
+    const id = setInterval(() => {
       const currentTimeStamp = Math.floor(Date.now() / 1000);
       let secondsLeft = unixTimeStamp - currentTimeStamp;
       let d = Math.floor(secondsLeft / (3600 * 24));
@@ -212,9 +212,10 @@ export const startTimerFromTimeStamp = (
       setMinute(m);
       setSecond(s);
       if (secondsLeft <= 0) {
-        clearInterval(interval);
+        clearInterval(intervalRef.current);
       }
     }, 1000);
+    intervalRef.current = id;
   }
 };
 
