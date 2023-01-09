@@ -21,7 +21,13 @@ export const compareFnCountDown = (a: any, b: any) => {
   return 0;
 };
 
-export const parseAniListData = (data: any) => {
+export const parseAniListData = ({
+  data,
+  year,
+  season,
+  byCount = true,
+  byPopularity = false,
+}: any) => {
   const {
     winter,
     spring,
@@ -33,24 +39,53 @@ export const parseAniListData = (data: any) => {
     summer: graphQLPageType;
     fall: graphQLPageType;
   } = data || {};
-  const { media: winterByPopularity = [] } = winter || {};
-  const { media: springByPopularity = [] } = spring || {};
-  const { media: summerByPopularity = [] } = summer || {};
-  const { media: fallByPopularity = [] } = fall || {};
 
-  const winterByCountDown = [...winterByPopularity]?.sort(compareFnCountDown);
-  const springByCountDown = [...springByPopularity]?.sort(compareFnCountDown);
-  const summerByCountDown = [...summerByPopularity]?.sort(compareFnCountDown);
-  const fallByCountDown = [...fallByPopularity]?.sort(compareFnCountDown);
+  interface parsedDataType {
+    popularity: any[];
+    countdown: any[];
+  }
+
+  const parsedData: parsedDataType = {
+    popularity: [],
+    countdown: [],
+  };
+
+  let parsedDataTest: any = [];
+  if (season === "winter") {
+    const winterData = winter?.media || [];
+    parsedData.popularity = winterData;
+    parsedData.countdown = [...winterData]?.sort(compareFnCountDown);
+    parsedDataTest = byCount
+      ? [...winterData]?.sort(compareFnCountDown)
+      : winterData;
+  }
+  if (season === "spring") {
+    const fallData = fall?.media || [];
+    parsedData.popularity = fallData;
+    parsedData.countdown = [...fallData]?.sort(compareFnCountDown);
+    parsedDataTest = byCount
+      ? [...fallData]?.sort(compareFnCountDown)
+      : fallData;
+  }
+  if (season === "summer") {
+    let summerData = summer?.media || [];
+    parsedData.popularity = summerData;
+    parsedData.countdown = [...summerData]?.sort(compareFnCountDown);
+    parsedDataTest = byCount
+      ? [...summerData]?.sort(compareFnCountDown)
+      : summerData;
+  }
+  if (season === "fall") {
+    let fallData = fall?.media || [];
+    parsedData.popularity = fallData;
+    parsedData.countdown = [...fallData]?.sort(compareFnCountDown);
+    parsedDataTest = byCount
+      ? [...fallData]?.sort(compareFnCountDown)
+      : fallData;
+  }
 
   return {
-    winterByPopularity,
-    winterByCountDown,
-    springByPopularity,
-    springByCountDown,
-    summerByPopularity,
-    summerByCountDown,
-    fallByPopularity,
-    fallByCountDown,
+    parsedData,
+    parsedDataTest,
   };
 };
