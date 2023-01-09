@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { HydrationContext } from "../common/HydrationProvider";
 import {
@@ -17,6 +17,7 @@ import removeFromUserAnimeList from "../../graphql/tags/mutations/removeFromUser
 import { fetchFromGraphQLServer } from "../../graphql/utils/fetchFromGraphQLServer";
 import { useSWRConfig } from "swr";
 import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
+import { useInterval } from "./utils/useInterval";
 
 const addToUserAnimeList = async (info: any) => {
   try {
@@ -60,6 +61,7 @@ interface Props {
   info?: any;
   id?: any;
   initialTimes?: any;
+  option?: any;
   children?: React.ReactNode;
 }
 
@@ -68,6 +70,7 @@ export default function AnimeInfoGrid({
   children,
   initialTimes,
   id,
+  option = "Any",
 }: Props) {
   const router = useRouter();
   const { cache } = useSWRConfig();
@@ -88,9 +91,7 @@ export default function AnimeInfoGrid({
     getInitialTimesFromTimeStamp(info?.upComingAirDate?.episode[0]?.airingAt)
       ?.s || 0
   );
-  const [isHydrated, setIsHydrated] = useState<Boolean>(false);
   const hydrated = useContext(HydrationContext);
-  let interval: any;
 
   const saveToAnimeList = async (info: any) => {
     const res = await addToUserAnimeList(info);
@@ -177,23 +178,23 @@ export default function AnimeInfoGrid({
     averageScore,
   } = info || {};
 
-  useEffect(() => {
+  const startTimer = () => {
     if (upcomingEpisode?.timeUntilAiring) {
-      startTimerFromTimeStamp(
-        interval,
-        upComingAirDate?.episode[0]?.airingAt,
-        setDay,
-        setHour,
-        setMinute,
-        setSecond,
-        info
-      );
+      const unixTimeStamp = upComingAirDate?.episode[0]?.airingAt;
+      const currentTimeStamp = Math.floor(Date.now() / 1000);
+      let secondsLeft = unixTimeStamp - currentTimeStamp;
+      let d = Math.floor(secondsLeft / (3600 * 24));
+      let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
+      let m = Math.floor((secondsLeft % 3600) / 60);
+      let s = Math.floor(secondsLeft % 60);
+      setDay(d);
+      setHour(h);
+      setMinute(m);
+      setSecond(s);
     }
+  };
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
+  useInterval(startTimer, 1000, option);
 
   return (
     <div

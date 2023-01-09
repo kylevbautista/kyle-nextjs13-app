@@ -14,6 +14,7 @@ export default async function Boundary({ year, season }: PageBaseProps) {
   const { data = {} } =
     (await getAniListDataByYear({
       year: year,
+      season: season,
       timeout: 5000,
       enableLogs: false,
     })) || {};

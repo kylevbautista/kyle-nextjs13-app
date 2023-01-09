@@ -8,6 +8,7 @@ const sleep = (ms: number) => {
 
 export const getAniListDataByYear = async ({
   year,
+  season = "",
   timeout = 5000,
   enableLogs = false,
 }: any) => {
@@ -28,7 +29,7 @@ export const getAniListDataByYear = async ({
     });
     if (enableLogs)
       console.log(
-        `getDataByYear ${parsedYear}`,
+        `getDataByYear ${parsedYear} ${season}`,
         res.headers.get("x-ratelimit-remaining")
       );
     // console.log("status: ", res.status);
