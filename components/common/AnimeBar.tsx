@@ -3,7 +3,7 @@ import { useContext } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { HydrationContext } from "./HydrationProvider";
-import { getCurrentSeasonPath } from "../anime/year/helpers";
+import { getCurrentSeasonPath } from "../animev3/helpers";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();

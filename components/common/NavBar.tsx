@@ -3,7 +3,6 @@ import Link from "next/link";
 // import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import LoginBox from "./LogInBox";
 import { AnimeBar } from "./AnimeBar";
-import { getCurrentSeasonPath } from "../anime/year/helpers";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();

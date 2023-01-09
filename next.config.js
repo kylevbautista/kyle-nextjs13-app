@@ -34,23 +34,23 @@ const nextConfig = {
 
     return config;
   },
-  async rewrites() {
-    /**
-     * Mask animev3 as anime for testing
-     */
-    return {
-      beforeFiles: [
-        {
-          source: "/anime",
-          destination: "/animev3", // Matched parameters can be used in the destination
-        },
-        {
-          source: "/anime/:slug*",
-          destination: "/animev3/:slug*", // Matched parameters can be used in the destination
-        },
-      ],
-    };
-  },
+  // async rewrites() {
+  //   /**
+  //    * Mask animev3 as anime for testing
+  //    */
+  //   return {
+  //     beforeFiles: [
+  //       {
+  //         source: "/anime",
+  //         destination: "/animev3", // Matched parameters can be used in the destination
+  //       },
+  //       {
+  //         source: "/anime/:slug*",
+  //         destination: "/animev3/:slug*", // Matched parameters can be used in the destination
+  //       },
+  //     ],
+  //   };
+  // },
   async redirects() {
     const dateObject = new Date();
     let year = dateObject.getUTCFullYear();

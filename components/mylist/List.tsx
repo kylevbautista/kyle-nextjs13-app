@@ -2,7 +2,7 @@
 import { ReactNode, useContext } from "react";
 import Grid from "../common/Grid";
 import AnimeInfoGrid from "../animev3/AnimeInfoGrid";
-import { getInitialTimes } from "../anime/year/helpers";
+import { getInitialTimes } from "../animev3/helpers";
 import { HeaderContext } from "./layout/HeaderProvider";
 
 interface PageBaseProps {
