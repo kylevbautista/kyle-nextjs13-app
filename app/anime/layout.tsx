@@ -1,6 +1,5 @@
-import HeaderSelector from "../../components/anime/HeaderSelector";
-import HeaderSelectorWrapper from "../../components/anime/HeaderSelectorWrapper";
-import { HeaderProvider } from "../../components/anime/HeaderProvider";
+import { HeaderSelectorWrapper } from "../../components/animev3/layoutSelector/HeaderSelectorWrapper";
+import { HeaderProvider } from "../../components/animev3/layoutSelector/HeaderProvider";
 
 export default function AnimeRouteLayout({
   params,
@@ -9,10 +8,12 @@ export default function AnimeRouteLayout({
   params: any;
   children: React.ReactNode;
 }) {
+  const { anime = [] } = params;
+  const [year = "", season = ""] = anime;
   return (
-    <div id="anime-route">
+    <div id="animev3-route">
       <HeaderProvider>
-        <HeaderSelectorWrapper />
+        <HeaderSelectorWrapper year={year} season={season} />
         {children}
       </HeaderProvider>
     </div>

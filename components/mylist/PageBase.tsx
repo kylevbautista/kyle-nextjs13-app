@@ -3,7 +3,7 @@ import { ReactNode, useState, useContext } from "react";
 import Link from "next/link";
 import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
-import { getCurrentSeasonPath } from "../anime/year/helpers";
+import { getCurrentSeasonPath } from "../animev3/helpers";
 import useSWR from "swr";
 import { compareFnCountDown } from "../animev3/utils/parseAniListData";
 import { getUserAnimeListClient } from "./utils/getUserAnimeList";
