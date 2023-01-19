@@ -60,12 +60,12 @@ export const parseAniListData = ({
       : winterData;
   }
   if (season === "spring") {
-    const fallData = fall?.media || [];
-    parsedData.popularity = fallData;
-    parsedData.countdown = [...fallData]?.sort(compareFnCountDown);
+    const springData = spring?.media || [];
+    parsedData.popularity = springData;
+    parsedData.countdown = [...springData]?.sort(compareFnCountDown);
     parsedDataTest = byCount
-      ? [...fallData]?.sort(compareFnCountDown)
-      : fallData;
+      ? [...springData]?.sort(compareFnCountDown)
+      : springData;
   }
   if (season === "summer") {
     let summerData = summer?.media || [];
