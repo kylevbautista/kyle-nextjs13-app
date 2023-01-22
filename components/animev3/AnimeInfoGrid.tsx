@@ -176,6 +176,7 @@ export default function AnimeInfoGrid({
     source,
     description,
     averageScore,
+    externalLinks,
   } = info || {};
   const { english: englishTitle = null, romaji: romajiTitle = null } = title;
   const displayTitle = title
@@ -183,6 +184,18 @@ export default function AnimeInfoGrid({
       ? englishTitle
       : romajiTitle
     : "Title";
+  let mediaLink = `https://zoro.to/search?keyword=${displayTitle.replace(
+    / /g,
+    "+"
+  )}`;
+  if (externalLinks.length) {
+    const crunchyRollLink = externalLinks.find(
+      (obj: any) => obj.site === "Crunchyroll"
+    );
+    if (crunchyRollLink) {
+      mediaLink = crunchyRollLink.url;
+    }
+  }
 
   const startTimer = () => {
     if (upcomingEpisode?.timeUntilAiring) {
@@ -407,10 +420,7 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://www.crunchyroll.com/search?q=${displayTitle.replace(
-              / /g,
-              "%20"
-            )}`}
+            href={mediaLink}
             className="crunchyroll"
           ></a>
         </div>
