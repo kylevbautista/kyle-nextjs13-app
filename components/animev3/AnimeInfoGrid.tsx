@@ -407,9 +407,9 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://zoro.to/search?keyword=${displayTitle.replace(
+            href={`https://www.crunchyroll.com/search?q=${displayTitle.replace(
               / /g,
-              "+"
+              "%20"
             )}`}
             className="crunchyroll"
           ></a>
@@ -418,7 +418,10 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://myanimelist.net/anime/${idMal}`}
+            href={`https://zoro.to/search?keyword=${displayTitle.replace(
+              / /g,
+              "+"
+            )}`}
             className="adb"
           ></a>
         </div>
