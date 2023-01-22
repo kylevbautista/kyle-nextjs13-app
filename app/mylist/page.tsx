@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import { unstable_getServerSession } from "next-auth/next";
@@ -22,7 +21,7 @@ export default async function MyList() {
   return (
     <>
       {/* @ts-ignore */}
-      <Boundary />
+      <Boundary session={session} />
     </>
   );
 }
