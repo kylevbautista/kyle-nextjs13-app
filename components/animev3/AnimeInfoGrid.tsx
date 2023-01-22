@@ -176,7 +176,7 @@ export default function AnimeInfoGrid({
     source,
     description,
     averageScore,
-    externalLinks,
+    externalLinks = [],
   } = info || {};
   const { english: englishTitle = null, romaji: romajiTitle = null } = title;
   const displayTitle = title
@@ -188,7 +188,7 @@ export default function AnimeInfoGrid({
     / /g,
     "+"
   )}`;
-  if (externalLinks.length) {
+  if (externalLinks?.length) {
     const crunchyRollLink = externalLinks.find(
       (obj: any) => obj.site === "Crunchyroll"
     );
