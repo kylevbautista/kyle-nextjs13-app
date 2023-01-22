@@ -177,6 +177,12 @@ export default function AnimeInfoGrid({
     description,
     averageScore,
   } = info || {};
+  const { english: englishTitle = null, romaji: romajiTitle = null } = title;
+  const displayTitle = title
+    ? englishTitle
+      ? englishTitle
+      : romajiTitle
+    : "Title";
 
   const startTimer = () => {
     if (upcomingEpisode?.timeUntilAiring) {
@@ -229,7 +235,7 @@ export default function AnimeInfoGrid({
             className="leading-4 hover:underline font-bold"
             href={`https://myanimelist.net/anime/${idMal}`}
           >
-            <p className="line-clamp-2">{title ? title.romaji : "Title"}</p>
+            <p className="line-clamp-2">{displayTitle}</p>
           </a>
         </div>
         <div
@@ -401,7 +407,10 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://myanimelist.net/anime/${idMal}`}
+            href={`https://zoro.to/search?keyword=${displayTitle.replace(
+              / /g,
+              "+"
+            )}`}
             className="crunchyroll"
           ></a>
         </div>
