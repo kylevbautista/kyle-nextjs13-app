@@ -24,6 +24,11 @@ query allCurrentAnimeQueryFetch($year: Int) {
         month
         day
       }
+      externalLinks {
+        id
+        url
+        site
+      }
       status
       episodes
       duration
@@ -75,6 +80,11 @@ query allCurrentAnimeQueryFetch($year: Int) {
         year
         month
         day
+      }
+      externalLinks {
+        id
+        url
+        site
       }
       status
       episodes
@@ -128,6 +138,11 @@ query allCurrentAnimeQueryFetch($year: Int) {
         month
         day
       }
+      externalLinks {
+        id
+        url
+        site
+      }
       status
       episodes
       duration
@@ -179,6 +194,11 @@ query allCurrentAnimeQueryFetch($year: Int) {
         year
         month
         day
+      }
+      externalLinks {
+        id
+        url
+        site
       }
       status
       episodes
