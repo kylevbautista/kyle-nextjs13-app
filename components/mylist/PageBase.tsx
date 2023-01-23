@@ -1,7 +1,7 @@
 "use client";
 import { ReactNode, useState, useContext } from "react";
 import Link from "next/link";
-import getUserAnimeListQuery from "../../graphql/tags/getUserAnimeList.graphql";
+import getUserAnimeListQuery from "../utils/graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../animev3/helpers";
 import useSWR from "swr";

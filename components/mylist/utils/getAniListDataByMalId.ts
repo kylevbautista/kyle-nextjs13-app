@@ -1,5 +1,5 @@
 import { print as stringifyTag } from "graphql";
-import findByMalIdQuery from "../../../graphql/tags/findByMalIdQuery.graphql";
+import findByMalIdQuery from "../../utils/graphql/tags/findByMalIdQuery.graphql";
 import { fetchWithTimeout } from "../../utils/fetchWithTimeout";
 
 const sleep = (ms: number) => {

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 // import { unstable_getServerSession } from "next-auth/next";
-// import { authOptions } from "../../pages/api/auth/[...nextauth]";
+// import { authOptions } from "../../server/auth";
 
 export default function LoginBox() {
   // const session = await unstable_getServerSession(authOptions);

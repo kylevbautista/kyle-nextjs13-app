@@ -1,4 +1,4 @@
-import getUserAnimeListQuery from "../../../graphql/tags/getUserAnimeList.graphql";
+import getUserAnimeListQuery from "../../utils/graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
 
 export const getUserAnimeListClient = async () => {

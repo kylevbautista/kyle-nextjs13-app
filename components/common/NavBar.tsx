@@ -1,6 +1,6 @@
 import Link from "next/link";
 // import { unstable_getServerSession } from "next-auth/next";
-// import { authOptions } from "../../pages/api/auth/[...nextauth]";
+// import { authOptions } from "../../server/auth";
 import LoginBox from "./LogInBox";
 import { AnimeBar } from "./AnimeBar";
 

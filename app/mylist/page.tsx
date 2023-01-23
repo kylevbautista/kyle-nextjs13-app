@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { authOptions } from "../../pages/api/auth/[...nextauth]";
+import { authOptions } from "../../server/auth";
 import { unstable_getServerSession } from "next-auth/next";
 import PageBase from "../../components/mylist/PageBase";
 import { Boundary } from "./Boundary";

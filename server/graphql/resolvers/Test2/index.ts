@@ -1,6 +1,6 @@
 // import { getToken } from "next-auth/jwt";
-// import TestModel from "../../../../mongodb/models/Test/test";
-// import UserModel from "../../../../mongodb/models/User";
+// import TestModel from "../../../mongodb/models/Test/test";
+// import UserModel from "../../../mongodb/models/User";
 
 const Test2 = {
   Query: {

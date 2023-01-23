@@ -1,5 +1,5 @@
 import { print as stringifyTag } from "graphql";
-import allCurrentAnimeTag from "../../../graphql/tags/allCurrentAnimeTag.graphql";
+import allCurrentAnimeTag from "../../utils/graphql/tags/allCurrentAnimeTag.graphql";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 
 const sleep = (ms: number) => {

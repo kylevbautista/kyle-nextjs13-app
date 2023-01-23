@@ -1,5 +1,5 @@
 import { print as stringifyTag } from "graphql";
-import updateUserAnimeListMutation from "../../../graphql/tags/updateUserAnimeListMutation.graphql";
+import updateUserAnimeListMutation from "../../utils/graphql/tags/updateUserAnimeListMutation.graphql";
 
 export const updateUserAnnimeList = async (info: any) => {
   try {
