@@ -23,6 +23,11 @@ query findByMalIdQuery($idMal: Int, $search: String) {
       month
       day
     }
+    externalLinks {
+      id
+      url
+      site
+    }
     status
     episodes
     duration

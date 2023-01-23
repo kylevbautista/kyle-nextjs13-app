@@ -32,6 +32,14 @@ const AnimeInfoScheme = new Schema(
       month: { type: Number, default: null },
       day: { type: Number, default: null },
     },
+    externalLinks: [
+      {
+        _id: false,
+        id: { type: Number, default: null },
+        url: { type: String, default: null },
+        site: { type: String, default: null },
+      },
+    ],
     status: { type: String, default: null },
     episodes: { type: Number, default: null },
     duration: { type: Number, default: null },
