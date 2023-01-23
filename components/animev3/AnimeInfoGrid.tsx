@@ -12,9 +12,9 @@ import {
 import Luffy from "/public/assets/Monkey_D_Luffy.png";
 import Image from "next/image";
 import { print as stringifyTag } from "graphql";
-import addToUserAnimeListMutation from "../../graphql/tags/addToUserAnimeList.graphql";
-import removeFromUserAnimeList from "../../graphql/tags/mutations/removeFromUserAnimeList.graphql";
-import { fetchFromGraphQLServer } from "../../graphql/utils/fetchFromGraphQLServer";
+import addToUserAnimeListMutation from "../utils/graphql/tags/addToUserAnimeList.graphql";
+import removeFromUserAnimeList from "../utils/graphql/tags/mutations/removeFromUserAnimeList.graphql";
+import { fetchFromGraphQLServer } from "../utils/graphql/utils/fetchFromGraphQLServer";
 import { useSWRConfig } from "swr";
 import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
 import { useInterval } from "./utils/useInterval";

@@ -1,6 +1,6 @@
 "use client";
-import { graphQLClient } from "../../graphql/graphqlClient";
-import allCurrentAnimeTag from "../../graphql/queries/allCurrentAnimeTag.graphql";
+import { graphQLClient } from "../utils/graphql/graphqlClient";
+import allCurrentAnimeTag from "../utils/graphql/queries/allCurrentAnimeTag.graphql";
 
 export default function Button() {
   const onClick = async () => {

@@ -1,5 +1,5 @@
 import PageBase from "../../components/auth/PageBase";
-import { authOptions } from "../../pages/api/auth/[...nextauth]";
+import { authOptions } from "../../server/auth";
 import { unstable_getServerSession } from "next-auth/next";
 
 /**

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { TestProvider } from "../../components/mylist/TestProvider";
 import PageBase from "../../components/mylist/PageBase";
-import { getUserAnimeListOptimized } from "../../lib/ssrQueries/getUserAnimeList";
+import { getUserAnimeListOptimized } from "../../server/lib/ssrQueries/getUserAnimeList";
 
 interface PageBaseProps {
   session?: any;

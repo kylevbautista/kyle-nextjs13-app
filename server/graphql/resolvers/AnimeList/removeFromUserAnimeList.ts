@@ -1,5 +1,5 @@
 import { GraphQLError } from "graphql";
-import UserModel from "../../../../mongodb/models/User";
+import UserModel from "../../../mongodb/models/User";
 
 export const removeFromUserAnimeList = async (
   parent: any,
