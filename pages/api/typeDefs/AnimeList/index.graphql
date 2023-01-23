@@ -25,6 +25,12 @@ type StartDateOutput {
   day: Int
 }
 
+type ExternalLinksOutput {
+  id: Int
+  url: String
+  site: String
+}
+
 type UpcomingEpisodeOutput {
   id: Int
   episode: Int
@@ -77,6 +83,12 @@ input StartDateInput {
   day: Int
 }
 
+input ExternalLinksInput {
+  id: Int
+  url: String
+  site: String
+}
+
 input UpcomingEpisodeInput {
   id: Int
   episode: Int
@@ -110,6 +122,7 @@ input DataInput {
   title: TitleInput
   studios: StudiosInput
   startDate: StartDateInput
+  externalLinks: [ExternalLinksInput]
   status: String
   episodes: Int
   duration: Int
@@ -128,6 +141,7 @@ type DataOutput {
   title: TitleOutput
   studios: StudiosOutput
   startDate: StartDateOutput
+  externalLinks: [ExternalLinksOutput]
   status: String
   episodes: Int
   duration: Int

@@ -25,6 +25,11 @@ query getUserAnimeListQuery {
         month
         year
       }
+      externalLinks {
+        id
+        url
+        site
+      }
       status
       studios {
         nodes {

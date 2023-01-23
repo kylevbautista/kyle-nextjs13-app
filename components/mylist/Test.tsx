@@ -19,6 +19,7 @@ const test = async (list: any, hidden = true) => {
       if (response?.message && !hidden) {
         alert(response?.message);
       }
+      console.log("Done Updating Epsiode Air Dates!");
     }
   } catch (err) {
     console.log(err);
