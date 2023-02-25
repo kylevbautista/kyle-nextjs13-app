@@ -202,14 +202,21 @@ export default function AnimeInfoGrid({
       const unixTimeStamp = upComingAirDate?.episode[0]?.airingAt;
       const currentTimeStamp = Math.floor(Date.now() / 1000);
       let secondsLeft = unixTimeStamp - currentTimeStamp;
-      let d = Math.floor(secondsLeft / (3600 * 24));
-      let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
-      let m = Math.floor((secondsLeft % 3600) / 60);
-      let s = Math.floor(secondsLeft % 60);
-      setDay(d);
-      setHour(h);
-      setMinute(m);
-      setSecond(s);
+      if (secondsLeft < 0) {
+        setDay(0);
+        setHour(0);
+        setMinute(0);
+        setSecond(0);
+      } else {
+        let d = Math.floor(secondsLeft / (3600 * 24));
+        let h = Math.floor((secondsLeft % (3600 * 24)) / 3600);
+        let m = Math.floor((secondsLeft % 3600) / 60);
+        let s = Math.floor(secondsLeft % 60);
+        setDay(d);
+        setHour(h);
+        setMinute(m);
+        setSecond(s);
+      }
     }
   };
 
