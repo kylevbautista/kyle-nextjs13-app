@@ -134,11 +134,11 @@ export function HeaderSelector({
         "
           >
             {year ? (
-              <h1 className="text-4xl">
+              <h1 className="text-2xl sm:text-4xl">
                 {getSeasonFromEnum(season)} {year} Anime
               </h1>
             ) : (
-              <h1 className="text-4xl">
+              <h1 className="text-2xl sm:text-4xl">
                 {"Season"} {"Year"} Anime
               </h1>
             )}

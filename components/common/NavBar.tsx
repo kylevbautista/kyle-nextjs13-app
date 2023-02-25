@@ -25,7 +25,8 @@ export default function NavBar() {
       <div className="flex justify-items-center">
         <div
           className="
-            block
+            hidden
+            sm:block
             p-5
           "
         >
