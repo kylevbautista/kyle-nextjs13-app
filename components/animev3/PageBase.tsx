@@ -52,7 +52,7 @@ export default function PageBase({
   const { byCount, byPopularity } = header;
   const season = getSeasonFromParams(params.season);
 
-  const { parsedData, parsedDataTest } = parseAniListData({
+  const { parsedData } = parseAniListData({
     data,
     year,
     season: params.season,

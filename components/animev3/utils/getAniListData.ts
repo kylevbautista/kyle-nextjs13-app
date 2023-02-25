@@ -1,12 +1,12 @@
 import { print as stringifyTag } from "graphql";
-import allCurrentAnimeTag from "../../utils/graphql/tags/allCurrentAnimeTag.graphql";
+import allCurrAnimeTag from "../../utils/graphql/tags/allCurrAnimeTag.graphql";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 
 const sleep = (ms: number) => {
   return new Promise((r) => setTimeout(r, ms));
 };
 
-export const getAniListDataByYear = async ({
+export const getAniListData = async ({
   year,
   season = "",
   timeout = 5000,
@@ -20,9 +20,10 @@ export const getAniListDataByYear = async ({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: stringifyTag(allCurrentAnimeTag),
+        query: stringifyTag(allCurrAnimeTag),
         variables: {
           year: parsedYear,
+          season: season.toUpperCase(),
         },
       }),
       timeout: timeout,

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import PageBase from "../../../components/animev3/PageBase";
-import { getAniListDataByYear } from "../../../components/animev3/utils/getAniListDataByYear";
+import { getAniListData } from "../../../components/animev3/utils/getAniListData";
 
 interface PageBaseProps {
   data?: any;
@@ -12,11 +12,11 @@ interface PageBaseProps {
 
 export default async function Boundary({ year, season }: PageBaseProps) {
   const { data = {} } =
-    (await getAniListDataByYear({
+    (await getAniListData({
       year: year,
       season: season,
       timeout: 5000,
-      enableLogs: false,
+      enableLogs: true,
     })) || {};
   const obj = { year: year, season: season };
 
