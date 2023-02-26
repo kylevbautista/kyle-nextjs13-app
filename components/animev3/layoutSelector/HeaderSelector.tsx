@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useContext } from "react";
 import { Season, getSeasonFromEnum } from "../helpers";
+import { RouterChangeContext } from "../../common/RouterChangeProvider";
 
 interface PageProps {
   byPopularity: any;
@@ -19,6 +20,7 @@ export function HeaderSelector({
   setByPopularity,
 }: PageProps) {
   const router = useRouter();
+  const startChange = useContext(RouterChangeContext);
 
   const displaySeasonText = {
     0: {
@@ -39,41 +41,49 @@ export function HeaderSelector({
     },
   };
 
+  const routerPushWrapper = (url: string) => {
+    const { pathname, search, hash } = window.location;
+    if (url !== pathname + search + hash) {
+      startChange();
+    }
+    router.push(url);
+  };
+
   const onClickHandler = (event: any) => {
     let values = event.currentTarget?.value?.split(" ");
     if (year) {
       if (parseInt(values[0]) === Season.WINTER) {
         if (event.currentTarget.id === "season-back") {
           const prevYear = parseInt(year) - 1;
-          router.push(`/anime/${prevYear}/fall`);
+          routerPushWrapper(`/anime/${prevYear}/fall`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/spring`);
+          routerPushWrapper(`/anime/${year}/spring`);
         }
       }
       if (parseInt(values[0]) === Season.SPRING) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/winter`);
+          routerPushWrapper(`/anime/${year}/winter`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/summer`);
+          routerPushWrapper(`/anime/${year}/summer`);
         }
       }
       if (parseInt(values[0]) === Season.SUMMER) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/spring`);
+          routerPushWrapper(`/anime/${year}/spring`);
         }
         if (event.currentTarget.id === "season-forward") {
-          router.push(`/anime/${year}/fall`);
+          routerPushWrapper(`/anime/${year}/fall`);
         }
       }
       if (parseInt(values[0]) === Season.FALL) {
         if (event.currentTarget.id === "season-back") {
-          router.push(`/anime/${year}/summer`);
+          routerPushWrapper(`/anime/${year}/summer`);
         }
         if (event.currentTarget.id === "season-forward") {
           const nextYear = parseInt(year) + 1;
-          router.push(`/anime/${nextYear}/winter`);
+          routerPushWrapper(`/anime/${nextYear}/winter`);
         }
       }
     }

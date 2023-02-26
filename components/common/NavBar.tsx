@@ -3,6 +3,7 @@ import Link from "next/link";
 // import { authOptions } from "../../server/auth";
 import LoginBox from "./LogInBox";
 import { AnimeBar } from "./AnimeBar";
+import { LinkRouterWrapper } from "./LinkRouterWrapper";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();
@@ -32,7 +33,7 @@ export default function NavBar() {
         >
           <p>Kyle</p>
         </div>
-        <Link
+        <LinkRouterWrapper
           href="/"
           className="
             block
@@ -42,7 +43,7 @@ export default function NavBar() {
           "
         >
           <p>Home</p>
-        </Link>
+        </LinkRouterWrapper>
         <AnimeBar />
       </div>
       <LoginBox />
