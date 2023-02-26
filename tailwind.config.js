@@ -22,6 +22,8 @@ module.exports = {
       },
       animation: {
         slideInFromLeft: "slideInFromLeft 1s ease-in forwards",
+        fade: "fadeOut 2s ease-in-out",
+        grow: "grow 400ms ease-in-out",
       },
       keyframes: {
         slideInFromLeft: {
@@ -35,6 +37,14 @@ module.exports = {
             filter: "blur(0px)",
             transform: "translateX(0)",
           },
+        },
+        fadeOut: {
+          "0%": { opacity: 0 },
+          "100%": { opacity: 1 },
+        },
+        grow: {
+          "0%": { transform: "scale(0)" },
+          "100%": { transform: "scale(1)" },
         },
       },
     },

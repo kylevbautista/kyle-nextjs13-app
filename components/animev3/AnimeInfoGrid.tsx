@@ -235,6 +235,7 @@ export default function AnimeInfoGrid({
       dark:bg-[rgb(30,30,30)]
       border-[rgb(53,53,53)]
       h-[100%]
+      animate-grow
       "
     >
       <div
