@@ -1,9 +1,9 @@
 "use client";
 import { useContext } from "react";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
 import { HydrationContext } from "./HydrationProvider";
 import { getCurrentSeasonPath } from "../animev3/helpers";
+import { LinkRouterWrapper } from "./LinkRouterWrapper";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();
@@ -27,7 +27,7 @@ export function AnimeBar() {
 
   return (
     <>
-      <Link
+      <LinkRouterWrapper
         href={`/anime/${getCurrentYear(true)}/${getCurrentSeasonPath(
           null,
           true
@@ -40,9 +40,9 @@ export function AnimeBar() {
           "
       >
         <p>カイル</p>
-      </Link>
+      </LinkRouterWrapper>
       {hydrated && isAnimeRoute && (
-        <Link
+        <LinkRouterWrapper
           href={`/topanime`}
           className="
             block
@@ -52,7 +52,7 @@ export function AnimeBar() {
           "
         >
           <p>Top Anime</p>
-        </Link>
+        </LinkRouterWrapper>
       )}
     </>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 // import { unstable_getServerSession } from "next-auth/next";
 // import { authOptions } from "../../server/auth";
+import { LinkRouterWrapper } from "./LinkRouterWrapper";
 
 export default function LoginBox() {
   // const session = await unstable_getServerSession(authOptions);
@@ -18,7 +19,7 @@ export default function LoginBox() {
   if (session) {
     return (
       <div className="flex justify-items-center">
-        <Link
+        <LinkRouterWrapper
           href="/mylist"
           className="
             block
@@ -28,7 +29,7 @@ export default function LoginBox() {
           "
         >
           <p>My List</p>
-        </Link>
+        </LinkRouterWrapper>
         <button
           className="
             p-5
@@ -45,7 +46,7 @@ export default function LoginBox() {
 
   return (
     <div className="flex justify-items-center">
-      <Link
+      <LinkRouterWrapper
         href="/auth"
         className="
             block
@@ -55,7 +56,7 @@ export default function LoginBox() {
           "
       >
         <p>LogIn</p>
-      </Link>
+      </LinkRouterWrapper>
     </div>
   );
 }
