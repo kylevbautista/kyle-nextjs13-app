@@ -29,7 +29,7 @@ const Test = ({ data, pagination }: any) => {
   return (
     <div className="flex flex-col">
       {clientData?.map((anime: any, index: number) => (
-        <div key={index} className="p-2">
+        <div key={index} className="p-2 animate-grow">
           <div className="flex justify-between items-center border rounded-2xl border-[rgb(53,53,53)] laptop2:p-4 laptop2:gap-2">
             <div className="flex items-center gap-4">
               <div className="pl-2 laptop2:w-[120px]">
