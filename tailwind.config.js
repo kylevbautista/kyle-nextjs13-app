@@ -43,7 +43,7 @@ module.exports = {
           "100%": { opacity: 1 },
         },
         grow: {
-          "0%": { transform: "scale(0)" },
+          "0%": { transform: "scale(0.8)" },
           "100%": { transform: "scale(1)" },
         },
       },

@@ -81,7 +81,7 @@ export default function PageBase({ children }: PageBaseProps) {
       >
         <p>SIGN IN WITH GOOGLE</p>
       </button>
-      <button
+      {/* <button
         className="
           border
           p-5
@@ -106,7 +106,7 @@ export default function PageBase({ children }: PageBaseProps) {
         onClick={handleOAuthSignIn("twitter")}
       >
         <p>SIGN IN WITH TWITTER</p>
-      </button>
+      </button> */}
     </div>
   );
 }
