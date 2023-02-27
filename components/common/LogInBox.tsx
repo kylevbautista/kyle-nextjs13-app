@@ -72,6 +72,19 @@ export default function LoginBox() {
                     <p>My List</p>
                   </LinkRouterWrapper>
                 </li>
+                <li onClick={() => setShowDropDown(!showDropDown)}>
+                  <LinkRouterWrapper
+                    href="https://www.trackkilo.com/"
+                    className="
+                      block
+                      px-4 
+                      py-2 
+                      hover:bg-blue-500
+                    "
+                  >
+                    <p>Lift Tracker</p>
+                  </LinkRouterWrapper>
+                </li>
                 <li>
                   <button
                     className="flex justify-start w-full px-4 py-2 hover:bg-gray-600 hover:text-white"

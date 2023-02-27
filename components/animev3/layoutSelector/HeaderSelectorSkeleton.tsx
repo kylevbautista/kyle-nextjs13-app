@@ -84,7 +84,7 @@ export function HeaderSelectorSkeleton({
             className="
         "
           >
-            <h1 className="text-4xl">
+            <h1 className="text-2xl sm:text-4xl">
               {getSeasonFromEnum(season)} {year} Anime
             </h1>
           </div>
