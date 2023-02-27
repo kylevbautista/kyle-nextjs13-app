@@ -24,7 +24,7 @@ export default function NavBar() {
       className="flex justify-between bg-[rgb(38,38,38)] text-white mb-2 sticky top-0 z-[1]"
     >
       <div className="flex justify-items-center">
-        <div
+        {/* <div
           className="
             hidden
             sm:block
@@ -32,7 +32,7 @@ export default function NavBar() {
           "
         >
           <p>Kyle</p>
-        </div>
+        </div> */}
         <LinkRouterWrapper
           href="/"
           className="
