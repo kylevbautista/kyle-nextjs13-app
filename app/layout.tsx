@@ -11,6 +11,28 @@ export default function RootLayout({
   return (
     <html>
       <head>
+        <style>
+          {`body {
+              overflow: overlay
+            }
+            ::-webkit-scrollbar {
+              width: 17px;
+            }
+            ::-webkit-scrollbar-track {
+              background-color: transparent;
+            }
+
+            ::-webkit-scrollbar-thumb {
+              border-radius: 20px;
+              border: 6px solid transparent;
+              background-clip: content-box;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+              background-color: #c0a0b9;
+            }
+          `}
+        </style>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />
         <link
           rel="icon"
