@@ -43,12 +43,28 @@ export default function LoginBox() {
     return (
       <div className="flex justify-items-center items-center">
         <div>
-          <div
+          {/* <div
             ref={rimururRef}
             className="flex justify-center items-center hover:bg-blue-500 h-[63px] w-[63px] rounded-[50%] cursor-pointer"
             onClick={() => setShowDropDown(!showDropDown)}
           >
             <img src="/rimuru.png" alt="Avatar" className="h-[32px]" />
+          </div> */}
+          <div
+            ref={rimururRef}
+            className="flex justify-center items-center hover:bg-blue-500 h-[63px] w-[63px] rounded-[50%] cursor-pointer"
+            onClick={() => setShowDropDown(!showDropDown)}
+          >
+            <img
+              src="/rimuru.png"
+              alt="Avatar"
+              className="h-[32px] absolute hover:opacity-0"
+            />
+            <img
+              src="/assets/pepe-the-frog-dancing.gif"
+              alt="Avatar"
+              className="h-[30px]"
+            />
           </div>
           {showDropDown && (
             <div
