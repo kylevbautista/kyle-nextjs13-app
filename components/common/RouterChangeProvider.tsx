@@ -19,11 +19,9 @@ const RouterChangeProvider = ({
 
   useEffect(() => {
     if (isChanging) {
-      console.log("Route Change Start", onStart);
       /* @ts-ignore */
       onStart();
     } else {
-      console.log("Route Change Complete", onComplete);
       /* @ts-ignore */
       onComplete();
     }
