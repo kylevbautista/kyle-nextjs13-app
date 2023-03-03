@@ -18,17 +18,20 @@ export function List({ list }: PageBaseProps) {
     <>
       {list.length && (
         <Grid>
-          {list?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={info.idMal}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-              option={option}
-            />
-          ))}
+          {list?.map(
+            (info: any, index: number) =>
+              info?.title?.romaji && (
+                <AnimeInfoGrid
+                  key={info.idMal}
+                  id={index}
+                  info={info}
+                  initialTimes={getInitialTimes(
+                    info?.upcomingEpisode?.timeUntilAiring
+                  )}
+                  option={option}
+                />
+              )
+          )}
         </Grid>
       )}
     </>
