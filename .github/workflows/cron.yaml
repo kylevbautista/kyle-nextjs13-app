@@ -8,4 +8,4 @@ jobs:
     steps:
       - name: Hit site to refresh cache
         run: |
-          curl https://www.kylevb.com/anime
+          curl -L -I https://www.kylevb.com/anime
