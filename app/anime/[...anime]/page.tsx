@@ -58,5 +58,8 @@ export function generateMetadata({ params }: any) {
     title: `${
       season.charAt(0).toUpperCase() + season.slice(1)
     } ${year} - Anime`,
+    description: `Anime showing for the ${
+      season.charAt(0).toUpperCase() + season.slice(1)
+    } ${year} season.`,
   };
 }
