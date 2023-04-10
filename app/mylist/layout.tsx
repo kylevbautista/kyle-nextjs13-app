@@ -1,6 +1,22 @@
 import { HeaderProvider } from "../../components/mylist/layout/HeaderProvider";
 import { HeaderSelector } from "../../components/mylist/layout/HeaderSelector";
 
+export const metadata = {
+  title: "My List",
+  description: "My anime list",
+  openGraph: {
+    title: "My List",
+    description: "My anime list",
+    images: [
+      {
+        url: "/rimuru.png",
+        width: 200,
+        height: 141,
+      },
+    ],
+  },
+};
+
 export default function MyListLayout({
   params,
   children,

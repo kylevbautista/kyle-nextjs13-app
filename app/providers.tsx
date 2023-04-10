@@ -7,9 +7,9 @@ import { RouterChangeProviderWrapper } from "../components/common/RouterChangePr
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <RouterChangeProviderWrapper>
-        <HydrationProvider>{children}</HydrationProvider>
-      </RouterChangeProviderWrapper>
+      {/* <RouterChangeProviderWrapper> */}
+      <HydrationProvider>{children}</HydrationProvider>
+      {/* </RouterChangeProviderWrapper> */}
     </SessionProvider>
   );
 }
