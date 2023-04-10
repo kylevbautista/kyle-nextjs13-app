@@ -1,6 +1,6 @@
 import PageBase from "../../components/auth/PageBase";
 import { authOptions } from "../../server/auth";
-import { unstable_getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth/next";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -9,6 +9,6 @@ import { unstable_getServerSession } from "next-auth/next";
  */
 
 export default async function Auth() {
-  const session = await unstable_getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
   return <PageBase />;
 }

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { authOptions } from "../../server/auth";
-import { unstable_getServerSession } from "next-auth/next";
-import PageBase from "../../components/mylist/PageBase";
+import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
 
 /**
@@ -13,7 +12,7 @@ import { Boundary } from "./Boundary";
 export const fetchCache = "default-no-store";
 
 export default async function MyList() {
-  const session = await unstable_getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
   if (!session) {
     redirect(`/auth`);
   }

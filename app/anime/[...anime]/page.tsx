@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import Boundary from "./Boundary";
 import { routeChecker } from "../../../components/animev3/utils/routeChecker";
 
+export const dynamicParams = true; // true | false,
 export const revalidate = 60;
 
 export default async function Anime({ params }: any) {
@@ -47,4 +48,15 @@ export async function generateStaticParams() {
   }
 
   return paths;
+}
+
+export function generateMetadata({ params }: any) {
+  const { anime = [] } = params;
+  const [year = "", season = ""] = anime;
+  const str2 = season.charAt(0).toUpperCase() + season.slice(1);
+  return {
+    title: `${
+      season.charAt(0).toUpperCase() + season.slice(1)
+    } ${year} - Anime`,
+  };
 }

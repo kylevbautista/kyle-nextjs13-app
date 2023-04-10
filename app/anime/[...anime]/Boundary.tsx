@@ -16,7 +16,7 @@ export default async function Boundary({ year, season }: PageBaseProps) {
       year: year,
       season: season,
       timeout: 5000,
-      enableLogs: false,
+      enableLogs: true,
     })) || {};
   const obj = { year: year, season: season };
 

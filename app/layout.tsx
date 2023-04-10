@@ -3,7 +3,23 @@ import "nprogress/nprogress.css";
 import NavBar from "../components/common/NavBar";
 import Providers from "./providers";
 
-export default function RootLayout({
+export const metadata = {
+  title: "Home",
+  description: "kylevb.com homepage",
+  openGraph: {
+    title: "Kyle",
+    description: "kylevb.com homepage",
+    images: [
+      {
+        url: "/rimuru.png",
+        width: 200,
+        height: 141,
+      },
+    ],
+  },
+};
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
