@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useContext } from "react";
 import { Season, getSeasonFromEnum } from "../helpers";
-import { RouterChangeContext } from "../../common/RouterChangeProvider";
+// import { RouterChangeContext } from "../../common/RouterChangeProvider";
 
 interface PageProps {
   byPopularity: any;
@@ -20,7 +20,7 @@ export function HeaderSelector({
   setByPopularity,
 }: PageProps) {
   const router = useRouter();
-  const startChange = useContext(RouterChangeContext);
+  // const startChange = useContext(RouterChangeContext);
 
   const displaySeasonText = {
     0: {
@@ -44,7 +44,7 @@ export function HeaderSelector({
   const routerPushWrapper = (url: string) => {
     const { pathname, search, hash } = window.location;
     if (url !== pathname + search + hash) {
-      startChange();
+      // startChange();
     }
     router.push(url);
   };

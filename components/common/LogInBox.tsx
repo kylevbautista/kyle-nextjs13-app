@@ -5,19 +5,19 @@ import { useState, useEffect, useRef, useContext } from "react";
 // import { unstable_getServerSession } from "next-auth/next";
 // import { authOptions } from "../../server/auth";
 import { LinkRouterWrapper } from "./LinkRouterWrapper";
-import { RouterChangeContext } from "./RouterChangeProvider";
+// import { RouterChangeContext } from "./RouterChangeProvider";
 
 export default function LoginBox() {
   // const session = await unstable_getServerSession(authOptions);
   const { data: session, status } = useSession();
   const [showDropDown, setShowDropDown] = useState(false);
-  const startChange = useContext(RouterChangeContext);
+  // const startChange = useContext(RouterChangeContext);
   const dropDownRef = useRef(null);
   const rimururRef = useRef(null);
 
   const handleSignOut = () => {
     setShowDropDown(false);
-    startChange();
+    // startChange();
     signOut({
       redirect: true,
       callbackUrl: "/",
