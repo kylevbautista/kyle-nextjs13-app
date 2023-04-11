@@ -1,22 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { sliceIntoChunks } from "../helpers";
 
-export default function useLazyLoad(
-  arr: any[],
-  nextPage: any,
-  getAniListClient: any,
-  obj: any,
-  option: any
-) {
+export default function useLazyLoad({
+  data,
+  hasNextPage,
+  callback,
+  callBackParams,
+  sortSelect,
+}: any) {
   const observedRef = useRef<any>(null);
   const [pageNumber, setPageNumber] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const chunks = sliceIntoChunks(arr, 2);
-  const [data, setData] = useState(chunks[0]);
+  const chunks = sliceIntoChunks(data, 2);
+  const [chunkedData, setChunkedData] = useState(chunks[0]);
 
   const updateData = () => {
     if (pageNumber < chunks.length - 1) {
-      setData((prev) => {
+      setChunkedData((prev) => {
         return [...prev, ...chunks[pageNumber + 1]];
       });
       setPageNumber(pageNumber + 1);
@@ -27,8 +27,8 @@ export default function useLazyLoad(
     setPageNumber(0);
     setHasMore(true);
 
-    const chunks = sliceIntoChunks(arr, 2);
-    setData(chunks[0]);
+    const chunks = sliceIntoChunks(data, 2);
+    setChunkedData(chunks[0]);
   };
 
   const observedRefCallBack = (el: any) => {
@@ -39,9 +39,9 @@ export default function useLazyLoad(
       if (el[0].isIntersecting) {
         if (pageNumber < chunks.length - 1) {
           updateData();
-        } else if (nextPage) {
+        } else if (hasNextPage) {
           console.log("client call");
-          getAniListClient(obj);
+          callback(callBackParams);
         } else {
           setHasMore(false);
         }
@@ -53,17 +53,16 @@ export default function useLazyLoad(
   };
 
   useEffect(() => {
-    console.log("option", arr);
     reset();
-  }, [option]);
+  }, [sortSelect]);
 
   return {
     observedRefCallBack,
     pageNumber,
     setPageNumber,
     chunks,
-    data,
-    setData,
+    chunkedData,
+    setChunkedData,
     setHasMore,
     updateData,
     hasMore,

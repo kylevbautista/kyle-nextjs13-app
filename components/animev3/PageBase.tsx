@@ -1,11 +1,5 @@
 "use client";
-import React, {
-  ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { ReactNode, useContext, useEffect, useState } from "react";
 import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "./../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
@@ -23,12 +17,12 @@ const clone = (items: any) =>
 const getAniListClient = async ({
   year,
   season,
-  durr,
-  setDurr,
+  dataReference,
+  setDataReference,
   page,
   setPage,
-  testData,
-  setTestData,
+  animeList,
+  setAnimeList,
 }: any) => {
   try {
     const { data = {} } =
@@ -39,16 +33,18 @@ const getAniListClient = async ({
         timeout: 8000,
         enableLogs: false,
       })) || {};
-    durr.page.pageInfo = data?.page?.pageInfo || { hasNextPage: false };
+    dataReference.page.pageInfo = data?.page?.pageInfo || {
+      hasNextPage: false,
+    };
     data?.page?.media?.forEach((item: any) => {
-      // Since I saved the reference to memory in the state,
-      // Im actually mutating data.page.media when I mutate durr.page.media
-      durr.page.media.push(item);
-      testData.push(item);
+      // Since I saved the obj mem reference in the state,
+      // Im actually mutating data.page.media when I mutate dataReference.page.media
+      dataReference.page.media.push(item);
+      animeList.push(item);
     });
-    setDurr({ ...durr });
+    setDataReference({ ...dataReference });
 
-    setTestData([...testData]);
+    setAnimeList([...animeList]);
     setPage(page + 1);
   } catch (err) {
     console.log(err);
@@ -93,35 +89,35 @@ export default function PageBase({
   children,
 }: PageBaseProps) {
   const header = useContext(HeaderContext);
-  const { byCount, byPopularity, prevCountRef } = header;
+  const { byCount, byPopularity } = header;
   const season = getSeasonFromParams(params.season);
-  const [durr, setDurr] = useState(data);
+  const [dataReference, setDataReference] = useState(data);
   const [page, setPage] = useState(2);
-  const [testData, setTestData] = useState(
+  const [animeList, setAnimeList] = useState(
     clone(data?.page?.media).sort(compareFnCountDown) || []
   );
   const [option, setOption] = useState(byCount ? true : false);
 
   const {
     observedRefCallBack: observedCountRef,
-    data: chunckedData,
+    chunkedData,
     hasMore,
-  } = useLazyLoad(
-    testData,
-    durr.page.pageInfo.hasNextPage,
-    getAniListClient,
-    {
+  } = useLazyLoad({
+    data: animeList,
+    hasNextPage: dataReference.page.pageInfo.hasNextPage,
+    callback: getAniListClient,
+    callBackParams: {
       year: params.year,
       season: params.season,
-      durr,
-      setDurr,
+      dataReference,
+      setDataReference,
       page,
       setPage,
-      testData,
-      setTestData,
+      animeList,
+      setAnimeList,
     },
-    option
-  );
+    sortSelect: option,
+  });
 
   const selectorDiv = !header.headerYear
     ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
@@ -141,13 +137,13 @@ export default function PageBase({
     const count = clone(pop).sort(compareFnCountDown);
 
     if (byCount) {
-      setTestData([...count]);
+      setAnimeList([...count]);
 
       // cant use global byCount inside useLazy directly since it is set before new data is set
       // so creating local option toggler to keep track and avoid race condition
       setOption(!option);
     } else {
-      setTestData([...pop]);
+      setAnimeList([...pop]);
 
       // cant use global byCount directly useLazy directly since it is set before new data is set
       // so creating local option toggler to keep track and avoid race condition
@@ -187,7 +183,7 @@ export default function PageBase({
         )}
       </div>
       <Grid>
-        {chunckedData?.map((info: any, index: number) => (
+        {chunkedData?.map((info: any, index: number) => (
           <AnimeInfoGrid
             key={info.idMal || index}
             id={index}
@@ -198,6 +194,8 @@ export default function PageBase({
           />
         ))}
         {hasMore && <AnimeInfoSkeleton forwardedRef={observedCountRef} />}
+        {hasMore && <AnimeInfoSkeleton />}
+        {hasMore && <AnimeInfoSkeleton />}
       </Grid>
     </div>
   );
