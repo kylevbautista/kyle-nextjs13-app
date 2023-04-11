@@ -35,18 +35,21 @@ export default function useLazyLoad({
     if (observedRef.current) {
       observedRef.current.disconnect();
     }
-    observedRef.current = new IntersectionObserver((el) => {
-      if (el[0].isIntersecting) {
-        if (pageNumber < chunks.length - 1) {
-          updateData();
-        } else if (hasNextPage) {
-          console.log("client call");
-          callback(callBackParams);
-        } else {
-          setHasMore(false);
+    observedRef.current = new IntersectionObserver(
+      (el) => {
+        if (el[0].isIntersecting) {
+          if (pageNumber < chunks.length - 1) {
+            updateData();
+          } else if (hasNextPage) {
+            console.log("client call");
+            callback(callBackParams);
+          } else {
+            setHasMore(false);
+          }
         }
-      }
-    });
+      },
+      { root: null, rootMargin: "0px", threshold: 0.5 }
+    );
     if (el) {
       observedRef.current.observe(el);
     }
