@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useState, useEffect, ReactNode, useRef } from "react";
 
 // const initialState = {
 //   headerYear: "2020",
@@ -17,7 +17,10 @@ function HeaderProvider({ children }: { children: ReactNode }) {
   const [headerSeason, setHeaderSeason] = useState(null);
   const [byCount, setByCount] = useState(true);
   const [byPopularity, setByPopularity] = useState(false);
-  useEffect(() => {}, []);
+  const prevCountRef = useRef(byCount);
+  useEffect(() => {
+    prevCountRef.current = byCount;
+  }, [byCount]);
   return (
     <HeaderContext.Provider
       value={{
@@ -29,6 +32,7 @@ function HeaderProvider({ children }: { children: ReactNode }) {
         setByCount,
         byPopularity,
         setByPopularity,
+        prevCountRef,
       }}
     >
       {children}

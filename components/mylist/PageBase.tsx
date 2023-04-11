@@ -5,9 +5,8 @@ import getUserAnimeListQuery from "../utils/graphql/tags/getUserAnimeList.graphq
 import { print as stringifyTag } from "graphql";
 import { getCurrentSeasonPath } from "../animev3/helpers";
 import useSWR from "swr";
-import { compareFnCountDown } from "../animev3/utils/parseAniListData";
+import { compareFnCountDown } from "../animev3/helpers";
 import { getUserAnimeListClient } from "./utils/getUserAnimeList";
-import { unixTimeStampToWeekDay } from "../animev3/utils/timeStampHelpers";
 import { getSortedData } from "./utils/getSortedData";
 import { HeaderContext } from "./layout/HeaderProvider";
 import { List } from "./List";

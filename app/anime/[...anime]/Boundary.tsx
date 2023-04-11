@@ -13,6 +13,7 @@ interface PageBaseProps {
 export default async function Boundary({ year, season }: PageBaseProps) {
   const { data = {} } =
     (await getAniListData({
+      page: 1,
       year: year,
       season: season,
       timeout: 5000,

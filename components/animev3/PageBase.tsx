@@ -1,15 +1,55 @@
 "use client";
-import React, { ReactNode, useContext, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { ReactNode, useContext, useEffect, useState } from "react";
 import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "./../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
 import { HeaderSelectorSkeleton } from "./layoutSelector/HeaderSelectorSkeleton";
 import { getInitialTimes, getSeasonFromParams } from "./helpers";
-import { parseAniListData } from "./utils/parseAniListData";
 import useLazyLoad from "./utils/useLazyLoad";
 import { usePrefetch } from "./utils/usePrefetch";
+import { getAniListData } from "./utils/getAniListData";
+import { compareFnCountDown } from "./helpers";
+
+const clone = (items: any) =>
+  items.map((item: any) => (Array.isArray(item) ? clone(item) : item));
+
+const getAniListClient = async ({
+  year,
+  season,
+  dataReference,
+  setDataReference,
+  page,
+  setPage,
+  animeList,
+  setAnimeList,
+}: any) => {
+  try {
+    const { data = {} } =
+      (await getAniListData({
+        page: page,
+        year: year,
+        season: season,
+        timeout: 8000,
+        enableLogs: false,
+      })) || {};
+    dataReference.page.pageInfo = data?.page?.pageInfo || {
+      hasNextPage: false,
+    };
+    data?.page?.media?.forEach((item: any) => {
+      // Since I saved the obj mem reference in the state,
+      // Im actually mutating data.page.media when I mutate dataReference.page.media
+      dataReference.page.media.push(item);
+      animeList.push(item);
+    });
+    setDataReference({ ...dataReference });
+
+    setAnimeList([...animeList]);
+    setPage(page + 1);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 interface PageBaseProps {
   data?: any;
@@ -51,25 +91,33 @@ export default function PageBase({
   const header = useContext(HeaderContext);
   const { byCount, byPopularity } = header;
   const season = getSeasonFromParams(params.season);
+  const [dataReference, setDataReference] = useState(data);
+  const [page, setPage] = useState(2);
+  const [animeList, setAnimeList] = useState(
+    clone(data?.page?.media).sort(compareFnCountDown) || []
+  );
+  const [option, setOption] = useState(byCount ? true : false);
 
-  const { parsedData } = parseAniListData({
-    data,
-    year,
-    season: params.season,
-    byCount,
-    byPopularity,
-  });
-
-  const {
-    observedRefCallBack: observedPopRef,
-    data: popData,
-    hasMore: popHasMore,
-  } = useLazyLoad(parsedData.popularity);
   const {
     observedRefCallBack: observedCountRef,
-    data: countData,
-    hasMore: countHasMore,
-  } = useLazyLoad(parsedData.countdown);
+    chunkedData,
+    hasMore,
+  } = useLazyLoad({
+    data: animeList,
+    hasNextPage: dataReference.page.pageInfo.hasNextPage,
+    callback: getAniListClient,
+    callBackParams: {
+      year: params.year,
+      season: params.season,
+      dataReference,
+      setDataReference,
+      page,
+      setPage,
+      animeList,
+      setAnimeList,
+    },
+    sortSelect: option,
+  });
 
   const selectorDiv = !header.headerYear
     ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
@@ -81,6 +129,27 @@ export default function PageBase({
     enablePrefetch,
     header,
   });
+
+  useEffect(() => {
+    const pop = data.page?.media;
+
+    // Deep cloning due to sort method directly affecting the original data
+    const count = clone(pop).sort(compareFnCountDown);
+
+    if (byCount) {
+      setAnimeList([...count]);
+
+      // cant use global byCount inside useLazy directly since it is set before new data is set
+      // so creating local option toggler to keep track and avoid race condition
+      setOption(!option);
+    } else {
+      setAnimeList([...pop]);
+
+      // cant use global byCount directly useLazy directly since it is set before new data is set
+      // so creating local option toggler to keep track and avoid race condition
+      setOption(!option);
+    }
+  }, [byCount]);
 
   return (
     <div
@@ -114,34 +183,18 @@ export default function PageBase({
         )}
       </div>
       <Grid>
-        {byCount &&
-          countData?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={info.idMal}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        {byCount && countHasMore && (
-          <AnimeInfoSkeleton forwardedRef={observedCountRef} />
-        )}
-        {byPopularity &&
-          popData?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={info.idMal}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        {byPopularity && popHasMore && (
-          <AnimeInfoSkeleton forwardedRef={observedPopRef} />
-        )}
+        {chunkedData?.map((info: any, index: number) => (
+          <AnimeInfoGrid
+            key={info.idMal || index}
+            id={index}
+            info={info}
+            initialTimes={getInitialTimes(
+              info?.upcomingEpisode?.timeUntilAiring
+            )}
+          />
+        ))}
+
+        {hasMore && <AnimeInfoSkeleton forwardedRef={observedCountRef} />}
       </Grid>
     </div>
   );

@@ -1,10 +1,18 @@
-query allCurrAnimeTag($year: Int, $season: MediaSeason) {
-  page: Page(page: 1, perPage: 50) {
+query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
+  page: Page(page: $page, perPage: 50) {
+    pageInfo {
+      total
+      perPage
+      currentPage
+      lastPage
+      hasNextPage
+    }
     media(
       season: $season
       seasonYear: $year
       sort: POPULARITY_DESC
       isAdult: false
+      format_not_in: [TV_SHORT, ONA]
     ) {
       description
       coverImage {
