@@ -27,9 +27,9 @@ export const parseAniListData = ({
   season,
   byCount = true,
   byPopularity = false,
+  setTestData,
 }: any) => {
   const { page }: any = data || {};
-
   interface parsedDataType {
     popularity: any[];
     countdown: any[];
@@ -44,7 +44,11 @@ export const parseAniListData = ({
   if (season !== "") {
     const pageData = page?.media || [];
     parsedData.popularity = pageData;
-    parsedData.countdown = [...pageData]?.sort(compareFnCountDown);
+    // parsedData.countdown =
+    //   pageData && pageData.length > 50
+    //     ? [...pageData]
+    //     : [...pageData]?.sort(compareFnCountDown);
+    parsedData.countdown = pageData;
     parsedDataTest = byCount
       ? [...pageData]?.sort(compareFnCountDown)
       : pageData;

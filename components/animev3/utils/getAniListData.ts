@@ -7,14 +7,18 @@ const sleep = (ms: number) => {
 };
 
 export const getAniListData = async ({
+  page = 1,
   year,
   season = "",
   timeout = 5000,
   enableLogs = false,
 }: any) => {
+  const url = process.env.GRAPHQL_ANILIST
+    ? process.env.GRAPHQL_ANILIST
+    : process.env.NEXT_PUBLIC_GRAPHQL_ANILIST;
   const parsedYear = parseInt(year);
   try {
-    const res = await fetchWithTimeout(`${process.env.GRAPHQL_ANILIST}`, {
+    const res = await fetchWithTimeout(`${url}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -22,6 +26,7 @@ export const getAniListData = async ({
       body: JSON.stringify({
         query: stringifyTag(allCurrAnimeTag),
         variables: {
+          page: page,
           year: parsedYear,
           season: season.toUpperCase(),
         },

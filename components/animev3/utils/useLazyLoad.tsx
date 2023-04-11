@@ -1,7 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { sliceIntoChunks } from "../helpers";
 
-export default function useLazyLoad(arr: any[]) {
+export default function useLazyLoad(
+  arr: any[],
+  nextPage: any,
+  getAniListClient: any,
+  obj: any,
+  byCount: any,
+  prevCountRef: any
+) {
   const observedRef = useRef<any>(null);
   const [pageNumber, setPageNumber] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -17,6 +24,14 @@ export default function useLazyLoad(arr: any[]) {
     }
   };
 
+  const reset = () => {
+    setPageNumber(0);
+    setHasMore(true);
+
+    const chunks = sliceIntoChunks(arr, 2);
+    setData(chunks[0]);
+  };
+
   const observedRefCallBack = (el: any) => {
     if (observedRef.current) {
       observedRef.current.disconnect();
@@ -25,6 +40,9 @@ export default function useLazyLoad(arr: any[]) {
       if (el[0].isIntersecting) {
         if (pageNumber < chunks.length - 1) {
           updateData();
+        } else if (nextPage) {
+          console.log("client call");
+          getAniListClient(obj);
         } else {
           setHasMore(false);
         }
@@ -35,6 +53,10 @@ export default function useLazyLoad(arr: any[]) {
     }
   };
 
+  useEffect(() => {
+    reset();
+  }, [arr]);
+
   return {
     observedRefCallBack,
     pageNumber,
@@ -42,7 +64,9 @@ export default function useLazyLoad(arr: any[]) {
     chunks,
     data,
     setData,
+    setHasMore,
     updateData,
     hasMore,
+    reset,
   };
 }

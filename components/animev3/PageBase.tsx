@@ -1,5 +1,11 @@
 "use client";
-import React, { ReactNode, useContext, useEffect } from "react";
+import React, {
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "./../common/Grid";
@@ -10,6 +16,46 @@ import { getInitialTimes, getSeasonFromParams } from "./helpers";
 import { parseAniListData } from "./utils/parseAniListData";
 import useLazyLoad from "./utils/useLazyLoad";
 import { usePrefetch } from "./utils/usePrefetch";
+import { getAniListData } from "./utils/getAniListData";
+import { compareFnCountDown } from "./utils/parseAniListData";
+
+const clone = (items: any) =>
+  items.map((item: any) => (Array.isArray(item) ? clone(item) : item));
+
+const getAniListClient = async ({
+  year,
+  season,
+  durr,
+  setDurr,
+  m1,
+  m2,
+  page,
+  setPage,
+  testData,
+  setTestData,
+}: any) => {
+  const { data = {} } =
+    (await getAniListData({
+      page: page,
+      year: year,
+      season: season,
+      timeout: 5000,
+      enableLogs: false,
+    })) || {};
+  durr.page.pageInfo = data?.page?.pageInfo;
+  data?.page?.media?.forEach((item: any) => {
+    // Since I saved the reference to memory in the state,
+    // Im actually mutating data.page.media when I mutate durr.page.media
+    durr.page.media.push(item);
+    testData.push(item);
+  });
+  setDurr({ ...durr });
+
+  m1 && m1(true);
+  m2 && m2(true);
+  setTestData([...testData]);
+  setPage(page + 1);
+};
 
 interface PageBaseProps {
   data?: any;
@@ -49,27 +95,37 @@ export default function PageBase({
   children,
 }: PageBaseProps) {
   const header = useContext(HeaderContext);
-  const { byCount, byPopularity } = header;
+  const { byCount, byPopularity, prevCountRef } = header;
   const season = getSeasonFromParams(params.season);
+  const [durr, setDurr] = useState(data);
+  const [page, setPage] = useState(2);
+  const [testData, setTestData] = useState(
+    clone(data?.page?.media).sort(compareFnCountDown) || []
+  );
 
-  const { parsedData } = parseAniListData({
-    data,
-    year,
-    season: params.season,
-    byCount,
-    byPopularity,
-  });
-
-  const {
-    observedRefCallBack: observedPopRef,
-    data: popData,
-    hasMore: popHasMore,
-  } = useLazyLoad(parsedData.popularity);
   const {
     observedRefCallBack: observedCountRef,
-    data: countData,
-    hasMore: countHasMore,
-  } = useLazyLoad(parsedData.countdown);
+    data: chunckedData,
+    hasMore,
+  } = useLazyLoad(
+    testData,
+    durr.page.pageInfo.hasNextPage,
+    getAniListClient,
+    {
+      year: params.year,
+      season: params.season,
+      durr,
+      setDurr,
+      m1: null,
+      m2: null,
+      page,
+      setPage,
+      testData,
+      setTestData,
+    },
+    byCount,
+    prevCountRef
+  );
 
   const selectorDiv = !header.headerYear
     ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
@@ -81,6 +137,16 @@ export default function PageBase({
     enablePrefetch,
     header,
   });
+
+  useEffect(() => {
+    const pop = data.page?.media;
+    const count = clone(pop).sort(compareFnCountDown);
+    if (byCount) {
+      setTestData([...count]);
+    } else {
+      setTestData([...pop]);
+    }
+  }, [byCount]);
 
   return (
     <div
@@ -114,34 +180,17 @@ export default function PageBase({
         )}
       </div>
       <Grid>
-        {byCount &&
-          countData?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={info.idMal}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        {byCount && countHasMore && (
-          <AnimeInfoSkeleton forwardedRef={observedCountRef} />
-        )}
-        {byPopularity &&
-          popData?.map((info: any, index: number) => (
-            <AnimeInfoGrid
-              key={info.idMal}
-              id={index}
-              info={info}
-              initialTimes={getInitialTimes(
-                info?.upcomingEpisode?.timeUntilAiring
-              )}
-            />
-          ))}
-        {byPopularity && popHasMore && (
-          <AnimeInfoSkeleton forwardedRef={observedPopRef} />
-        )}
+        {chunckedData?.map((info: any, index: number) => (
+          <AnimeInfoGrid
+            key={info.idMal || index}
+            id={index}
+            info={info}
+            initialTimes={getInitialTimes(
+              info?.upcomingEpisode?.timeUntilAiring
+            )}
+          />
+        ))}
+        {hasMore && <AnimeInfoSkeleton forwardedRef={observedCountRef} />}
       </Grid>
     </div>
   );
