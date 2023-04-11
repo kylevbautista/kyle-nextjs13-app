@@ -196,6 +196,8 @@ export default function PageBase({
         {hasMore && <AnimeInfoSkeleton forwardedRef={observedCountRef} />}
         {hasMore && <AnimeInfoSkeleton />}
         {hasMore && <AnimeInfoSkeleton />}
+        {hasMore && <AnimeInfoSkeleton />}
+        {hasMore && <AnimeInfoSkeleton />}
       </Grid>
     </div>
   );
