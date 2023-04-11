@@ -48,7 +48,7 @@ export default function useLazyLoad({
           }
         }
       },
-      { root: null, rootMargin: "0px", threshold: 1 }
+      { root: null, rootMargin: "0px", threshold: 0.15 }
     );
     if (el) {
       observedRef.current.observe(el);
