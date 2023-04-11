@@ -6,14 +6,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
 import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "./../common/Grid";
 import AnimeInfoGrid from "./AnimeInfoGrid";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
 import { HeaderSelectorSkeleton } from "./layoutSelector/HeaderSelectorSkeleton";
 import { getInitialTimes, getSeasonFromParams } from "./helpers";
-import { parseAniListData } from "./utils/parseAniListData";
 import useLazyLoad from "./utils/useLazyLoad";
 import { usePrefetch } from "./utils/usePrefetch";
 import { getAniListData } from "./utils/getAniListData";
