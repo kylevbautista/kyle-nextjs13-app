@@ -1,7 +1,3 @@
-interface graphQLPageType {
-  media: [];
-}
-
 export const compareFnCountDown = (a: any, b: any) => {
   let tempA = Number.MAX_SAFE_INTEGER;
   let tempB = Number.MAX_SAFE_INTEGER;
@@ -19,43 +15,4 @@ export const compareFnCountDown = (a: any, b: any) => {
     return 1;
   }
   return 0;
-};
-
-export const parseAniListData = ({
-  data,
-  year,
-  season,
-  byCount = true,
-  byPopularity = false,
-  setTestData,
-}: any) => {
-  const { page }: any = data || {};
-  interface parsedDataType {
-    popularity: any[];
-    countdown: any[];
-  }
-
-  const parsedData: parsedDataType = {
-    popularity: [],
-    countdown: [],
-  };
-
-  let parsedDataTest: any = [];
-  if (season !== "") {
-    const pageData = page?.media || [];
-    parsedData.popularity = pageData;
-    // parsedData.countdown =
-    //   pageData && pageData.length > 50
-    //     ? [...pageData]
-    //     : [...pageData]?.sort(compareFnCountDown);
-    parsedData.countdown = pageData;
-    parsedDataTest = byCount
-      ? [...pageData]?.sort(compareFnCountDown)
-      : pageData;
-  }
-
-  return {
-    parsedData,
-    parsedDataTest,
-  };
 };
