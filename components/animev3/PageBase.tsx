@@ -36,7 +36,7 @@ const getAniListClient = async ({
         page: page,
         year: year,
         season: season,
-        timeout: 5000,
+        timeout: 8000,
         enableLogs: false,
       })) || {};
     durr.page.pageInfo = data?.page?.pageInfo || { hasNextPage: false };
