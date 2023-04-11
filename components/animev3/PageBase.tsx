@@ -15,7 +15,7 @@ import { getInitialTimes, getSeasonFromParams } from "./helpers";
 import useLazyLoad from "./utils/useLazyLoad";
 import { usePrefetch } from "./utils/usePrefetch";
 import { getAniListData } from "./utils/getAniListData";
-import { compareFnCountDown } from "./utils/parseAniListData";
+import { compareFnCountDown } from "./helpers";
 
 const clone = (items: any) =>
   items.map((item: any) => (Array.isArray(item) ? clone(item) : item));
@@ -25,34 +25,34 @@ const getAniListClient = async ({
   season,
   durr,
   setDurr,
-  m1,
-  m2,
   page,
   setPage,
   testData,
   setTestData,
 }: any) => {
-  const { data = {} } =
-    (await getAniListData({
-      page: page,
-      year: year,
-      season: season,
-      timeout: 5000,
-      enableLogs: false,
-    })) || {};
-  durr.page.pageInfo = data?.page?.pageInfo;
-  data?.page?.media?.forEach((item: any) => {
-    // Since I saved the reference to memory in the state,
-    // Im actually mutating data.page.media when I mutate durr.page.media
-    durr.page.media.push(item);
-    testData.push(item);
-  });
-  setDurr({ ...durr });
+  try {
+    const { data = {} } =
+      (await getAniListData({
+        page: page,
+        year: year,
+        season: season,
+        timeout: 5000,
+        enableLogs: false,
+      })) || {};
+    durr.page.pageInfo = data?.page?.pageInfo || { hasNextPage: false };
+    data?.page?.media?.forEach((item: any) => {
+      // Since I saved the reference to memory in the state,
+      // Im actually mutating data.page.media when I mutate durr.page.media
+      durr.page.media.push(item);
+      testData.push(item);
+    });
+    setDurr({ ...durr });
 
-  m1 && m1(true);
-  m2 && m2(true);
-  setTestData([...testData]);
-  setPage(page + 1);
+    setTestData([...testData]);
+    setPage(page + 1);
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 interface PageBaseProps {
@@ -100,6 +100,7 @@ export default function PageBase({
   const [testData, setTestData] = useState(
     clone(data?.page?.media).sort(compareFnCountDown) || []
   );
+  const [option, setOption] = useState(byCount ? true : false);
 
   const {
     observedRefCallBack: observedCountRef,
@@ -114,15 +115,12 @@ export default function PageBase({
       season: params.season,
       durr,
       setDurr,
-      m1: null,
-      m2: null,
       page,
       setPage,
       testData,
       setTestData,
     },
-    byCount,
-    prevCountRef
+    option
   );
 
   const selectorDiv = !header.headerYear
@@ -138,11 +136,22 @@ export default function PageBase({
 
   useEffect(() => {
     const pop = data.page?.media;
+
+    // Deep cloning due to sort method directly affecting the original data
     const count = clone(pop).sort(compareFnCountDown);
+
     if (byCount) {
       setTestData([...count]);
+
+      // cant use global byCount inside useLazy directly since it is set before new data is set
+      // so creating local option toggler to keep track and avoid race condition
+      setOption(!option);
     } else {
       setTestData([...pop]);
+
+      // cant use global byCount directly useLazy directly since it is set before new data is set
+      // so creating local option toggler to keep track and avoid race condition
+      setOption(!option);
     }
   }, [byCount]);
 

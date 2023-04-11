@@ -6,8 +6,7 @@ export default function useLazyLoad(
   nextPage: any,
   getAniListClient: any,
   obj: any,
-  byCount: any,
-  prevCountRef: any
+  option: any
 ) {
   const observedRef = useRef<any>(null);
   const [pageNumber, setPageNumber] = useState(0);
@@ -54,8 +53,9 @@ export default function useLazyLoad(
   };
 
   useEffect(() => {
+    console.log("option", arr);
     reset();
-  }, [arr]);
+  }, [option]);
 
   return {
     observedRefCallBack,
