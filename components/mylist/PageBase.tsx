@@ -30,7 +30,7 @@ interface PageBaseProps {
 export default function PageBase() {
   // const [option, setOption] = useState("Any");
   const header = useContext(HeaderContext);
-  const { option, setOption } = header;
+  const { option, setOption, year, season, day } = header;
   const { data: list, isValidating } = useSWR(
     "/mylist",
     () => getUserAnimeListClient(),
@@ -39,7 +39,13 @@ export default function PageBase() {
     }
   );
   const listSorted = [...list]?.sort(compareFnCountDown);
-  const { data } = getSortedData({ option, listSorted });
+  const { data } = getSortedData({
+    option,
+    yearOption: year,
+    seasonOption: season,
+    dayOption: day,
+    listSorted,
+  });
 
   return (
     <div
@@ -61,7 +67,7 @@ export default function PageBase() {
             {option === "Any" ? (
               <p>Nothing in your anime watch list </p>
             ) : (
-              <p>Nothing Airing on {option}</p>
+              <p>Nothing Airing on {day}</p>
             )}
           </div>
           <div>
