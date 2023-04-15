@@ -162,7 +162,7 @@ type AddAnimeList {
 }
 
 type Query {
-  getUserAnimeList: GetAnimeList
+  getUserAnimeList(userParam: String): GetAnimeList
 }
 type Mutation {
   addToUserAnimeList(data: DataInput): AddAnimeList

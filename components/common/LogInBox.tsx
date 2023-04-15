@@ -77,7 +77,9 @@ export default function LoginBox() {
               >
                 <li onClick={() => setShowDropDown(!showDropDown)}>
                   <LinkRouterWrapper
-                    href="/mylist"
+                    href={`/mylist/${encodeURIComponent(
+                      session?.user?.email || ""
+                    )}`}
                     className="
                       block
                       px-4 

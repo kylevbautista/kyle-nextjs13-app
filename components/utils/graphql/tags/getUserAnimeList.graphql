@@ -1,5 +1,5 @@
-query getUserAnimeListQuery {
-  getUserAnimeList {
+query getUserAnimeListQuery($userParam: String) {
+  getUserAnimeList(userParam: $userParam) {
     list {
       averageScore
       coverImage {

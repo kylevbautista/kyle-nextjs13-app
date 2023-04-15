@@ -1,5 +1,5 @@
-import { HeaderProvider } from "../../components/mylist/layout/HeaderProvider";
-import { HeaderSelector } from "../../components/mylist/layout/HeaderSelector";
+import { HeaderProvider } from "../../../components/mylist/layout/HeaderProvider";
+import { HeaderSelector } from "../../../components/mylist/layout/HeaderSelector";
 
 export const metadata = {
   title: "My List",

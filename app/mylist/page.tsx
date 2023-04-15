@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { authOptions } from "../../server/auth";
 import { getServerSession } from "next-auth/next";
-import { Boundary } from "./Boundary";
+import Link from "next/link";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -18,9 +18,18 @@ export default async function MyList() {
   }
 
   return (
-    <>
-      {/* @ts-ignore */}
-      <Boundary session={session} />
-    </>
+    <div>
+      <Link
+        href={`/mylist/${encodeURIComponent(session?.user?.email || "")}`}
+        className="
+        block
+        px-4 
+        py-2 
+        hover:bg-blue-500
+      "
+      >
+        <p className="flex w-full justify-center">My List</p>
+      </Link>
+    </div>
   );
 }
