@@ -1,7 +1,7 @@
 import getUserAnimeListQuery from "../../utils/graphql/tags/getUserAnimeList.graphql";
 import { print as stringifyTag } from "graphql";
 
-export const getUserAnimeListClient = async () => {
+export const getUserAnimeListClient = async ({ userParam }: any) => {
   try {
     /**
      * If calling /api routes from the server,
@@ -15,6 +15,9 @@ export const getUserAnimeListClient = async () => {
       },
       body: JSON.stringify({
         query: stringifyTag(getUserAnimeListQuery),
+        variables: {
+          userParam: userParam,
+        },
       }),
     });
     const { data = null } = await res.json();

@@ -13,11 +13,31 @@ const AnimeList = {
           },
         });
       }
+      const sameAcc = args.userParam === contextValue?.session?.user?.email;
+      // try {
+      //   const users = await UserModel.find({
+      //     _id: contextValue?.session?.objectId,
+      //   });
+
+      //   return {
+      //     list: users[0]?.following,
+      //   };
+      // } catch (err) {
+      //   console.log(err);
+      //   return null;
+      // }
 
       try {
-        const users = await UserModel.find({
-          _id: contextValue?.session?.objectId,
-        });
+        let users: any = [];
+        if (sameAcc) {
+          users = await UserModel.find({
+            _id: contextValue?.session?.objectId,
+          });
+        } else {
+          users = await UserModel.find({
+            email: args.userParam,
+          });
+        }
 
         return {
           list: users[0]?.following,

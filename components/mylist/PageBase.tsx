@@ -27,17 +27,18 @@ interface PageBaseProps {
   children?: ReactNode;
 }
 
-export default function PageBase() {
+export default function PageBase({ session, userParam }: any) {
   // const [option, setOption] = useState("Any");
   const header = useContext(HeaderContext);
   const { option, setOption, year, season, day } = header;
   const { data: list, isValidating } = useSWR(
-    "/mylist",
-    () => getUserAnimeListClient(),
+    `/mylist/${userParam}`,
+    () => getUserAnimeListClient({ userParam }),
     {
       refreshInterval: 5000,
     }
   );
+
   const listSorted = [...list]?.sort(compareFnCountDown);
   const { data } = getSortedData({
     option,
@@ -83,9 +84,12 @@ export default function PageBase() {
           </div>
         </div>
       )}
-      <div className="mt-4">
-        <Test list={listSorted} shouldRefresh={!isValidating} />
-      </div>
+
+      {session?.user?.email === userParam && (
+        <div className="mt-4">
+          <Test list={listSorted} shouldRefresh={!isValidating} />
+        </div>
+      )}
     </div>
   );
 }
