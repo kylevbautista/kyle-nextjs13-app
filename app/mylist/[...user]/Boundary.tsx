@@ -21,7 +21,8 @@ export async function Boundary({
     objectId: session?.objectId,
     email: userParam,
   });
-  if (!data?.getUserAnimeList?.list) {
+
+  if (!data?.hasAccount) {
     return notFound();
   }
   const list = data?.getUserAnimeList?.list || [];
