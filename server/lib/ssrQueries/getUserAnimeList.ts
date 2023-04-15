@@ -19,8 +19,10 @@ export const getUserAnimeListOptimized = async ({
     const users = await db.collection("users").find({ email: email }).toArray();
 
     const list = users[0]?.following;
+    const hasAccount = Boolean(users[0]);
     return {
       data: {
+        hasAccount: hasAccount,
         getUserAnimeList: { list },
       },
     };
