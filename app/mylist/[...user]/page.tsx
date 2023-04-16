@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { authOptions } from "../../../server/auth";
+import { authOptions } from "@/server/auth";
 import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
 
@@ -14,16 +14,13 @@ export const fetchCache = "default-no-store";
 export default async function MyList({ params }: any) {
   const { user = [] } = params;
   const [userParam = null] = user;
-  console.log(decodeURIComponent(userParam));
+
   const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect(`/auth`);
-  }
 
   return (
     <>
       {/* @ts-ignore */}
-      <Boundary session={session} userParam={decodeURIComponent(userParam)} />
+      <Boundary session={session} userParam={userParam} />
     </>
   );
 }

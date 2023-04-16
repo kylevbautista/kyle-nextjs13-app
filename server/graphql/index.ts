@@ -20,14 +20,14 @@ export default startServerAndCreateNextHandler(server, {
      * If user not logged in, throw UNAUTHENTICATED error
      */
     const session = await getServerSession(req, res, authOptions);
-    if (!session) {
-      throw new GraphQLError("User is not authenticated", {
-        extensions: {
-          code: "UNAUTHENTICATED",
-          http: { status: 401 },
-        },
-      });
-    }
+    // if (!session) {
+    //   throw new GraphQLError("User is not authenticated", {
+    //     extensions: {
+    //       code: "UNAUTHENTICATED",
+    //       http: { status: 401 },
+    //     },
+    //   });
+    // }
     return {
       req,
       res,

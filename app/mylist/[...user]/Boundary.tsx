@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
-import { TestProvider } from "../../../components/mylist/TestProvider";
-import PageBase from "../../../components/mylist/PageBase";
-import { getUserAnimeListOptimized } from "../../../server/lib/ssrQueries/getUserAnimeList";
+import { TestProvider } from "@/components/mylist/TestProvider";
+import PageBase from "@/components/mylist/PageBase";
+import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
 import { notFound } from "next/navigation";
 
 interface PageBaseProps {
@@ -15,11 +15,9 @@ export async function Boundary({
   userParam,
   children,
 }: PageBaseProps) {
-  // const { data = {} } = await getUserAnimeList();
-  // const list = data?.getUserAnimeList?.list || [];
   const { data = null } = await getUserAnimeListOptimized({
     objectId: session?.objectId,
-    email: userParam,
+    userParam: userParam,
   });
 
   if (!data?.hasAccount) {

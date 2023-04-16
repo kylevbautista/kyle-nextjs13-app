@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "../../server/auth";
 import { getServerSession } from "next-auth/next";
 import Link from "next/link";
+import base64url from "base64url";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -20,7 +21,7 @@ export default async function MyList() {
   return (
     <div>
       <Link
-        href={`/mylist/${encodeURIComponent(session?.user?.email || "")}`}
+        href={`/mylist/${base64url(`${session?.user?.email}`)}`}
         className="
         block
         px-4 

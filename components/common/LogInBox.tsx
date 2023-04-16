@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useContext } from "react";
 // import { authOptions } from "../../server/auth";
 import { LinkRouterWrapper } from "./LinkRouterWrapper";
 // import { RouterChangeContext } from "./RouterChangeProvider";
+import base64url from "base64url";
 
 export default function LoginBox() {
   // const session = await unstable_getServerSession(authOptions);
@@ -77,9 +78,7 @@ export default function LoginBox() {
               >
                 <li onClick={() => setShowDropDown(!showDropDown)}>
                   <LinkRouterWrapper
-                    href={`/mylist/${encodeURIComponent(
-                      session?.user?.email || ""
-                    )}`}
+                    href={`/mylist/${base64url(`${session?.user?.email}`)}`}
                     className="
                       block
                       px-4 
