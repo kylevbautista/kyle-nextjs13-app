@@ -11,6 +11,7 @@ import { getSortedData } from "./utils/getSortedData";
 import { HeaderContext } from "./layout/HeaderProvider";
 import { List } from "./List";
 import { Test } from "./Test";
+import base64url from "base64url";
 
 const getCurrentYear = (shifted: Boolean = false) => {
   const dateObject = new Date();
@@ -85,7 +86,7 @@ export default function PageBase({ session, userParam }: any) {
         </div>
       )}
 
-      {session?.user?.email === userParam && (
+      {session?.user?.email === base64url.decode(userParam) && (
         <div className="mt-4">
           <Test list={listSorted} shouldRefresh={!isValidating} />
         </div>
