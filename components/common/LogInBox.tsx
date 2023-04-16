@@ -39,15 +39,7 @@ export default function LoginBox() {
       }
     });
   }, [dropDownRef]);
-  // encodeURIComponent(btoa(`${session?.user?.email}`)
-  // Buffer.from(`${session?.user?.email}`).toString("base64url")
-  // Buffer.from(`${session?.user?.email}`).toString("base64")
-  console.log("base64 encode", {
-    text: session?.user?.email,
-    textEncoded: session?.user?.email
-      ? base64url(`${session?.user?.email}`)
-      : null,
-  });
+
   if (session) {
     return (
       <div className="flex justify-items-center items-center">

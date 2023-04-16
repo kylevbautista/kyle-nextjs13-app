@@ -15,11 +15,9 @@ export async function Boundary({
   userParam,
   children,
 }: PageBaseProps) {
-  // const { data = {} } = await getUserAnimeList();
-  // const list = data?.getUserAnimeList?.list || [];
   const { data = null } = await getUserAnimeListOptimized({
     objectId: session?.objectId,
-    email: userParam,
+    userParam: userParam,
   });
 
   if (!data?.hasAccount) {

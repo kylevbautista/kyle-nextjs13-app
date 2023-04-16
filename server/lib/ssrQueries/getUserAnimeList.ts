@@ -1,11 +1,12 @@
 import clientPromise from "../mongodb";
 import { ObjectId } from "mongodb";
+import base64url from "base64url";
 
 export const getUserAnimeListOptimized = async ({
   objectId = null,
-  email = null,
+  userParam = null,
 }: any) => {
-  if (!objectId) {
+  if (!userParam) {
     return { data: null };
   }
 
@@ -16,10 +17,14 @@ export const getUserAnimeListOptimized = async ({
     //   .collection("users")
     //   .find({ _id: new ObjectId(`${objectId}`) })
     //   .toArray();
-    const users = await db.collection("users").find({ email: email }).toArray();
+    const users = await db
+      .collection("users")
+      .find({ email: base64url.decode(userParam) })
+      .toArray();
 
     const list = users[0]?.following;
     const hasAccount = Boolean(users[0]);
+
     return {
       data: {
         hasAccount: hasAccount,

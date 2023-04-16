@@ -1,18 +1,19 @@
 import { GraphQLError } from "graphql";
-import UserModel from "../../../mongodb/models/User";
+import UserModel from "@/server/mongodb/models/User";
 import { removeFromUserAnimeList } from "./removeFromUserAnimeList";
+import base64url from "base64url";
 
 const AnimeList = {
   Query: {
     getUserAnimeList: async (parent: any, args: any, contextValue: any) => {
-      if (!contextValue?.session?.objectId) {
-        throw new GraphQLError("User is not authenticated", {
-          extensions: {
-            code: "UNAUTHENTICATED",
-            http: { status: 401 },
-          },
-        });
-      }
+      // if (!contextValue?.session?.objectId) {
+      //   throw new GraphQLError("User is not authenticated", {
+      //     extensions: {
+      //       code: "UNAUTHENTICATED",
+      //       http: { status: 401 },
+      //     },
+      //   });
+      // }
       const sameAcc = args.userParam === contextValue?.session?.user?.email;
       // try {
       //   const users = await UserModel.find({
@@ -35,7 +36,7 @@ const AnimeList = {
           });
         } else {
           users = await UserModel.find({
-            email: args.userParam,
+            email: base64url.decode(args.userParam),
           });
         }
 
