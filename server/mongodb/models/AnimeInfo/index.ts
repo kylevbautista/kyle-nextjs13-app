@@ -10,6 +10,7 @@ const AnimeInfoScheme = new Schema(
       medium: { type: String, default: null },
       color: { type: String, default: null },
     },
+    id: { type: Number },
     idMal: { type: Number },
     title: {
       _id: false,

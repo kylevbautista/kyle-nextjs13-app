@@ -18,6 +18,7 @@ query getUserAnimeListQuery($userParam: String) {
         }
       }
       genres
+      id
       idMal
       source
       startDate {
