@@ -18,6 +18,7 @@ import { fetchFromGraphQLServer } from "../utils/graphql/utils/fetchFromGraphQLS
 import { useSWRConfig } from "swr";
 import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
 import { useInterval } from "./utils/useInterval";
+import toast from "react-hot-toast";
 
 const addToUserAnimeList = async (info: any) => {
   try {
@@ -94,14 +95,33 @@ export default function AnimeInfoGrid({
   const hydrated = useContext(HydrationContext);
 
   const saveToAnimeList = async (info: any) => {
+    const loadingToast = toast.loading("Adding To List...");
     const res = await addToUserAnimeList(info);
-    const message = res.addToUserAnimeList.message || "";
-    if (message === "Successfully Added to List")
-      alert(`Added ${info?.title?.romaji} to your Anime List`);
-    else if (message === "Already In List") {
-      alert(`You are already following ${info?.title?.romaji}`);
+    const message = res.addToUserAnimeList?.message || "";
+
+    if (message === "Successfully Added to List") {
+      const addSuccess = toast.success(
+        `Added ${info?.title?.romaji} to your Anime List`,
+        { id: loadingToast }
+      );
+      setTimeout(() => {
+        toast.remove(addSuccess);
+      }, 2500);
+    } else if (message === "Already In List") {
+      const addDupe = toast.error(
+        `You are already following ${
+          info?.title?.english || info?.title?.romaji
+        }`,
+        { id: loadingToast }
+      );
+      setTimeout(() => {
+        toast.remove(addDupe);
+      }, 2500);
     } else {
-      alert("UnAuthorized");
+      const addError = toast.error("Login To Add", { id: loadingToast });
+      setTimeout(() => {
+        toast.remove(addError);
+      }, 2500);
     }
     const currentTime = Date.now();
     if (!localStorage.getItem("listRefreshTime")) {
@@ -124,14 +144,36 @@ export default function AnimeInfoGrid({
   };
 
   const removeTest = async (info: any) => {
+    const loadingToast = toast.loading("Removing From List...");
     const res = await removeFromList(info);
-    const message = res.removeFromUserAnimeList.message || "";
-    if (message === "Successfully Removed From List")
-      console.log(`Removed ${info?.title?.romaji} from your Anime List`);
-    else if (message === "Did Not Remove") {
-      console.log(`Unable To Remove ${info?.title?.romaji} from List`);
+    const message = res.removeFromUserAnimeList?.message || "";
+    if (message === "Successfully Removed From List") {
+      const removeSuccess = toast.success(
+        `Removed ${info?.title?.romaji} from your Anime List`,
+        {
+          id: loadingToast,
+        }
+      );
+      setTimeout(() => {
+        toast.remove(removeSuccess);
+      }, 2000);
+    } else if (message === "Did Not Remove") {
+      const didNotRemove = toast.error(
+        `Unable To Remove ${info?.title?.romaji} from List`,
+        {
+          id: loadingToast,
+        }
+      );
+      setTimeout(() => {
+        toast.remove(didNotRemove);
+      }, 2000);
     } else {
-      console.log("UnAuthorized");
+      const loginToRemove = toast.error("Login To Remove From List", {
+        id: loadingToast,
+      });
+      setTimeout(() => {
+        toast.remove(loginToRemove);
+      }, 2000);
     }
     console.log("done");
     const currentTime = Date.now();

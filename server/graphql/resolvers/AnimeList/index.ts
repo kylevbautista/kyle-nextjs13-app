@@ -77,7 +77,7 @@ const AnimeList = {
             _id: contextValue?.session?.objectId,
           },
           {
-            following: { $elemMatch: { idMal: args.data.idMal } },
+            following: { $elemMatch: { id: args.data.id } },
           }
         );
 

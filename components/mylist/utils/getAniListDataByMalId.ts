@@ -54,21 +54,45 @@ export const getAniListDataByMalId = async ({
   }
 };
 
-export const getAniListDataByMalIdList = async (list: any) => {
-  let results: any = [];
+export const getAniListDataByMalIdList = async (
+  list: any,
+  enableLogs = false
+) => {
+  const numOfPromises = Math.ceil(list.length / 50);
+  const ids = list.map((item: any) => item.id);
+
   try {
-    for (let i = 0; i < list.length; i++) {
-      let id = list[i]?.idMal;
-      let titleParam = list[i]?.title?.romaji;
-      const { data } = await getAniListDataByMalId({
-        malId: id,
-        title: titleParam,
-        enableLogs: false,
-      });
-      const { anime = {} } = data || {};
-      results.push(anime);
+    let promises = [];
+    for (let i = 0; i < numOfPromises; i++) {
+      let promise = fetchWithTimeout(
+        `${process.env.NEXT_PUBLIC_GRAPHQL_ANILIST}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: stringifyTag(findByMalIdQuery),
+            variables: {
+              page: i + 1,
+              ids: ids,
+            },
+          }),
+          timeout: 8000,
+        }
+      );
+      promises.push(promise);
     }
-    return results;
+    const response = await Promise.all(promises);
+    if (enableLogs) {
+      console.log(
+        `getAniListDataByMalId`,
+        response[0].headers.get("x-ratelimit-remaining")
+      );
+    }
+    const data = await Promise.all(response.map((res) => res.json()));
+
+    return data;
   } catch (err) {
     console.log(err);
     return null;
