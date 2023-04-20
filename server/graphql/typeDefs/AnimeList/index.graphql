@@ -118,6 +118,7 @@ input FirstEpisodeInput {
 input DataInput {
   description: String
   coverImage: CoverImageInput
+  id: Int
   idMal: Int
   title: TitleInput
   studios: StudiosInput
@@ -137,6 +138,7 @@ input DataInput {
 type DataOutput {
   description: String
   coverImage: CoverImageOutput
+  id: Int
   idMal: Int
   title: TitleOutput
   studios: StudiosOutput

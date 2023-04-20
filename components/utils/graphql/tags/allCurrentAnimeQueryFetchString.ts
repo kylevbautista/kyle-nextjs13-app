@@ -8,6 +8,7 @@ export const allCurrentAnimeQueryFetchString = `query allCurrentAnimeQueryFetch(
         medium
         color
       }
+      id
       idMal
       title {
         romaji

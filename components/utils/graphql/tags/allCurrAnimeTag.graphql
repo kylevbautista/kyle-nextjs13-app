@@ -21,6 +21,7 @@ query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
         medium
         color
       }
+      id
       idMal
       title {
         romaji
