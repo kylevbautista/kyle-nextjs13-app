@@ -3,6 +3,8 @@ import { ReactNode, useEffect } from "react";
 import { getAniListDataByMalIdList } from "./utils/getAniListDataByMalId";
 import { updateUserAnnimeList } from "./utils/updateUserList";
 // import { getUserAnimeListClient } from "./utils/getUserAnimeList";
+import toast from "react-hot-toast";
+
 interface PageBaseProps {
   list?: any;
   shouldRefresh?: any;
@@ -10,18 +12,41 @@ interface PageBaseProps {
 }
 
 const test = async (list: any, hidden = true) => {
+  const loadingToast = toast.loading("Updating Episode Air Dates...");
   try {
-    // const listBetter = await getUserAnimeListClient();
-    const data = await getAniListDataByMalIdList(list);
-    if (data) {
-      const { updateUserAnimeList: response = {} } =
-        (await updateUserAnnimeList(data)) || {};
-      if (response?.message && !hidden) {
-        alert(response?.message);
+    const dataArr = (await getAniListDataByMalIdList(list)) || [];
+
+    if (dataArr && dataArr.length > 0) {
+      const dataAggregated: any = [];
+      for (let i = 0; i < dataArr?.length; i++) {
+        dataAggregated.push(...dataArr[i]?.data?.page?.anime);
       }
-      console.log("Done Updating Epsiode Air Dates!");
+
+      if (list.length == dataAggregated.length) {
+        const { updateUserAnimeList: response = {} } =
+          (await updateUserAnnimeList(dataAggregated)) || {};
+        if (response?.message && !hidden) {
+          alert(response?.message);
+        }
+        const updateSuccess = toast.success(
+          "Done Updating Epsiode Air Dates!",
+          { id: loadingToast }
+        );
+        setTimeout(() => {
+          toast.remove(updateSuccess);
+        }, 2000);
+        console.log("Done Updating Epsiode Air Dates!");
+      } else {
+        console.log("Mismatch lengths");
+      }
     }
   } catch (err) {
+    const updateError = toast.error("Done Updating Epsiode Air Dates!", {
+      id: loadingToast,
+    });
+    setTimeout(() => {
+      toast.remove(updateError);
+    }, 2000);
     console.log(err);
   }
 };
@@ -46,7 +71,6 @@ export function Test({ list, shouldRefresh }: PageBaseProps) {
     }
 
     if (list.length && shouldRefresh && timeDiff > 60) {
-      console.log("Updating Episode Air Dates...");
       test(list);
       localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
     }

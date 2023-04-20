@@ -1,57 +1,66 @@
-query findByMalIdQuery($idMal: Int, $search: String) {
-  anime: Media(idMal: $idMal, search: $search) {
-    description
-    coverImage {
-      extraLarge
-      large
-      medium
-      color
+query findByMalIdQuery($page: Int, $ids: [Int]) {
+  page: Page(page: $page, perPage: 50) {
+    pageInfo {
+      total
+      perPage
+      currentPage
+      lastPage
+      hasNextPage
     }
-    id
-    idMal
-    title {
-      romaji
-      english
-      native
-    }
-    studios(isMain: true) {
-      nodes {
-        name
+    anime: media(id_in: $ids) {
+      description
+      coverImage {
+        extraLarge
+        large
+        medium
+        color
       }
-    }
-    startDate {
-      year
-      month
-      day
-    }
-    externalLinks {
       id
-      url
-      site
-    }
-    status
-    episodes
-    duration
-    source
-    genres
-    averageScore
-    upcomingEpisode: nextAiringEpisode {
-      id
-      episode
-      timeUntilAiring
-      mediaId
-    }
-    upComingAirDate: airingSchedule(notYetAired: true, page: 1, perPage: 1) {
-      episode: nodes {
-        airingAt
+      idMal
+      title {
+        romaji
+        english
+        native
+      }
+      studios(isMain: true) {
+        nodes {
+          name
+        }
+      }
+      startDate {
+        year
+        month
+        day
+      }
+      externalLinks {
+        id
+        url
+        site
+      }
+      status
+      episodes
+      duration
+      source
+      genres
+      averageScore
+      upcomingEpisode: nextAiringEpisode {
+        id
+        episode
         timeUntilAiring
-        episode
+        mediaId
       }
-    }
-    firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
-      episode: nodes {
-        airingAt
-        episode
+      upComingAirDate: airingSchedule(notYetAired: true, page: 1, perPage: 1) {
+        episode: nodes {
+          airingAt
+          timeUntilAiring
+          episode
+        }
+      }
+      firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
+        episode: nodes {
+          airingAt
+          episode
+        }
       }
     }
   }
