@@ -11,7 +11,6 @@ import base64url from "base64url";
  */
 
 export const fetchCache = "default-no-store";
-export const runtime = "edge"; // 'nodejs' is the default
 
 export default async function MyList() {
   const session = await getServerSession(authOptions);
