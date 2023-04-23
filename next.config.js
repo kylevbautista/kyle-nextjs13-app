@@ -32,17 +32,7 @@ const nextConfig = {
       loader: "graphql-tag/loader",
     });
 
-    // return config;
-    if (nextRuntime === "nodejs") return config;
-    return {
-      ...config,
-      entry() {
-        return config.entry().then((entry) => ({
-          ...entry,
-          cli: path.resolve(process.cwd(), "lib/cli.ts"),
-        }));
-      },
-    };
+    return config;
   },
   // async rewrites() {
   //   /**

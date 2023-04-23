@@ -10,7 +10,6 @@ import { Boundary } from "./Boundary";
  */
 
 export const fetchCache = "default-no-store";
-export const runtime = "edge"; // 'nodejs' is the default
 
 export default async function MyList({ params }: any) {
   const { user = [] } = params;
