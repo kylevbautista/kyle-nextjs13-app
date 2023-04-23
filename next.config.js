@@ -33,7 +33,7 @@ const nextConfig = {
     });
 
     // return config;
-    if (nextRuntime !== "nodejs") return config;
+    if (nextRuntime === "nodejs") return config;
     return {
       ...config,
       entry() {
