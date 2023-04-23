@@ -25,14 +25,24 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
-  webpack: (config, options) => {
+  webpack: (config, { nextRuntime }) => {
     config.module.rules.push({
       test: /\.(graphql|gql)/,
       exclude: /node_modules/,
       loader: "graphql-tag/loader",
     });
 
-    return config;
+    // return config;
+    if (nextRuntime !== "nodejs") return config;
+    return {
+      ...config,
+      entry() {
+        return config.entry().then((entry) => ({
+          ...entry,
+          cli: path.resolve(process.cwd(), "lib/cli.ts"),
+        }));
+      },
+    };
   },
   // async rewrites() {
   //   /**
