@@ -4,7 +4,6 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     appDir: true,
-    runtime: "experimental-edge",
     optimizeCss: true,
     /**
      * To stop rate limiting, I am forcing nextjs
