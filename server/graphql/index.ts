@@ -1,9 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { getServerSession } from "next-auth/next";
-import { GraphQLError } from "graphql";
 import { authOptions } from "../auth";
-// import { startServerAndCreateNextHandler } from "../lib/graphqlMongooseHandler";
 import { NextRequest } from "next/server";
 
 import resolvers from "./resolvers";
