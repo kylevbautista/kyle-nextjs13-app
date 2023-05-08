@@ -29,7 +29,7 @@ const test = async (list: any, hidden = true) => {
           alert(response?.message);
         }
         if (response?.message !== "Successfully Updated List") {
-          console.log("err updating list");
+          console.log("err updating list", response);
         }
         const updateSuccess = toast.success(
           "Done Updating Epsiode Air Dates!",
