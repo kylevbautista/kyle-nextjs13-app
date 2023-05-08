@@ -5,6 +5,7 @@ import base64url from "base64url";
 export const serverFunction = async (formData: FormData) => {
   console.log("server function", formData.get("episodeNumber"));
   console.log("server function", formData.get("userParam"));
+
   try {
     const client = await clientPromise;
     const db = client.db();
