@@ -96,73 +96,73 @@ const AnimeList = {
 
       let modifiedCount = 0;
       /********************************* */
-      const query = {
-        _id: contextValue?.session?.objectId,
-      };
-      const updateNew = {
-        $set: {
-          following: args.data,
-        },
-      };
-      const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+      // const query = {
+      //   _id: contextValue?.session?.objectId,
+      // };
+      // const updateNew = {
+      //   $set: {
+      //     following: args.data,
+      //   },
+      // };
+      // const options = { upsert: true, new: true, setDefaultsOnInsert: true };
       /********************************* */
 
       try {
         if (args?.data) {
           /********************************* */
-          const res = await UserModel.updateOne(query, updateNew, options);
-          // console.log("res", res);
-          if (res?.modifiedCount > 0) {
-            console.log("Successfully Updated List");
-            return {
-              message: "Successfully Updated List",
-            };
-          }
-          /********************************* */
-          // for (let i = 0; i < args?.data?.length; i++) {
-          //   const currData = args?.data[i];
-          //   const query = {
-          //     _id: contextValue?.session?.objectId,
-          //     "following.id": currData?.id,
+          // const res = await UserModel.updateOne(query, updateNew, options);
+          // // console.log("res", res);
+          // if (res?.modifiedCount > 0) {
+          //   console.log("Successfully Updated List");
+          //   return {
+          //     message: "Successfully Updated List",
           //   };
-          //   const updateNew = {
-          //     $set: {
-          //       "following.$.description": currData?.description,
-          //       "following.$.coverImage": currData?.coverImage,
-          //       "following.$.id": currData?.id,
-          //       "following.$.idMal": currData?.idMal,
-          //       "following.$.title": currData?.title,
-          //       "following.$.studios": currData?.studios,
-          //       "following.$.startDate": currData?.startDate,
-          //       "following.$.externalLinks": currData?.externalLinks,
-          //       "following.$.status": currData?.status,
-          //       "following.$.episodes": currData?.episodes,
-          //       "following.$.duration": currData?.duration,
-          //       "following.$.source": currData?.source,
-          //       "following.$.genres": currData?.genres,
-          //       "following.$.averageScore": currData?.averageScore,
-          //       "following.$.upcomingEpisode": currData?.upcomingEpisode,
-          //       "following.$.firstEpisode": currData?.firstEpisode,
-          //     },
-          //   };
-          //   const options = {
-          //     upsert: true,
-          //     new: true,
-          //     setDefaultsOnInsert: true,
-          //   };
-          //   const res = await UserModel.updateOne(query, updateNew, options);
-          //   if (res?.modifiedCount > 0) {
-          //     modifiedCount = modifiedCount + 1;
-          //   }
           // }
+          /********************************* */
+          for (let i = 0; i < args?.data?.length; i++) {
+            const currData = args?.data[i];
+            const query = {
+              _id: contextValue?.session?.objectId,
+              "following.id": currData?.id,
+            };
+            const updateNew = {
+              $set: {
+                "following.$.description": currData?.description,
+                "following.$.coverImage": currData?.coverImage,
+                "following.$.id": currData?.id,
+                "following.$.idMal": currData?.idMal,
+                "following.$.title": currData?.title,
+                "following.$.studios": currData?.studios,
+                "following.$.startDate": currData?.startDate,
+                "following.$.externalLinks": currData?.externalLinks,
+                "following.$.status": currData?.status,
+                "following.$.episodes": currData?.episodes,
+                "following.$.duration": currData?.duration,
+                "following.$.source": currData?.source,
+                "following.$.genres": currData?.genres,
+                "following.$.averageScore": currData?.averageScore,
+                "following.$.upcomingEpisode": currData?.upcomingEpisode,
+                "following.$.firstEpisode": currData?.firstEpisode,
+              },
+            };
+            const options = {
+              upsert: true,
+              new: true,
+              setDefaultsOnInsert: true,
+            };
+            const res = await UserModel.updateOne(query, updateNew, options);
+            if (res?.modifiedCount > 0) {
+              modifiedCount = modifiedCount + 1;
+            }
+          }
         }
-        // console.log("count", { modifiedCount, datalen: args.data.length });
-        // if (modifiedCount == args?.data?.length) {
-        //   console.log("Successfully Updated List");
-        //   return {
-        //     message: "Successfully Updated List",
-        //   };
-        // }
+        console.log("count", { modifiedCount, datalen: args.data.length });
+        if (modifiedCount == args?.data?.length) {
+          console.log("Successfully Updated List");
+          return {
+            message: "Successfully Updated List",
+          };
+        }
         console.log("Already In List");
         return {
           message: "Already In List",
