@@ -6,6 +6,7 @@ import clientPromise from "@/server/lib/mongodb";
 
 const authOptions: NextAuthOptions = {
   // Configure one or more authentication providers
+
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
