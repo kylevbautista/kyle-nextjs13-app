@@ -142,6 +142,7 @@ const AnimeList = {
                 "following.$.genres": currData?.genres,
                 "following.$.averageScore": currData?.averageScore,
                 "following.$.upcomingEpisode": currData?.upcomingEpisode,
+                "following.$.upComingAirDate": currData?.upComingAirDate,
                 "following.$.firstEpisode": currData?.firstEpisode,
               },
             };
