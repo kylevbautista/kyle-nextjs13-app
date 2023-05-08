@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   experimental: {
-    serverActions: true,
+    // serverActions: true,
     optimizeCss: true,
     /**
      * To stop rate limiting, I am forcing nextjs
