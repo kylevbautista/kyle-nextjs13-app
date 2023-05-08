@@ -75,6 +75,14 @@ const AnimeInfoScheme = new Schema(
         },
       ],
     },
+    userData: {
+      _id: false,
+      listType: { type: String, default: "watching" },
+      episodeProgressNumber: { type: Number, default: 0 },
+      startDate: { type: Number, default: null },
+      finishDate: { type: Number, default: null },
+      score: { type: Number, default: null },
+    },
   },
   { _id: false }
 );
