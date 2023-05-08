@@ -1,3 +1,3 @@
-import graphqlNextHandler from "../../server/graphql";
+import graphqlNextHandler from "@/server/graphql";
 
 export default graphqlNextHandler;

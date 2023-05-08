@@ -1,3 +1,3 @@
-import authNextHandler from "../../../server/auth";
+import authNextHandler from "@/server/auth";
 
 export default authNextHandler;
