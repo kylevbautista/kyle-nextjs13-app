@@ -1,12 +1,8 @@
 "use client";
-import { serverFunction } from "./actions";
+// import { serverFunction } from "./actions";
 
 export const ClientComp = ({ data, userParam }: any) => {
-  const modifyEpisode = () => {
-    console.log("onclick");
-  };
-
-  console.log(data);
+  // console.log(data);
   return (
     <div>
       {data?.map((item: any, idx: any) => (
@@ -27,7 +23,7 @@ export const ClientComp = ({ data, userParam }: any) => {
             <p>Click to Increment Epiode Progress</p>
           </button> */}
           {/* @ts-ignore */}
-          <form action={serverFunction}>
+          {/* <form action={serverFunction}>
             <input
               name="episodeNumber"
               defaultValue={item?.userData?.episodeProgressNumber}
@@ -41,7 +37,7 @@ export const ClientComp = ({ data, userParam }: any) => {
             <button className="bg-slate-400 rounded-md p-3" type="submit">
               <p>Click to Increment Epiode Progress</p>
             </button>
-          </form>
+          </form> */}
         </div>
       ))}
     </div>

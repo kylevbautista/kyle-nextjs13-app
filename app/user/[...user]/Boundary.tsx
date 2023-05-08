@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { TestProvider } from "@/components/mylist/TestProvider";
-import PageBase from "@/components/mylist/PageBase";
+// import { TestProvider } from "@/components/mylist/TestProvider";
+// import PageBase from "@/components/mylist/PageBase";
 import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
 import { notFound } from "next/navigation";
 import { ClientComp } from "./ClientComp";
@@ -27,8 +27,8 @@ export async function Boundary({
   const list = data?.getUserAnimeList?.list || [];
 
   return (
-    <TestProvider data={list} userParam={userParam}>
-      <ClientComp data={list} userParam={userParam} />
-    </TestProvider>
+    // <TestProvider data={list} userParam={userParam}>
+    <ClientComp data={list} userParam={userParam} />
+    // </TestProvider>
   );
 }

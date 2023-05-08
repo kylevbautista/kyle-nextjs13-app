@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { authOptions } from "@/server/auth";
 import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
