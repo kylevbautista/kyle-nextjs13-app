@@ -151,7 +151,7 @@ const AnimeList = {
               setDefaultsOnInsert: true,
             };
             const res = await UserModel.updateOne(query, updateNew, options);
-            if (res?.modifiedCount > 0) {
+            if (res?.acknowledged) {
               modifiedCount = modifiedCount + 1;
             }
           }
