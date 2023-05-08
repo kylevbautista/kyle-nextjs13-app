@@ -135,6 +135,19 @@ input DataInput {
   firstEpisode: FirstEpisodeInput
 }
 
+input AnimeUserData {
+  listType: String
+  episodeProgressNumber: Int
+  startDate: Int
+  finishDate: Int
+  score: Int
+}
+
+input UserAnimeInfoInput {
+  userData: AnimeUserData
+  animeId: Int
+}
+
 type DataOutput {
   description: String
   coverImage: CoverImageOutput
@@ -166,8 +179,10 @@ type AddAnimeList {
 type Query {
   getUserAnimeList(userParam: String): GetAnimeList
 }
+
 type Mutation {
   addToUserAnimeList(data: DataInput): AddAnimeList
   updateUserAnimeList(data: [DataInput]): AddAnimeList
   removeFromUserAnimeList(data: DataInput): AddAnimeList
+  updateUserAnimeData(data: UserAnimeInfoInput): AddAnimeList
 }
