@@ -73,7 +73,7 @@ export function Test({ list, shouldRefresh }: PageBaseProps) {
       timeDiff = Math.floor((currentTime - oldTime) / 1000);
     }
 
-    if (list.length && shouldRefresh && timeDiff > 60) {
+    if (list.length && shouldRefresh && timeDiff > 300) {
       test(list);
       localStorage.setItem("listRefreshTime", JSON.stringify(currentTime));
     }
