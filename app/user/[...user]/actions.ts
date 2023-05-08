@@ -10,13 +10,16 @@ export const serverFunction = async (formData: FormData) => {
     const db = client.db();
 
     const query = {
+      /* @ts-ignore */
       email: base64url.decode(formData.get("userParam")),
+      /* @ts-ignore */
       "following.id": parseInt(formData.get("animeId")),
     };
 
     const updateNew = {
       $set: {
         "following.$.userData.episodeProgressNumber":
+          /* @ts-ignore */
           parseInt(formData.get("episodeNumber")) + 1,
       },
     };
