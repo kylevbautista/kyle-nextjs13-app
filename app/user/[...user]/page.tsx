@@ -1,6 +1,9 @@
 import { authOptions } from "@/server/auth";
 import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
+import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
+import { notFound } from "next/navigation";
+import { ClientComp } from "./ClientComp";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest
@@ -16,10 +19,20 @@ export default async function MyList({ params }: any) {
 
   const session = await getServerSession(authOptions);
 
+  const { data = null } = await getUserAnimeListOptimized({
+    objectId: session?.objectId,
+    userParam: userParam,
+  });
+
+  if (!data?.hasAccount) {
+    return notFound();
+  }
+
+  const list = data?.getUserAnimeList?.list || [];
+
   return (
     <>
-      {/* @ts-ignore */}
-      <Boundary session={session} userParam={userParam} />
+      <ClientComp data={list} userParam={userParam} />
     </>
   );
 }
