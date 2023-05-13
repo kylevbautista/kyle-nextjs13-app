@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
 import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
 import { notFound } from "next/navigation";
-import { ClientComp } from "./ClientComp";
+import { ClientComp } from "../_client/ClientComp";
 
 /**
  * Can't invalidate cache in nextjs13 with graphqlrequest

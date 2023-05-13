@@ -16,20 +16,21 @@ export const LinkRouterWrapper = ({
     return (
       <Link
         href={href}
-        onClick={() => {
-          const { pathname, search, hash } = window.location;
-          if (href !== pathname + search + hash) {
-            // startChange();
-          }
-        }}
+        prefetch={false}
+        // onClick={() => {
+        //   const { pathname, search, hash } = window.location;
+        //   if (href !== pathname + search + hash) {
+        //     // startChange();
+        //   }
+        // }}
         className={className}
       >
         {children}
       </Link>
     );
   return (
-    <a href={href} className={className}>
+    <Link href={href} className={className}>
       {children}
-    </a>
+    </Link>
   );
 };

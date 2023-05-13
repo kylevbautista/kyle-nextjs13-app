@@ -20,7 +20,7 @@ export const removeFromUserAnimeList = async (
   };
   const updateRemove = {
     $pull: {
-      following: { idMal: args.data.idMal },
+      following: { id: args.data.id },
     },
   };
   const options = { upsert: true, new: true, setDefaultsOnInsert: true };
@@ -31,7 +31,7 @@ export const removeFromUserAnimeList = async (
         _id: contextValue?.session?.objectId,
       },
       {
-        following: { $elemMatch: { idMal: args.data.idMal } },
+        following: { $elemMatch: { id: args.data.id } },
       }
     );
     const inList = users[0]?.following.length ? true : false;
