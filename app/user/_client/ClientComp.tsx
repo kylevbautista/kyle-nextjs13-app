@@ -7,6 +7,8 @@ import {
 import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import { useSWRConfig } from "swr";
 import toast from "react-hot-toast";
+import { useBearStore } from "@/stores/user/userStore";
+import Image from "next/image";
 
 const updateUserAnimeData = async ({ info, e }: any = {}) => {
   const userData = { ...info.userData };
@@ -73,6 +75,9 @@ const removeFromList = async (info: any) => {
 export const ClientComp = ({ data, userParam }: any) => {
   const { cache } = useSWRConfig();
   const { mutate } = useSWRConfig();
+  // const bears = useBearStore((state: any) => state.bears);
+  // const increaseBears = useBearStore((state: any) => state.increasePopulation);
+  // console.log("zustand", bears);
 
   const removeHandler = async (info: any) => {
     const loadingToast = toast.loading("Removing From List...");
@@ -145,24 +150,51 @@ export const ClientComp = ({ data, userParam }: any) => {
     }
   };
 
-  console.log("swr cache", cache?.get(`/mylist/${userParam}`)?.data);
-
   return (
-    <div className="flex flex-col items-start justify-center gap-3 border p-3">
+    <div className="flex flex-wrap items-start justify-center gap-3 border-l p-3">
+      {/* <button onClick={increaseBears}>increase bears</button> */}
       {data?.map((item: any, idx: any) => (
         <div
           key={idx}
-          className="flex items-center justify-center gap-4 rounded-lg border p-2"
+          className="flex items-center justify-center gap-4 rounded-md p-2"
         >
-          <div className="flex flex-col items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-2">
-            <div className="group relative">
-              <img
+          <div className="flex flex-col items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)]">
+            <div className="group relative h-[230px] w-[170px] ">
+              {/* <img
                 src={item?.coverImage?.extraLarge}
                 alt="Avatar"
-                className="h-[250px]"
-              />
-              <div className="absolute bottom-0 hidden w-full bg-[rgba(0,0,0,0.6)] p-3 group-hover:block">
-                <p>{item?.title?.english || item?.title?.romaji}</p>
+                className="h-[210px]"
+              /> */}
+              <Image src={item?.coverImage?.extraLarge} fill alt="" />
+              <div className="absolute bottom-[25px] flex h-[40px] w-full items-center justify-start bg-[rgba(0,0,0,0.6)] p-1">
+                <p className="leading-4 line-clamp-2">
+                  {item?.title?.english || item?.title?.romaji}
+                </p>
+              </div>
+              <div className="absolute bottom-0 flex h-[25px] w-full items-center bg-[rgba(0,0,0,0.6)] px-1">
+                <p className="text-sm line-clamp-1">
+                  {item?.userData?.episodeProgressNumber}/{item.episodes || "?"}
+                </p>
+
+                <button
+                  id="episode-increment"
+                  onClick={(e) => updateUserAnimeData({ info: item, e })}
+                  disabled={
+                    !Boolean(item?.episodes) ||
+                    (item.episodes &&
+                      item.userData.episodeProgressNumber === item.episodes)
+                  }
+                  className="hidden group-hover:block"
+                >
+                  {item.episodes &&
+                  item.userData.episodeProgressNumber === item.episodes ? (
+                    <p className="ml-1">Complete</p>
+                  ) : item.episodes ? (
+                    <p className="ml-1">+</p>
+                  ) : (
+                    <p className="ml-1">{`Can't Add`}</p>
+                  )}
+                </button>
               </div>
               <button
                 onClick={() => removeHandler(item)}
@@ -170,33 +202,6 @@ export const ClientComp = ({ data, userParam }: any) => {
               >
                 Del
               </button>
-            </div>
-            <div>
-              <p>Episodes Completed: {item?.userData?.episodeProgressNumber}</p>
-            </div>
-            <button
-              id="episode-increment"
-              onClick={(e) => updateUserAnimeData({ info: item, e })}
-              disabled={
-                !Boolean(item?.episodes) ||
-                (item.episodes &&
-                  item.userData.episodeProgressNumber === item.episodes)
-              }
-              className="rounded-md bg-slate-800 p-3 enabled:hover:bg-slate-400 disabled:bg-slate-800/50 disabled:text-white/50"
-            >
-              <p>Click to Increment Epiode Progress</p>
-            </button>
-          </div>
-
-          <div className="flex flex-col items-center justify-center rounded-lg border border-[rgb(53,53,53)] p-2">
-            <div className="max-w-[200px] p-3">
-              <p>List: {item?.userData?.listType}</p>
-              <p>Episode Progress: {item?.userData?.episodeProgressNumber}</p>
-              <p>Added to list: {item?.userData?.startDate || "n/a"}</p>
-              <p>Completed On: {item?.userData?.finishDate || "n/a"}</p>
-              <p>Score: {item?.userData?.score || "n/a"}</p>
-              <p>Score: {item?.status || "n/a"}</p>
-              <p>Episode #: {item?.episodes || "n/a"}</p>
             </div>
           </div>
         </div>
