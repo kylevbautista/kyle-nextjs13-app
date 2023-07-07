@@ -226,7 +226,7 @@ export default function AnimeInfoGrid({
       ? englishTitle
       : romajiTitle
     : "Title";
-  let mediaLink = `https://zoro.to/search?keyword=${displayTitle.replace(
+  let mediaLink = `https://aniwatch.to/search?keyword=${displayTitle.replace(
     / /g,
     "+"
   )}`;
@@ -269,32 +269,32 @@ export default function AnimeInfoGrid({
       id="anime-card-container"
       className="
       grid 
+      animate-grow 
       grid-rows-[60px_201px_32px] 
-      sm:grid-rows-[60px_250px_32px] 
-      bg-[rgb(38,38,38)] 
-      rounded-sm
-      shadow-md 
-      dark:bg-[rgb(30,30,30)]
+      rounded-sm 
       border-[rgb(53,53,53)]
-      animate-grow
+      bg-[rgb(38,38,38)] 
+      shadow-md
+      dark:bg-[rgb(30,30,30)]
+      sm:grid-rows-[60px_250px_32px]
       "
     >
       <div
         className="
-          place-items-center
           grid
+          h-[60px]
           grid-rows-[38px_22px]
-          h-[60px] 
+          place-items-center 
           border-b
           border-inherit
           text-[#95ccff]
           "
       >
-        <div className="w-full h-full flex justify-center items-center text-center">
+        <div className="flex h-full w-full items-center justify-center text-center">
           <a
             target="_blank"
             rel="noopener noreferrer"
-            className="leading-4 hover:underline font-bold"
+            className="font-bold leading-4 hover:underline"
             href={`https://myanimelist.net/anime/${idMal}`}
           >
             <p className="line-clamp-2">{displayTitle}</p>
@@ -302,10 +302,10 @@ export default function AnimeInfoGrid({
         </div>
         <div
           className="
-            line-clamp-1
             text-xs
-            text-[rgb(164,164,164)]
             leading-6
+            text-[rgb(164,164,164)]
+            line-clamp-1
           "
         >
           <p>
@@ -313,7 +313,7 @@ export default function AnimeInfoGrid({
               ? genres.map((obj: any, index: number) => (
                   <a
                     key={index}
-                    className="hover:underline hover:text-[#95ccff]"
+                    className="hover:text-[#95ccff] hover:underline"
                     href="#"
                   >
                     &nbsp;{obj} &nbsp;
@@ -328,15 +328,15 @@ export default function AnimeInfoGrid({
         <div
           id="anime-image"
           className="
-            w-[135px] 
-            sm:w-[175px] 
+            relative 
             h-[201px] 
-            sm:h-[250px] 
-            border-b
+            w-[135px] 
+            border-b 
             border-l
             border-r
             border-[rgb(53,53,53)]
-            relative"
+            sm:h-[250px]
+            sm:w-[175px]"
         >
           <div>
             <a href="#">
@@ -350,16 +350,16 @@ export default function AnimeInfoGrid({
           <div
             id="countDown"
             className="
-            bg-[rgba(0,0,0,0.6)]
-            absolute 
-            w-[133px] 
-            sm:w-[173px] 
-            h-[24px] 
+            absolute
             top-[0px] 
-            text-xs 
             flex 
+            h-[24px] 
+            w-[133px] 
+            items-center 
             justify-center 
-            items-center"
+            bg-[rgba(0,0,0,0.6)] 
+            text-xs 
+            sm:w-[173px]"
           >
             {hydrated && (
               <p>
@@ -372,18 +372,18 @@ export default function AnimeInfoGrid({
           <div
             id="score"
             className="
-            bg-[rgba(0,0,0,0.6)]
-            absolute 
-            w-[65px] 
-            h-[25px] 
-            left-[8px]
-            rounded-[35px]
+            absolute
             bottom-[8px] 
-            text-xs 
+            left-[8px] 
             flex 
-            justify-center
+            h-[25px]
+            w-[65px]
+            items-center 
+            justify-center 
+            rounded-[35px] 
+            bg-[rgba(0,0,0,0.6)]
             p-1 
-            items-center"
+            text-xs"
           >
             <div className="star"></div>
             <p>{averageScore ? (averageScore / 10).toFixed(1) : "N/A"}</p>
@@ -393,22 +393,22 @@ export default function AnimeInfoGrid({
           className="
           grid 
           grid-rows-[25px_25px_25px_126px] 
+          border-[rgb(53,53,53)] 
           sm:grid-rows-[25px_48px_48px_129px] 
-          tablet:grid-rows-[27px_27px_27px_169px] 
-          border-[rgb(53,53,53)]
+          tablet:grid-rows-[27px_27px_27px_169px]
         "
         >
-          <div className="flex justify-center text-[#95ccff] border-b border-inherit">
+          <div className="flex justify-center border-b border-inherit text-[#95ccff]">
             <p className="line-clamp-1">
               {studios ? getStudios(studios.nodes) : "Studio"}
             </p>
           </div>
-          <div className="flex justify-center items-center text-[rgb(164,164,164)] border-b pl-1 border-inherit">
-            <p className="line-clamp-2 text-sm">
+          <div className="flex items-center justify-center border-b border-inherit pl-1 text-[rgb(164,164,164)]">
+            <p className="text-sm line-clamp-2">
               {unixTimeStampToDate(firstEpisode?.episode[0]?.airingAt)}
             </p>
           </div>
-          <div className="flex justify-around items-center gap-[6px] text-[rgb(164,164,164)] border-b pl-1 border-inherit text-sm">
+          <div className="flex items-center justify-around gap-[6px] border-b border-inherit pl-1 text-sm text-[rgb(164,164,164)]">
             <div className="p-[2px]">
               <p className="line-clamp-2">
                 {source ? formatSource(source) : "Source"}
@@ -423,7 +423,7 @@ export default function AnimeInfoGrid({
           <div
             id={`anime-snopsis-${1}`}
             onTouchStart={() => {}}
-            className="scrollbar border-b pl-1 pr-1 border-inherit"
+            className="scrollbar border-b border-inherit pl-1 pr-1"
           >
             {description ? (
               <div className="text-xs">
@@ -447,7 +447,7 @@ export default function AnimeInfoGrid({
 
       <div
         id="anime-links"
-        className="h-[32px] flex flex-wrap justify-center items-center gap-2 overflow-auto"
+        className="flex h-[32px] flex-wrap items-center justify-center gap-2 overflow-auto"
       >
         {/* <div className="hover:bg-blue-500 rounded-[50%]">
           <a
@@ -457,7 +457,7 @@ export default function AnimeInfoGrid({
             className="eye"
           ></a>
         </div> */}
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -465,7 +465,7 @@ export default function AnimeInfoGrid({
             className="mal"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -473,18 +473,18 @@ export default function AnimeInfoGrid({
             className="crunchyroll"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://zoro.to/search?keyword=${displayTitle.replace(
+            href={`https://aniwatch.to/search?keyword=${displayTitle.replace(
               / /g,
               "+"
             )}`}
             className="adb"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -492,7 +492,7 @@ export default function AnimeInfoGrid({
             className="fox"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -500,7 +500,7 @@ export default function AnimeInfoGrid({
             className="globe"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -508,7 +508,7 @@ export default function AnimeInfoGrid({
             className="planet"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -516,7 +516,7 @@ export default function AnimeInfoGrid({
             className="twitter"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -524,7 +524,7 @@ export default function AnimeInfoGrid({
             className="cut"
           ></a>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <button
             // target="_blank"
             // rel="noopener noreferrer"
@@ -533,7 +533,7 @@ export default function AnimeInfoGrid({
             onClick={() => removeTest(info)}
           ></button>
         </div>
-        <div className="hover:bg-blue-500 rounded-[50%]">
+        <div className="rounded-[50%] hover:bg-blue-500">
           <button
             // target="_blank"
             // rel="noopener noreferrer"
