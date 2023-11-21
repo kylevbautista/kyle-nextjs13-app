@@ -23,6 +23,7 @@ query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
       }
       id
       idMal
+      season
       title {
         romaji
         english

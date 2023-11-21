@@ -17,6 +17,7 @@ query findByMalIdQuery($page: Int, $ids: [Int]) {
       }
       id
       idMal
+      season
       title {
         romaji
         english

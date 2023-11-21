@@ -121,6 +121,7 @@ input DataInput {
   id: Int
   idMal: Int
   title: TitleInput
+  season: String
   studios: StudiosInput
   startDate: StartDateInput
   externalLinks: [ExternalLinksInput]
@@ -141,6 +142,7 @@ type DataOutput {
   id: Int
   idMal: Int
   title: TitleOutput
+  season: String
   studios: StudiosOutput
   startDate: StartDateOutput
   externalLinks: [ExternalLinksOutput]
