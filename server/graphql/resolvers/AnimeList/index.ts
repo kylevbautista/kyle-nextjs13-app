@@ -132,6 +132,7 @@ const AnimeList = {
                 "following.$.id": currData?.id,
                 "following.$.idMal": currData?.idMal,
                 "following.$.title": currData?.title,
+                "following.$.season": currData?.season,
                 "following.$.studios": currData?.studios,
                 "following.$.startDate": currData?.startDate,
                 "following.$.externalLinks": currData?.externalLinks,

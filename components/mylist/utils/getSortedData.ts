@@ -27,7 +27,7 @@ export const getSortedData = ({
     const { day = 1, month = 1, year = 1 } = startDate;
 
     if (
-      getSeason(month) === seasonOption &&
+      anime?.season?.toLowerCase() === seasonOption &&
       yearOption == year &&
       dayOption ==
         unixTimeStampToWeekDay(
@@ -41,7 +41,7 @@ export const getSortedData = ({
     const startDate = anime?.startDate || {};
     const { day = 1, month = 1, year = 1 } = startDate;
 
-    if (getSeason(month) === seasonOption && yearOption == year) {
+    if (anime?.season?.toLowerCase() === seasonOption && yearOption == year) {
       return anime;
     }
   });
