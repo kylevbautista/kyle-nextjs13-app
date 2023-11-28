@@ -14,24 +14,7 @@ const handler = startServerAndCreateNextHandler(apolloServer, {
      * Checks if user is logged in before any request/query executed
      * If user not logged in, throw UNAUTHENTICATED error
      */
-    let session = null;
-    // Need this after migrating graphql to app router, route handler, missing res.getHeader via framework change, so added it back
-    try {
-      session = await getServerSession(
-        req as unknown as NextApiRequest,
-        {
-          ...res,
-          // @ts-ignore
-          getHeader: (name: string) => res.headers?.get(name),
-          setHeader: (name: string, value: string) =>
-            // @ts-ignore
-            res.headers?.set(name, value),
-        } as unknown as NextApiResponse,
-        authOptions
-      );
-    } catch (err) {
-      console.log(err);
-    }
+    const session = await getServerSession(authOptions);
     // if (!session) {
     //   throw new GraphQLError("User is not authenticated", {
     //     extensions: {

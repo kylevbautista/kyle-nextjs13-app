@@ -1,12 +1,14 @@
 import { GraphQLError } from "graphql";
 import UserModel from "@/server/mongodb/models/User";
 import base64url from "base64url";
+import dbConnect from "@/server/lib/dbConnect";
 
 export const updateUserAnimeData = async (
   parent: any,
   args: any,
   contextValue: any
 ) => {
+  await dbConnect();
   console.log(args?.data?.userData);
   console.log(args?.data?.animeId);
   //_id: contextValue?.session?.objectId
