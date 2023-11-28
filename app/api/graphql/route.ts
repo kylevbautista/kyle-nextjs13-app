@@ -21,8 +21,10 @@ const handler = startServerAndCreateNextHandler(apolloServer, {
         req as unknown as NextApiRequest,
         {
           ...res,
+          // @ts-ignore
           getHeader: (name: string) => res.headers?.get(name),
           setHeader: (name: string, value: string) =>
+            // @ts-ignore
             res.headers?.set(name, value),
         } as unknown as NextApiResponse,
         authOptions
