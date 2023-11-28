@@ -2,10 +2,12 @@ import { GraphQLError } from "graphql";
 import UserModel from "@/server/mongodb/models/User";
 import { removeFromUserAnimeList } from "./removeFromUserAnimeList";
 import base64url from "base64url";
+import dbConnect from "@/server/lib/dbConnect";
 
 const AnimeList = {
   Query: {
     getUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       const sameAcc = args.userParam === contextValue?.session?.user?.email;
 
       try {
@@ -31,6 +33,7 @@ const AnimeList = {
   },
   Mutation: {
     addToUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       if (!contextValue?.session?.objectId) {
         throw new GraphQLError("User is not authenticated", {
           extensions: {
@@ -84,6 +87,7 @@ const AnimeList = {
       }
     },
     updateUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       if (!contextValue?.session?.objectId) {
         throw new GraphQLError("User is not authenticated", {
           extensions: {
