@@ -1,11 +1,13 @@
 import { GraphQLError } from "graphql";
 import UserModel from "../../../mongodb/models/User";
+import dbConnect from "@/server/lib/dbConnect";
 
 export const removeFromUserAnimeList = async (
   parent: any,
   args: any,
   contextValue: any
 ) => {
+  await dbConnect();
   if (!contextValue?.session?.objectId) {
     throw new GraphQLError("User is not authenticated", {
       extensions: {

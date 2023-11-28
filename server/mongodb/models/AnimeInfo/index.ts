@@ -18,6 +18,7 @@ const AnimeInfoScheme = new Schema(
       english: { type: String, default: null },
       native: { type: String, default: null },
     },
+    season: { type: String, default: null },
     studios: {
       _id: false,
       nodes: [

@@ -3,10 +3,12 @@ import UserModel from "@/server/mongodb/models/User";
 import { removeFromUserAnimeList } from "./removeFromUserAnimeList";
 import { updateUserAnimeData } from "./updateUserAnimeData";
 import base64url from "base64url";
+import dbConnect from "@/server/lib/dbConnect";
 
 const AnimeList = {
   Query: {
     getUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       const sameAcc = args.userParam === contextValue?.session?.user?.email;
 
       try {
@@ -32,6 +34,7 @@ const AnimeList = {
   },
   Mutation: {
     addToUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       if (!contextValue?.session?.objectId) {
         throw new GraphQLError("User is not authenticated", {
           extensions: {
@@ -85,6 +88,7 @@ const AnimeList = {
       }
     },
     updateUserAnimeList: async (parent: any, args: any, contextValue: any) => {
+      await dbConnect();
       if (!contextValue?.session?.objectId) {
         throw new GraphQLError("User is not authenticated", {
           extensions: {
@@ -133,6 +137,7 @@ const AnimeList = {
                 "following.$.id": currData?.id,
                 "following.$.idMal": currData?.idMal,
                 "following.$.title": currData?.title,
+                "following.$.season": currData?.season,
                 "following.$.studios": currData?.studios,
                 "following.$.startDate": currData?.startDate,
                 "following.$.externalLinks": currData?.externalLinks,

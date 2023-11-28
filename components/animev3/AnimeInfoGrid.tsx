@@ -226,7 +226,7 @@ export default function AnimeInfoGrid({
       ? englishTitle
       : romajiTitle
     : "Title";
-  let mediaLink = `https://zoro.to/search?keyword=${displayTitle.replace(
+  let mediaLink = `https://aniwatch.to/search?keyword=${displayTitle.replace(
     / /g,
     "+"
   )}`;
@@ -477,7 +477,7 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href={`https://zoro.to/search?keyword=${displayTitle.replace(
+            href={`https://aniwatch.to/search?keyword=${displayTitle.replace(
               / /g,
               "+"
             )}`}
