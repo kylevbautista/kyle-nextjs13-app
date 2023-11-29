@@ -93,8 +93,7 @@ export const ClientComp = ({ data, userParam }: any) => {
   const [modalContent, setModalContent] = useState<any>(null);
   // const bears = useBearStore((state: any) => state);
   const listBy = useBearStore((state: any) => state.listBy);
-  const increaseBears = useBearStore((state: any) => state.increasePopulation);
-  console.log("zustand", listBy);
+  // const increaseBears = useBearStore((state: any) => state.increasePopulation);
 
   const removeHandler = async (info: any) => {
     const loadingToast = toast.loading("Removing From List...");

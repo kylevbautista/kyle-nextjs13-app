@@ -25,10 +25,7 @@ export default function MyListLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      id="my-list"
-      className="grid grid-cols-[auto_1fr] border border-blue-500 px-8"
-    >
+    <div id="my-list" className="grid grid-cols-[auto_1fr] px-8">
       {/* <div
         id="container"
         className="

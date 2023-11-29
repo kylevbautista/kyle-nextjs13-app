@@ -10,12 +10,12 @@ export const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex h-full w-full items-center justify-center overflow-y-auto border"
+      className="fixed inset-0 z-[200] flex h-full w-full items-center justify-center overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
       <div className="relative flex h-[50%] w-[50%] flex-col gap-3 rounded border bg-slate-500 p-4">
-        <div className="flex flex-col justify-between gap-4 border p-1 sm:flex-row">
+        <div className="flex flex-col justify-between gap-4 p-1 sm:flex-row">
           <div className="min-w-[100px]">
             <Image
               src={modalContent?.coverImage?.extraLarge}
@@ -24,7 +24,7 @@ export const Modal = ({
               alt=""
             />
           </div>
-          <div className="flex items-center border">
+          <div className="flex items-center">
             <p className="line-clamp-2 text-4xl">
               {modalContent?.title?.english || modalContent?.title?.romaji}
             </p>
