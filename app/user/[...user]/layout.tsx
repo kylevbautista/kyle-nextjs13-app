@@ -25,7 +25,7 @@ export default function MyListLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div id="my-list">
+    <div id="my-list" className="grid grid-cols-[auto_1fr] px-8">
       {/* <div
         id="container"
         className="
@@ -38,10 +38,10 @@ export default function MyListLayout({
         border
       "
       ></div> */}
-      <HeaderProvider>
-        <HeaderSelector />
-        {children}
-      </HeaderProvider>
+      {/* <HeaderProvider>
+        <HeaderSelector /> */}
+      {children}
+      {/* </HeaderProvider> */}
     </div>
   );
 }

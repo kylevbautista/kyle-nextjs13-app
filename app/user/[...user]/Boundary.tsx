@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 // import PageBase from "@/components/mylist/PageBase";
 import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
 import { notFound } from "next/navigation";
-import { ClientComp } from "./ClientComp";
+import { ClientComp } from "../_client/ClientComp";
 
 interface PageBaseProps {
   session?: any;

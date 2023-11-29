@@ -1,6 +1,7 @@
 import { GraphQLError } from "graphql";
 import UserModel from "@/server/mongodb/models/User";
 import { removeFromUserAnimeList } from "./removeFromUserAnimeList";
+import { updateUserAnimeData } from "./updateUserAnimeData";
 import base64url from "base64url";
 import dbConnect from "@/server/lib/dbConnect";
 
@@ -179,6 +180,7 @@ const AnimeList = {
       }
     },
     removeFromUserAnimeList,
+    updateUserAnimeData,
   },
 };
 

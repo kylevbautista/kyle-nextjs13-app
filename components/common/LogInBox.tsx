@@ -42,7 +42,7 @@ export default function LoginBox() {
 
   if (session) {
     return (
-      <div className="flex justify-items-center items-center">
+      <div className="flex items-center justify-items-center">
         <div>
           {/* <div
             ref={rimururRef}
@@ -53,13 +53,13 @@ export default function LoginBox() {
           </div> */}
           <div
             ref={rimururRef}
-            className="flex justify-center items-center hover:bg-blue-500 h-[63px] w-[63px] rounded-[50%] cursor-pointer"
+            className="flex h-[63px] w-[63px] cursor-pointer items-center justify-center rounded-[50%] hover:bg-blue-500"
             onClick={() => setShowDropDown(!showDropDown)}
           >
             <img
               src="/rimuru.png"
               alt="Avatar"
-              className="h-[32px] absolute hover:opacity-0"
+              className="absolute h-[32px] hover:opacity-0"
             />
             <img
               src="/assets/pepe-the-frog-dancing.gif"
@@ -69,7 +69,7 @@ export default function LoginBox() {
           </div>
           {showDropDown && (
             <div
-              className="z-10 rounded-lg shadow w-44 bg-gray-700 absolute right-0"
+              className="absolute right-0 z-10 w-44 rounded-lg bg-gray-700 shadow"
               ref={dropDownRef}
             >
               <ul
@@ -91,6 +91,19 @@ export default function LoginBox() {
                 </li>
                 <li onClick={() => setShowDropDown(!showDropDown)}>
                   <LinkRouterWrapper
+                    href={`/user/${base64url(`${session?.user?.email}`)}`}
+                    className="
+                      block
+                      px-4 
+                      py-2 
+                      hover:bg-blue-500
+                    "
+                  >
+                    <p>My List New</p>
+                  </LinkRouterWrapper>
+                </li>
+                <li onClick={() => setShowDropDown(!showDropDown)}>
+                  <LinkRouterWrapper
                     href="https://www.trackkilo.com/"
                     className="
                       block
@@ -104,7 +117,7 @@ export default function LoginBox() {
                 </li>
                 <li>
                   <button
-                    className="flex justify-start w-full px-4 py-2 hover:bg-gray-600 hover:text-white"
+                    className="flex w-full justify-start px-4 py-2 hover:bg-gray-600 hover:text-white"
                     onClick={handleSignOut}
                   >
                     Sign out
@@ -124,9 +137,9 @@ export default function LoginBox() {
         href="/auth"
         className="
             block
+            rounded-2xl
             p-5
             hover:bg-blue-500
-            rounded-2xl
           "
       >
         <p>LogIn</p>

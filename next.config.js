@@ -3,8 +3,8 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   experimental: {
-    optimizeCss: true,
     // serverActions: true,
+    optimizeCss: true,
     /**
      * To stop rate limiting, I am forcing nextjs
      * to ssg on 1 thread to that there is no parellel
