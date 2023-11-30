@@ -4,6 +4,7 @@ import { useBearStore } from "@/stores/user/userStore";
 export const SideBarList = () => {
   const listBy = useBearStore((state: any) => state.listBy);
   const updateListBy = useBearStore((state: any) => state.updateListBy);
+  const listByNumbers = useBearStore((state: any) => state.listByNumbers);
 
   const tailwindMap = {
     selected: "rounded-md p-1 text-start hover:bg-slate-500 bg-white/50",
@@ -22,7 +23,7 @@ export const SideBarList = () => {
           }
           onClick={() => updateListBy("All")}
         >
-          <p>All</p>
+          <p>All {listByNumbers.all}</p>
         </button>
         <button
           className={
@@ -32,7 +33,7 @@ export const SideBarList = () => {
           }
           onClick={() => updateListBy("Watching")}
         >
-          <p>Watching</p>
+          <p>Watching {listByNumbers.watching}</p>
         </button>
         <button
           className={
@@ -42,7 +43,7 @@ export const SideBarList = () => {
           }
           onClick={() => updateListBy("Completed")}
         >
-          <p>Completed</p>
+          <p>Completed {listByNumbers.completed}</p>
         </button>
         <button
           className={
@@ -52,7 +53,7 @@ export const SideBarList = () => {
           }
           onClick={() => updateListBy("Paused")}
         >
-          <p>Paused</p>
+          <p>Paused {listByNumbers.paused}</p>
         </button>
         <button
           className={
@@ -62,7 +63,7 @@ export const SideBarList = () => {
           }
           onClick={() => updateListBy("Dropped")}
         >
-          <p>Dropped</p>
+          <p>Dropped {listByNumbers.dropped}</p>
         </button>
       </div>
     </div>
