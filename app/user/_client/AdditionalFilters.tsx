@@ -4,6 +4,7 @@ import { useBearStore } from "@/stores/user/userStore";
 
 export const AdditionalFilters = () => {
   const updateFilterBy = useBearStore((state: any) => state.updateFilterBy);
+  const filterBy = useBearStore((state: any) => state.filterBy);
 
   return (
     <div id="filter">
@@ -12,7 +13,7 @@ export const AdditionalFilters = () => {
         <select
           name="selectedYear"
           id="selected-year"
-          defaultValue={0}
+          defaultValue={filterBy.year}
           onChange={(e) => {
             updateFilterBy({ year: parseInt(e.target.value) });
           }}
@@ -29,7 +30,7 @@ export const AdditionalFilters = () => {
         <select
           name="selectedSeason"
           id="selected-season"
-          defaultValue={"all"}
+          defaultValue={filterBy.season}
           onChange={(e) => {
             updateFilterBy({ season: e.target.value });
           }}
@@ -43,7 +44,7 @@ export const AdditionalFilters = () => {
         <select
           name="selectedDay"
           id="selected-day"
-          defaultValue={"none"}
+          defaultValue={filterBy.day}
           onChange={(e) => {
             updateFilterBy({ day: e.target.value });
           }}
@@ -60,7 +61,7 @@ export const AdditionalFilters = () => {
         <select
           name="selectedstatus"
           id="selected-status"
-          defaultValue={"all"}
+          defaultValue={filterBy.status}
           onChange={(e) => {
             updateFilterBy({ status: e.target.value });
           }}
