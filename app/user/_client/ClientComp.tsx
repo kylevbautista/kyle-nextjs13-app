@@ -202,11 +202,8 @@ export const ClientComp = ({ data, userParam }: any) => {
       dropped,
     });
 
-    console.log(data[0]);
     setHydrated(true);
   }, [data, filterBy]);
-
-  console.log(bears.filterBy);
 
   return (
     <div className="flex flex-wrap items-start justify-start gap-3 border-l p-3">
