@@ -28,12 +28,13 @@ export default function RootLayout({
     <html>
       <head>
         <style>
-          {`body {
+          {`
+            body {
               overflow: overlay
             }
-            ::-webkit-scrollbar {
-              width: 17px;
-            }
+            // ::-webkit-scrollbar {
+            //   width: 17px;
+            // }
             ::-webkit-scrollbar-track {
               background-color: transparent;
             }
@@ -57,14 +58,14 @@ export default function RootLayout({
           href="/rimuru.png"
         ></link>
       </head>
-      <body className="grid grid-rows-[auto_1fr_auto] min-h-screen bg-[rgb(18,18,18)]">
+      <body className="grid min-h-screen grid-rows-[auto_1fr_auto] bg-[rgb(18,18,18)]">
         <Providers>
           <NavBar />
           {children}
         </Providers>
         <footer
           id="main-nav"
-          className="flex justify-between bg-[rgb(38,38,38)] text-white mt-2 h-10"
+          className="mt-2 flex h-10 justify-between bg-[rgb(38,38,38)] text-white"
         >
           <div>I am foot</div>
         </footer>
