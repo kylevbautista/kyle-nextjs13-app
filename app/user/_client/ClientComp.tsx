@@ -1,6 +1,6 @@
 "use client";
 // import { serverFunction } from "./actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   updateUserAnimeDataMutation,
   removeFromUserAnimeListMutation,
@@ -12,6 +12,7 @@ import { useBearStore } from "@/stores/user/userStore";
 import Image from "next/image";
 import { Modal } from "./Modal";
 import { Card } from "./Card";
+import { getByDay, getByListType } from "./helpers/sort";
 
 const updateUserAnimeData = async ({ info, e, modalData }: any = {}) => {
   const userData = { ...info.userData };
@@ -89,11 +90,16 @@ const removeFromList = async (info: any) => {
 export const ClientComp = ({ data, userParam }: any) => {
   const { cache } = useSWRConfig();
   const { mutate } = useSWRConfig();
+  const [hydrated, setHydrated] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState<any>(null);
-  // const bears = useBearStore((state: any) => state);
+  const bears = useBearStore((state: any) => state);
   const listBy = useBearStore((state: any) => state.listBy);
-  // const increaseBears = useBearStore((state: any) => state.increasePopulation);
+  const updateListByNumbers = useBearStore(
+    (state: any) => state.updateListByNumbers
+  );
+  const filterBy = useBearStore((state: any) => state.filterBy);
+  const dataByListType = getByListType({ data, filterBy });
 
   const removeHandler = async (info: any) => {
     const loadingToast = toast.loading("Removing From List...");
@@ -166,78 +172,101 @@ export const ClientComp = ({ data, userParam }: any) => {
     }
   };
 
+  useEffect(() => {
+    let watching = 0;
+    let completed = 0;
+    let paused = 0;
+    let dropped = 0;
+
+    for (let i = 0; i < dataByListType.all.length; i++) {
+      let item = dataByListType.all[i];
+      if (item.userData.listType === "watching") {
+        watching += 1;
+      }
+      if (item.userData.listType === "completed") {
+        completed += 1;
+      }
+      if (item.userData.listType === "paused") {
+        paused += 1;
+      }
+      if (item.userData.listType === "dropped") {
+        dropped += 1;
+      }
+    }
+
+    updateListByNumbers({
+      all: dataByListType.all.length,
+      watching,
+      completed,
+      paused,
+      dropped,
+    });
+
+    setHydrated(true);
+  }, [data, filterBy]);
+
   return (
     <div className="flex flex-wrap items-start justify-start gap-3 border-l p-3">
-      {listBy === "All" && (
+      {listBy === "All" ? (
         <>
           <div className="w-full border-b-2">Watching</div>
-          {data?.map(
-            (item: any, idx: any) =>
-              item.userData.listType === "watching" && (
-                <Card
-                  key={idx}
-                  item={item}
-                  setShowModal={setShowModal}
-                  updateUserAnimeData={updateUserAnimeData}
-                  setModalContent={setModalContent}
-                />
-              )
-          )}
-          <div className="w-full border-b-2">Completed</div>
-          {data?.map(
-            (item: any, idx: any) =>
-              item.userData.listType === "completed" && (
-                <Card
-                  key={idx}
-                  item={item}
-                  setShowModal={setShowModal}
-                  updateUserAnimeData={updateUserAnimeData}
-                  setModalContent={setModalContent}
-                />
-              )
-          )}
-          <div className="w-full border-b-2">Paused</div>
-          {data?.map(
-            (item: any, idx: any) =>
-              item.userData.listType === "paused" && (
-                <Card
-                  key={idx}
-                  item={item}
-                  setShowModal={setShowModal}
-                  updateUserAnimeData={updateUserAnimeData}
-                  setModalContent={setModalContent}
-                />
-              )
-          )}
-          <div className="w-full border-b-2">Dropped</div>
-          {data?.map(
-            (item: any, idx: any) =>
-              item.userData.listType === "dropped" && (
-                <Card
-                  key={idx}
-                  item={item}
-                  setShowModal={setShowModal}
-                  updateUserAnimeData={updateUserAnimeData}
-                  setModalContent={setModalContent}
-                />
-              )
-          )}
-        </>
-      )}
-      {/* <button onClick={increaseBears}>increase bears</button> */}
-      {data?.map((item: any, idx: any) =>
-        listBy === "All" ? (
-          <></>
-        ) : (
-          item.userData.listType === listBy.toLowerCase() && (
+          {dataByListType.watching?.map((item: any, idx: any) => (
             <Card
-              key={idx}
+              hydrated
+              key={item.id}
               item={item}
               setShowModal={setShowModal}
               updateUserAnimeData={updateUserAnimeData}
               setModalContent={setModalContent}
             />
-          )
+          ))}
+          <div className="w-full border-b-2">Completed</div>
+          {dataByListType.completed?.map((item: any, idx: any) => (
+            <Card
+              hydrated
+              key={item.id}
+              item={item}
+              setShowModal={setShowModal}
+              updateUserAnimeData={updateUserAnimeData}
+              setModalContent={setModalContent}
+            />
+          ))}
+          <div className="w-full border-b-2">Paused</div>
+          {dataByListType.paused?.map((item: any, idx: any) => (
+            <Card
+              hydrated
+              key={item.id}
+              item={item}
+              setShowModal={setShowModal}
+              updateUserAnimeData={updateUserAnimeData}
+              setModalContent={setModalContent}
+            />
+          ))}
+          <div className="w-full border-b-2">Dropped</div>
+          {dataByListType.dropped?.map((item: any, idx: any) => (
+            <Card
+              hydrated
+              key={item.id}
+              item={item}
+              setShowModal={setShowModal}
+              updateUserAnimeData={updateUserAnimeData}
+              setModalContent={setModalContent}
+            />
+          ))}
+        </>
+      ) : (
+        dataByListType.all?.map(
+          (item: any, idx: any) =>
+            item.userData.listType === listBy.toLowerCase() && (
+              <Card
+                hydrated
+                key={item.id}
+                item={item}
+                setShowModal={setShowModal}
+                updateUserAnimeData={updateUserAnimeData}
+                setModalContent={setModalContent}
+              />
+            )
         )
       )}
       {showModal && (
