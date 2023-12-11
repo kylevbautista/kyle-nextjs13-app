@@ -26,7 +26,7 @@ export default function Loading() {
     >
       <p>/mylist/user</p>
       <Grid>{skeletons()}</Grid>
-      <FixLoading />
+      {/* <FixLoading /> */}
     </div>
   );
 }
