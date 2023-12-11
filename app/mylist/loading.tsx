@@ -24,7 +24,7 @@ export default function Loading() {
         sm:p-4
       "
     >
-      <p>/mylist/user</p>
+      <p>/mylist</p>
       <Grid>{skeletons()}</Grid>
       <FixLoading />
     </div>
