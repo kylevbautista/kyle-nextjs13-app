@@ -6,13 +6,13 @@ export default function Loading() {
     <div
       id="container"
       className="
+        text-whites 
         flex 
         flex-col 
-        justify-center 
         items-center 
-        sm:p-4
-        text-whites
+        justify-center
         transition-all
+        sm:p-4
       "
     >
       <Image
@@ -21,7 +21,7 @@ export default function Loading() {
         height={360}
         alt="I AM AOTMIC"
       />
-      <FixLoading />
+      {/* <FixLoading /> */}
     </div>
   );
 }

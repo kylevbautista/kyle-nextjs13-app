@@ -26,7 +26,7 @@ export default function Loading() {
     >
       <p>/mylist</p>
       <Grid>{skeletons()}</Grid>
-      <FixLoading />
+      {/* <FixLoading /> */}
     </div>
   );
 }
