@@ -16,7 +16,7 @@ export const LinkRouterWrapper = ({
     return (
       <Link
         href={href}
-        prefetch={false}
+        prefetch={true}
         // onClick={() => {
         //   const { pathname, search, hash } = window.location;
         //   if (href !== pathname + search + hash) {
