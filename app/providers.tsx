@@ -9,13 +9,13 @@ import { Toaster } from "react-hot-toast";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      {/* <RouterChangeProviderWrapper> */}
-      <HydrationProvider>
-        {children}
-        <Toaster />
-        <Analytics />
-      </HydrationProvider>
-      {/* </RouterChangeProviderWrapper> */}
+      <RouterChangeProviderWrapper>
+        <HydrationProvider>
+          {children}
+          <Toaster />
+          <Analytics />
+        </HydrationProvider>
+      </RouterChangeProviderWrapper>
     </SessionProvider>
   );
 }
