@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { authOptions } from "@/server/auth";
 import { getServerSession } from "next-auth/next";
 import { Boundary } from "./Boundary";
@@ -19,8 +20,10 @@ export default async function MyList({ params }: any) {
 
   return (
     <>
-      {/* @ts-ignore */}
-      <Boundary session={session} userParam={userParam} />
+      <Suspense fallback={<div>wtf</div>}>
+        {/* @ts-ignore */}
+        <Boundary session={session} userParam={userParam} />
+      </Suspense>
     </>
   );
 }
