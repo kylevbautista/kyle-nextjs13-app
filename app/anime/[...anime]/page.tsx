@@ -55,7 +55,7 @@ export function generateMetadata({ params }: any) {
   const [year = "", season = ""] = anime;
   const str2 = season.charAt(0).toUpperCase() + season.slice(1);
   return {
-    metadataBase: new URL("https://kylevb.com"),
+    // metadataBase: new URL("https://kylevb.com"),
     title: `${
       season.charAt(0).toUpperCase() + season.slice(1)
     } ${year} - Anime`,
