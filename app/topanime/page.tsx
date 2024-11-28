@@ -1,4 +1,4 @@
-// import { Suspense } from "react";
+// import { Suspense } from "react"
 import { Boundary } from "./Boundary";
 
 export const revalidate = 60;
