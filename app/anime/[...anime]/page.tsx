@@ -14,7 +14,7 @@ import Boundary from "./Boundary";
 import { routeChecker } from "../../../components/animev3/utils/routeChecker";
 
 export const dynamicParams = true; // true | false,
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function Anime({ params }: any) {
   const { anime = [] } = params;
