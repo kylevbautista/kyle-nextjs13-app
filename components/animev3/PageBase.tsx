@@ -143,7 +143,9 @@ export default function PageBase({
       // so creating local option toggler to keep track and avoid race condition
       setOption(!option);
     } else {
-      setAnimeList([...pop]);
+      console.log("kvb pop",pop)
+      
+      setAnimeList(pop ? [...pop] : []);
 
       // cant use global byCount directly useLazy directly since it is set before new data is set
       // so creating local option toggler to keep track and avoid race condition
