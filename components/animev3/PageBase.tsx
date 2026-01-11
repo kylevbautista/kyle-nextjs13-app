@@ -131,12 +131,12 @@ export default function PageBase({
   });
 
   useEffect(() => {
-    const pop = data.page?.media;
+    const pop = data?.page?.media;
 
     // Deep cloning due to sort method directly affecting the original data
-    const count = clone(pop).sort(compareFnCountDown);
+    const count = pop ? clone(pop).sort(compareFnCountDown): [];
 
-    if (byCount) {
+    if (byCount && pop) {
       setAnimeList([...count]);
 
       // cant use global byCount inside useLazy directly since it is set before new data is set
