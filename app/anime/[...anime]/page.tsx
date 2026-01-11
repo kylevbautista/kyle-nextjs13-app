@@ -40,7 +40,7 @@ export async function generateStaticParams() {
   const year = dateObject.getUTCFullYear();
   let paths: any = [];
 
-  for (let i = year - 5; i <= year + 1; i++) {
+  for (let i = year - 2; i <= year + 1; i++) {
     paths.push({ anime: [i.toString(), "winter"] });
     paths.push({ anime: [i.toString(), "spring"] });
     paths.push({ anime: [i.toString(), "summer"] });
