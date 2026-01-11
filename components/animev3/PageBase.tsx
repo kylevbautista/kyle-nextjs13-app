@@ -104,7 +104,7 @@ export default function PageBase({
     hasMore,
   } = useLazyLoad({
     data: animeList,
-    hasNextPage: dataReference.page.pageInfo.hasNextPage,
+    hasNextPage: dataReference?.page?.pageInfo?.hasNextPage,
     callback: getAniListClient,
     callBackParams: {
       year: params.year,
