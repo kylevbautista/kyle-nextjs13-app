@@ -12,7 +12,7 @@ import { getAniListData } from "./utils/getAniListData";
 import { compareFnCountDown } from "./helpers";
 
 const clone = (items: any) =>
-  items.map((item: any) => (Array.isArray(item) ? clone(item) : item));
+  items?.map((item: any) => (Array.isArray(item) ? clone(item) : item));
 
 const getAniListClient = async ({
   year,
@@ -94,7 +94,7 @@ export default function PageBase({
   const [dataReference, setDataReference] = useState(data);
   const [page, setPage] = useState(2);
   const [animeList, setAnimeList] = useState(
-    clone(data?.page?.media).sort(compareFnCountDown) || []
+    data?.page?.media ? clone(data?.page?.media).sort(compareFnCountDown) || [] : []
   );
   const [option, setOption] = useState(byCount ? true : false);
 
