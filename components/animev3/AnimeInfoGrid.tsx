@@ -9,7 +9,7 @@ import {
   getInitialTimesFromTimeStamp,
   formatSource,
 } from "./helpers";
-import Luffy from "/public/assets/Monkey_D_Luffy.png";
+import Luffy from "../../public/assets/Monkey_D_Luffy.png";
 import Image from "next/image";
 import { useSWRConfig } from "swr";
 import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
