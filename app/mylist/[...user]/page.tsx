@@ -11,7 +11,8 @@ import { Boundary } from "./Boundary";
 
 export const fetchCache = "default-no-store";
 
-export default async function MyList({ params }: any) {
+export default async function MyList(props: any) {
+  const params = await props.params;
   const { user = [] } = params;
   const [userParam = null] = user;
 

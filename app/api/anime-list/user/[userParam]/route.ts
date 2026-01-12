@@ -5,10 +5,8 @@ import UserModel from "@/server/mongodb/models/User";
 import base64url from "base64url";
 import dbConnect from "@/server/lib/dbConnect";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { userParam: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ userParam: string }> }) {
+  const params = await props.params;
   await dbConnect();
 
   const session = await getServerSession(authOptions);

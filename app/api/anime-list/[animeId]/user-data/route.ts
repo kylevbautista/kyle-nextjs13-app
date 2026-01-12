@@ -4,10 +4,8 @@ import { authOptions } from "@/server/auth";
 import UserModel from "@/server/mongodb/models/User";
 import dbConnect from "@/server/lib/dbConnect";
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { animeId: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ animeId: string }> }) {
+  const params = await props.params;
   await dbConnect();
 
   const session = await getServerSession(authOptions);
