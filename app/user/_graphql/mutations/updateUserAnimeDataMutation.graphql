@@ -1,5 +1,0 @@
-mutation updateUserAnimeDataMutation($data: UserAnimeInfoInput) {
-  updateUserAnimeData(data: $data) {
-    message
-  }
-}

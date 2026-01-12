@@ -16,7 +16,8 @@ import { routeChecker } from "../../../components/animev3/utils/routeChecker";
 export const dynamicParams = true; // true | false,
 export const revalidate = 60;
 
-export default async function Anime({ params }: any) {
+export default async function Anime(props: any) {
+  const params = await props.params;
   const { anime = [] } = params;
   const [year = "", season = ""] = anime;
   const { redirectUrl } = routeChecker({ year: year, season: season });
@@ -50,7 +51,8 @@ export async function generateStaticParams() {
   return paths;
 }
 
-export function generateMetadata({ params }: any) {
+export async function generateMetadata(props: any) {
+  const params = await props.params;
   const { anime = [] } = params;
   const [year = "", season = ""] = anime;
   const str2 = season.charAt(0).toUpperCase() + season.slice(1);

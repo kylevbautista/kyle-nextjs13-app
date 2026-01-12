@@ -1,5 +1,0 @@
-mutation addToUserAnimeList($data: DataInput) {
-  addToUserAnimeList(data: $data) {
-    message
-  }
-}

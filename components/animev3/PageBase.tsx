@@ -94,7 +94,7 @@ export default function PageBase({
   const [dataReference, setDataReference] = useState(data);
   const [page, setPage] = useState(2);
   const [animeList, setAnimeList] = useState(
-    clone(data?.page?.media).sort(compareFnCountDown) || []
+    data?.page?.media ? clone(data?.page?.media).sort(compareFnCountDown) || [] : []
   );
   const [option, setOption] = useState(byCount ? true : false);
 
@@ -104,7 +104,7 @@ export default function PageBase({
     hasMore,
   } = useLazyLoad({
     data: animeList,
-    hasNextPage: dataReference.page.pageInfo.hasNextPage,
+    hasNextPage: dataReference?.page?.pageInfo?.hasNextPage,
     callback: getAniListClient,
     callBackParams: {
       year: params.year,
@@ -134,7 +134,7 @@ export default function PageBase({
     const pop = data.page?.media;
 
     // Deep cloning due to sort method directly affecting the original data
-    const count = clone(pop).sort(compareFnCountDown);
+    const count = pop ? clone(pop).sort(compareFnCountDown) : [];
 
     if (byCount) {
       setAnimeList([...count]);

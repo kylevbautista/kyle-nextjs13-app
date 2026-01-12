@@ -1,5 +1,4 @@
-import { print as stringifyTag } from "graphql";
-import findByMalIdQuery from "../../utils/graphql/tags/findByMalIdQuery.graphql";
+import { findByMalIdQuery } from "../../utils/anilist-queries/findByMalIdQuery";
 import { fetchWithTimeout } from "../../utils/fetchWithTimeout";
 
 const sleep = (ms: number) => {
@@ -21,7 +20,7 @@ export const getAniListDataByMalId = async ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          query: stringifyTag(findByMalIdQuery),
+          query: findByMalIdQuery,
           variables: {
             idMal: malId,
             search: title,
@@ -72,7 +71,7 @@ export const getAniListDataByMalIdList = async (
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            query: stringifyTag(findByMalIdQuery),
+            query: findByMalIdQuery,
             variables: {
               page: i + 1,
               ids: ids,

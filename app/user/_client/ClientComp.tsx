@@ -1,10 +1,6 @@
 "use client";
 // import { serverFunction } from "./actions";
 import { useState, useEffect } from "react";
-import {
-  updateUserAnimeDataMutation,
-  removeFromUserAnimeListMutation,
-} from "../_graphql/mutations";
 import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import { useSWRConfig } from "swr";
 import toast from "react-hot-toast";
@@ -16,49 +12,39 @@ import { getByDay, getByListType } from "./helpers/sort";
 
 const updateUserAnimeData = async ({ info, e, modalData }: any = {}) => {
   const userData = { ...info.userData };
-  const ress = {
-    userData: {},
-    animeId: null,
-  };
+  let finalUserData = {};
+  let animeId = null;
+
   if (e.currentTarget.id === "episode-increment") {
     userData.episodeProgressNumber = userData.episodeProgressNumber + 1;
 
     if (info.episodes && userData.episodeProgressNumber === info.episodes) {
       userData.listType = "completed";
     }
-    ress.userData = userData;
-    ress.animeId = info?.id;
+    finalUserData = userData;
+    animeId = info?.id;
   }
   if (e.currentTarget.id === "save-user-data") {
     if (info.episodes && modalData.episodeProgressNumber === info.episodes) {
       modalData.listType = "completed";
     }
-    ress.userData = modalData;
-    ress.animeId = info?.id;
+    finalUserData = modalData;
+    animeId = info?.id;
   }
   try {
-    const res = await fetchWithTimeout("/api/graphql", {
-      method: "POST",
+    const res = await fetchWithTimeout(`/api/anime-list/${animeId}/user-data`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: updateUserAnimeDataMutation,
-        variables: {
-          data: ress,
-        },
+        userData: finalUserData,
       }),
     });
 
-    const { data = null } = await res.json();
-    console.log("graphql data", data);
+    const data = await res.json();
+    console.log("api data", data);
     window.location.reload();
-    // return data;
-    // console.log("button clicked", {
-    //   event: e.currentTarget.id,
-    //   info,
-    //   res: ress,
-    // });
   } catch (err) {
     console.log(err);
   }
@@ -67,19 +53,16 @@ const updateUserAnimeData = async ({ info, e, modalData }: any = {}) => {
 const removeFromList = async (info: any) => {
   console.log("remove from list", info);
   try {
-    const res = await fetchWithTimeout("/api/graphql", {
-      method: "POST",
+    const res = await fetchWithTimeout("/api/anime-list", {
+      method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: removeFromUserAnimeListMutation,
-        variables: {
-          data: info,
-        },
+        data: info,
       }),
     });
-    const { data = null } = await res.json();
+    const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
@@ -104,7 +87,7 @@ export const ClientComp = ({ data, userParam }: any) => {
   const removeHandler = async (info: any) => {
     const loadingToast = toast.loading("Removing From List...");
     const res = await removeFromList({ id: info.id });
-    const message = res?.removeFromUserAnimeList?.message || "";
+    const message = res?.message || "";
 
     if (res === null) {
       const removeError = toast.error(`ERROR`, {

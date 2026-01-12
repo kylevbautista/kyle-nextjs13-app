@@ -1,5 +1,0 @@
-mutation removeFromUserAnimeList($data: DataInput) {
-  removeFromUserAnimeList(data: $data) {
-    message
-  }
-}

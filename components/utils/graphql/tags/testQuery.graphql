@@ -1,6 +1,0 @@
-query testing {
-  test2 {
-    id
-    url
-  }
-}

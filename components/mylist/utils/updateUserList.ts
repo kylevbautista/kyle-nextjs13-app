@@ -1,21 +1,15 @@
-import { print as stringifyTag } from "graphql";
-import updateUserAnimeListMutation from "../../utils/graphql/tags/updateUserAnimeListMutation.graphql";
-
 export const updateUserAnnimeList = async (info: any) => {
   try {
-    const res = await fetch("/api/graphql", {
-      method: "POST",
+    const res = await fetch("/api/anime-list/bulk", {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: stringifyTag(updateUserAnimeListMutation),
-        variables: {
-          data: info,
-        },
+        data: info,
       }),
     });
-    const { data = null } = await res.json();
+    const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
