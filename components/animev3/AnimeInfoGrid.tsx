@@ -11,10 +11,6 @@ import {
 } from "./helpers";
 import Luffy from "/public/assets/Monkey_D_Luffy.png";
 import Image from "next/image";
-import { print as stringifyTag } from "graphql";
-import addToUserAnimeListMutation from "../utils/graphql/tags/addToUserAnimeList.graphql";
-import removeFromUserAnimeList from "../utils/graphql/tags/mutations/removeFromUserAnimeList.graphql";
-import { fetchFromGraphQLServer } from "../utils/graphql/utils/fetchFromGraphQLServer";
 import { useSWRConfig } from "swr";
 import { unixTimeStampToWeekDay } from "./utils/timeStampHelpers";
 import { useInterval } from "./utils/useInterval";
@@ -22,19 +18,16 @@ import toast from "react-hot-toast";
 
 const addToUserAnimeList = async (info: any) => {
   try {
-    const res = await fetch("/api/graphql", {
+    const res = await fetch("/api/anime-list", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: stringifyTag(addToUserAnimeListMutation),
-        variables: {
-          data: info,
-        },
+        data: info,
       }),
     });
-    const { data = null } = await res.json();
+    const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
@@ -44,13 +37,16 @@ const addToUserAnimeList = async (info: any) => {
 
 const removeFromList = async (info: any) => {
   try {
-    const res = await fetchFromGraphQLServer({
-      query: removeFromUserAnimeList,
-      variables: {
-        data: info,
+    const res = await fetch("/api/anime-list", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        data: info,
+      }),
     });
-    const { data = null } = await res.json();
+    const data = await res.json();
     return data;
   } catch (err) {
     console.log(err);
@@ -97,7 +93,7 @@ export default function AnimeInfoGrid({
   const saveToAnimeList = async (info: any) => {
     const loadingToast = toast.loading("Adding To List...");
     const res = await addToUserAnimeList(info);
-    const message = res.addToUserAnimeList?.message || "";
+    const message = res.message || "";
 
     if (message === "Successfully Added to List") {
       const addSuccess = toast.success(
@@ -146,7 +142,7 @@ export default function AnimeInfoGrid({
   const removeTest = async (info: any) => {
     const loadingToast = toast.loading("Removing From List...");
     const res = await removeFromList(info);
-    const message = res.removeFromUserAnimeList?.message || "";
+    const message = res.message || "";
     if (message === "Successfully Removed From List") {
       const removeSuccess = toast.success(
         `Removed ${info?.title?.romaji} from your Anime List`,

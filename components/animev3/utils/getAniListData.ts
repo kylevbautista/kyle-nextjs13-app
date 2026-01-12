@@ -1,5 +1,4 @@
-import { print as stringifyTag } from "graphql";
-import allCurrAnimeTag from "../../utils/graphql/tags/allCurrAnimeTag.graphql";
+import { allCurrAnimeTag } from "../../utils/anilist-queries/allCurrAnimeTag";
 import { fetchWithTimeout } from "./fetchWithTimeout";
 
 const sleep = (ms: number) => {
@@ -24,7 +23,7 @@ export const getAniListData = async ({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: stringifyTag(allCurrAnimeTag),
+        query: allCurrAnimeTag,
         variables: {
           page: page,
           year: parsedYear,

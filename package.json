@@ -15,9 +15,6 @@
     "resetlocal": "npm run clean && npm install"
   },
   "dependencies": {
-    "@apollo/server": "^4.3.0",
-    "@as-integrations/next": "^3.0.0",
-    "@graphql-tools/merge": "^8.3.14",
     "@next-auth/mongodb-adapter": "^1.1.1",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@types/node": "18.11.9",
@@ -28,9 +25,6 @@
     "bootstrap": "^5.2.2",
     "eslint": "8.26.0",
     "eslint-config-next": "14.2.35",
-    "graphql": "^16.6.0",
-    "graphql-request": "^5.0.0",
-    "graphql-tag": "^2.12.6",
     "mongodb": "^4.13.0",
     "mongoose": "^6.8.1",
     "next": "14.2.35",

@@ -1,4 +1,5 @@
-query findByMalIdQuery($page: Int, $ids: [Int]) {
+export const allCurrAnimeTag = `
+query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
   page: Page(page: $page, perPage: 50) {
     pageInfo {
       total
@@ -7,7 +8,13 @@ query findByMalIdQuery($page: Int, $ids: [Int]) {
       lastPage
       hasNextPage
     }
-    anime: media(id_in: $ids) {
+    media(
+      season: $season
+      seasonYear: $year
+      sort: POPULARITY_DESC
+      isAdult: false
+      format_not_in: [TV_SHORT, ONA]
+    ) {
       description
       coverImage {
         extraLarge
@@ -66,3 +73,4 @@ query findByMalIdQuery($page: Int, $ids: [Int]) {
     }
   }
 }
+`;
