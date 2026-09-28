@@ -1,3 +1,6 @@
+import { mediaFieldsFragment } from "./mediaFields";
+
+/** One season, 50 per page, most popular first (TV_SHORT and ONA excluded). */
 export const allCurrAnimeTag = `
 query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
   page: Page(page: $page, perPage: 50) {
@@ -15,62 +18,9 @@ query allCurrAnimeTag($page: Int, $year: Int, $season: MediaSeason) {
       isAdult: false
       format_not_in: [TV_SHORT, ONA]
     ) {
-      description
-      coverImage {
-        extraLarge
-        large
-        medium
-        color
-      }
-      id
-      idMal
-      season
-      title {
-        romaji
-        english
-        native
-      }
-      studios(isMain: true) {
-        nodes {
-          name
-        }
-      }
-      startDate {
-        year
-        month
-        day
-      }
-      externalLinks {
-        id
-        url
-        site
-      }
-      status
-      episodes
-      duration
-      source
-      genres
-      averageScore
-      upcomingEpisode: nextAiringEpisode {
-        id
-        episode
-        timeUntilAiring
-        mediaId
-      }
-      upComingAirDate: airingSchedule(notYetAired: true, page: 1, perPage: 1) {
-        episode: nodes {
-          airingAt
-          timeUntilAiring
-          episode
-        }
-      }
-      firstEpisode: airingSchedule(notYetAired: false, page: 1, perPage: 1) {
-        episode: nodes {
-          airingAt
-          episode
-        }
-      }
+      ...mediaFields
     }
   }
 }
+${mediaFieldsFragment}
 `;

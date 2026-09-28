@@ -1,43 +1,28 @@
 "use client";
-import { createContext, useState, useEffect, ReactNode, useRef } from "react";
+import { createContext, ReactNode, useMemo, useState } from "react";
 
-// const initialState = {
-//   headerYear: "2020",
-//   headerSeason: 0,
-//   setHeaderYear: () => {},
-//   setHeaderSeason: () => {},
-// };
+/** How the season grid is ordered. Lives in the /anime layout so it survives season changes. */
+export type SortMode = "countdown" | "popularity";
 
-const HeaderContext = createContext<any>(null);
+export const SORT_LABELS: Record<SortMode, string> = {
+  countdown: "By Countdown",
+  popularity: "By Popularity",
+};
+
+interface HeaderContextValue {
+  sort: SortMode;
+  setSort: (sort: SortMode) => void;
+}
+
+const HeaderContext = createContext<HeaderContextValue>({
+  sort: "countdown",
+  setSort: () => {},
+});
 
 function HeaderProvider({ children }: { children: ReactNode }) {
-  const dateObject = new Date();
-  const currentYear = dateObject.getUTCFullYear();
-  const [headerYear, setHeaderYear] = useState(null);
-  const [headerSeason, setHeaderSeason] = useState(null);
-  const [byCount, setByCount] = useState(true);
-  const [byPopularity, setByPopularity] = useState(false);
-  const prevCountRef = useRef(byCount);
-  useEffect(() => {
-    prevCountRef.current = byCount;
-  }, [byCount]);
-  return (
-    <HeaderContext.Provider
-      value={{
-        headerYear,
-        setHeaderYear,
-        headerSeason,
-        setHeaderSeason,
-        byCount,
-        setByCount,
-        byPopularity,
-        setByPopularity,
-        prevCountRef,
-      }}
-    >
-      {children}
-    </HeaderContext.Provider>
-  );
+  const [sort, setSort] = useState<SortMode>("countdown");
+  const value = useMemo(() => ({ sort, setSort }), [sort]);
+  return <HeaderContext.Provider value={value}>{children}</HeaderContext.Provider>;
 }
 
 export { HeaderProvider, HeaderContext };

@@ -1,68 +1,53 @@
 /**
- * Catch-all dyanmic segment
- *
- * Cacthes:
- * /anime/year
- * /anime/year/season
- * /anime/...
- *
- * Then uses regex (routechecker()) to verify correct slugs/params
+ * /anime/<year>/<season>. Anything else under /anime/… (a bare year, a
+ * capitalized season, extra segments, an out-of-range year) is redirected by
+ * seasonRouteRedirect.
  */
-// import { Suspense } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Boundary from "./Boundary";
-import { routeChecker } from "../../../components/animev3/utils/routeChecker";
+import {
+  SEASON_LABELS,
+  SEASON_MONTHS,
+  SeasonName,
+  allSeasonParams,
+  seasonRouteRedirect,
+} from "@/lib/season";
 
-export const dynamicParams = true; // true | false,
-export const revalidate = 60;
+export const dynamicParams = true;
+// AniList allows ~30 requests/minute; countdowns use absolute timestamps, so 5 minutes is plenty.
+export const revalidate = 300;
 
-export default async function Anime(props: any) {
-  const params = await props.params;
-  const { anime = [] } = params;
-  const [year = "", season = ""] = anime;
-  const { redirectUrl } = routeChecker({ year: year, season: season });
-  if (redirectUrl) {
-    // console.log("redirecting...");
-    redirect(redirectUrl);
-  }
-
-  return (
-    <div>
-      {/* <Suspense fallback={<p>Loading...</p>}> */}
-      {/* @ts-ignore */}
-      <Boundary year={year} season={season} />
-      {/* </Suspense> */}
-    </div>
-  );
+interface SeasonPageProps {
+  params: Promise<{ anime: string[] }>;
 }
 
-export async function generateStaticParams() {
-  const dateObject = new Date();
-  const year = dateObject.getUTCFullYear();
-  let paths: any = [];
-
-  for (let i = year - 5; i <= year + 1; i++) {
-    paths.push({ anime: [i.toString(), "winter"] });
-    paths.push({ anime: [i.toString(), "spring"] });
-    paths.push({ anime: [i.toString(), "summer"] });
-    paths.push({ anime: [i.toString(), "fall"] });
-  }
-
-  return paths;
+function parseSeason(segments: string[] = []): { year: number; season: SeasonName } | null {
+  if (seasonRouteRedirect(segments) !== null) return null;
+  return { year: Number(segments[0]), season: segments[1] as SeasonName };
 }
 
-export async function generateMetadata(props: any) {
-  const params = await props.params;
-  const { anime = [] } = params;
-  const [year = "", season = ""] = anime;
-  const str2 = season.charAt(0).toUpperCase() + season.slice(1);
+export function generateStaticParams() {
+  return allSeasonParams().map(({ year, season }) => ({ anime: [String(year), season] }));
+}
+
+export async function generateMetadata({ params }: SeasonPageProps): Promise<Metadata> {
+  const parsed = parseSeason((await params).anime);
+  if (!parsed) return { title: "Seasonal Anime" };
+
+  const { year, season } = parsed;
+  const label = `${SEASON_LABELS[season]} ${year}`;
+  const { from, to } = SEASON_MONTHS[season];
   return {
-    // metadataBase: new URL("https://kylevb.com"),
-    title: `${
-      season.charAt(0).toUpperCase() + season.slice(1)
-    } ${year} - Anime`,
-    description: `Anime showing for the ${
-      season.charAt(0).toUpperCase() + season.slice(1)
-    } ${year} season.`,
+    title: `${label} Anime`,
+    description: `Every anime premiering in ${label} (${from} – ${to} ${year}): live countdowns to the next episode, air dates, studios, scores and synopses. Sort by countdown or popularity and add shows to your list.`,
   };
+}
+
+export default async function SeasonPage({ params }: SeasonPageProps) {
+  const segments = (await params).anime ?? [];
+  const target = seasonRouteRedirect(segments);
+  if (target) redirect(target);
+
+  return <Boundary year={Number(segments[0])} season={segments[1] as SeasonName} />;
 }

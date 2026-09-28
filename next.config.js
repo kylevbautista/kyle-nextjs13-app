@@ -1,105 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   experimental: {
-    // serverActions: true,
-    optimizeCss: true,
     /**
-     * To stop rate limiting, I am forcing nextjs
-     * to ssg on 1 thread to that there is no parellel
-     * ssg builds to avoid api throttling during build.
-     *
-     * If I had unlimited access to api, I would revert the below code
+     * AniList allows ~30 requests/minute. Prerendering the 28 season pages
+     * on one worker keeps `next build` from bursting past that limit.
      */
     workerThreads: false,
     cpus: 1,
+    // Season/top-anime pages throw on upstream failure (so ISR keeps the last
+    // good page); retry a failed prerender instead of failing the whole build.
+    staticGenerationRetryCount: 2,
   },
-  // reactStrictMode: true,
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "s4.anilist.co",
-      },
-    ],
+    // Covers are served as-is (no Vercel image optimization costs).
     unoptimized: true,
+    remotePatterns: [
+      { protocol: "https", hostname: "s4.anilist.co" },
+      { protocol: "https", hostname: "cdn.myanimelist.net" },
+    ],
   },
-  // async rewrites() {
-  //   /**
-  //    * Mask animev3 as anime for testing
-  //    */
-  //   return {
-  //     beforeFiles: [
-  //       {
-  //         source: "/anime",
-  //         destination: "/animev3", // Matched parameters can be used in the destination
-  //       },
-  //       {
-  //         source: "/anime/:slug*",
-  //         destination: "/animev3/:slug*", // Matched parameters can be used in the destination
-  //       },
-  //     ],
-  //   };
-  // },
-  async redirects() {
-    const dateObject = new Date();
-    let year = dateObject.getUTCFullYear();
-    const currentMonth = dateObject.getUTCMonth();
-    // if (currentMonth === 11) {
-    //   year = year + 1;
-    // }
-
-    const getCurrentSeasonPath = (date = null, shifted = false) => {
-      let month = date;
-      if (!date) {
-        const dateObject = new Date();
-        month = dateObject.getUTCMonth();
-      }
-
-      if (shifted) {
-        if (month <= 2) {
-          return "winter";
-        }
-        if (month >= 3 && month <= 5) {
-          return "spring";
-        }
-        if (month >= 6 && month <= 8) {
-          return "summer";
-        }
-        if (month >= 9 && month <= 11) {
-          return "fall";
-        }
-      } else {
-        if (month <= 1 || month === 11) {
-          return "winter";
-        }
-        if (month >= 2 && month <= 4) {
-          return "spring";
-        }
-        if (month >= 5 && month <= 7) {
-          return "summer";
-        }
-        if (month >= 8 && month <= 10) {
-          return "fall";
-        }
-      }
-      return "winter";
-    };
-
-    return [
-      {
-        source: "/anime",
-        destination: `/anime/${year}/${getCurrentSeasonPath(null, true)}`,
-        permanent: false,
-      },
-      {
-        source: "/anime/:year",
-        destination: `/anime/${year}/${getCurrentSeasonPath(null, true)}`,
-        permanent: false,
-      },
-    ];
-  },
+  // NOTE: /anime → current season is resolved per request in proxy.ts.
+  // Don't reintroduce it as a redirects() rule: those are evaluated at build time.
 };
 
 module.exports = nextConfig;

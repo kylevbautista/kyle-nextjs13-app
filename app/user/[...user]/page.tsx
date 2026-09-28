@@ -1,48 +1,53 @@
-import { authOptions } from "@/server/auth";
-import { getServerSession } from "next-auth/next";
-import { Boundary } from "./Boundary";
-import { getUserAnimeListOptimized } from "@/server/lib/ssrQueries/getUserAnimeList";
-import { notFound } from "next/navigation";
-import { ClientComp } from "../_client/ClientComp";
-import { SideBarList } from "../_client/SideBarList";
-import { AdditionalFilters } from "../_client/AdditionalFilters";
+import type { Metadata } from "next";
+import { loadListEntries } from "@/server/lib/userList";
+import { lookupListOwner, publicOwnerName, requireListOwner } from "@/server/lib/listRoute";
+import { myListPath } from "@/lib/routes";
+import { MyList } from "../_client/MyList";
+import { toMyListEntry } from "../_client/listFilters";
 
-/**
- * Can't invalidate cache in nextjs13 with graphqlrequest
- * Have to use native fetch api to make graphql post request
- * @returns data
- */
+interface UserListPageProps {
+  params: Promise<{ user?: string[] }>;
+}
 
-export const fetchCache = "default-no-store";
+export async function generateMetadata({ params }: UserListPageProps): Promise<Metadata> {
+  const { user = [] } = await params;
+  const lookup = await lookupListOwner(user[0]);
+  if (lookup.kind !== "found") return { title: "Anime list" };
 
-export default async function MyList(props: any) {
-  const params = await props.params;
-  const { user = [] } = params;
-  const [userParam = null] = user;
+  // Metadata is what link previews show, so it never includes the full name.
+  const name = publicOwnerName(lookup.user.name);
+  const title = name ? `${name}'s anime list` : "Anime list";
+  const count = Array.isArray(lookup.user.following) ? lookup.user.following.length : 0;
+  const description = `${count} anime tracked on kylevb.com — what's airing, watched and planned.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: "/rimuru.png", width: 200, height: 141 }],
+    },
+  };
+}
 
-  const session = await getServerSession(authOptions);
+export default async function UserListPage({ params }: UserListPageProps) {
+  const { user } = await params;
+  // Already enforced by layout.tsx (before streaming); cached, so no extra queries.
+  const lookup = await requireListOwner(user, myListPath);
 
-  const { data = null } = await getUserAnimeListOptimized({
-    objectId: session?.objectId,
-    userParam: userParam,
-  });
-
-  if (!data?.hasAccount) {
-    return notFound();
-  }
-
-  const list = data?.getUserAnimeList?.list || [];
+  const entries = (await loadListEntries(lookup.user)).map(toMyListEntry);
 
   return (
-    <>
-      <div
-        id="side-bar"
-        className="sticky top-[64px] mt-4 flex h-[calc(100vh-120px)] flex-col gap-8 p-8 md:w-[250px]"
-      >
-        <SideBarList></SideBarList>
-        <AdditionalFilters></AdditionalFilters>
-      </div>
-      <ClientComp data={list} userParam={userParam} />
-    </>
+    <MyList
+      key={lookup.userId}
+      entries={entries}
+      isOwner={lookup.isOwner}
+      owner={{
+        id: lookup.userId,
+        // Visitors see the first name only and no profile photo.
+        name: lookup.isOwner ? (lookup.user.name ?? null) : publicOwnerName(lookup.user.name),
+        image: lookup.isOwner ? (lookup.user.image ?? null) : null,
+      }}
+    />
   );
 }

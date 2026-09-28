@@ -1,24 +1,14 @@
-import { HeaderSelectorWrapper } from "../../components/animev3/layoutSelector/HeaderSelectorWrapper";
-import { HeaderProvider } from "../../components/animev3/layoutSelector/HeaderProvider";
+import { HeaderSelectorWrapper } from "@/components/animev3/layoutSelector/HeaderSelectorWrapper";
+import { HeaderProvider } from "@/components/animev3/layoutSelector/HeaderProvider";
 
-export default async function AnimeRouteLayout(
-  props: {
-    params: Promise<any>;
-    children: React.ReactNode;
-  }
-) {
-  const params = await props.params;
+export default function AnimeRouteLayout({ children }: { children: React.ReactNode }) {
+  // The header's season math uses the server's clock so its markup hydrates cleanly.
+  const renderedAt = new Date().getTime();
 
-  const {
-    children
-  } = props;
-
-  const { anime = [] } = params;
-  const [year = "", season = ""] = anime;
   return (
     <div id="animev3-route">
       <HeaderProvider>
-        <HeaderSelectorWrapper year={year} season={season} />
+        <HeaderSelectorWrapper renderedAt={renderedAt} />
         {children}
       </HeaderProvider>
     </div>

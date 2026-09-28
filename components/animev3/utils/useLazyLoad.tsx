@@ -1,74 +1,59 @@
-import { useState, useRef, useEffect } from "react";
-import { sliceIntoChunks } from "../helpers";
+"use client";
+import { useCallback, useState } from "react";
 
+/** Cards revealed per step. The first chunk is part of the server HTML. */
+export const REVEAL_CHUNK = 12;
+
+interface UseLazyLoadOptions {
+  /** Items available locally (already fetched). */
+  total: number;
+  /** Whether another page can be fetched once every local item is visible. */
+  canFetchMore: boolean;
+  /** Fetches the next page. Must guard against concurrent calls itself. */
+  fetchMore: () => void;
+  chunkSize?: number;
+}
+
+/**
+ * Reveals items in chunks while a sentinel element is on screen, and asks for
+ * the next page once everything fetched so far is visible.
+ *
+ * The sentinel ref callback is recreated whenever the state it depends on
+ * changes; a fresh IntersectionObserver reports the sentinel's current
+ * intersection immediately, so revealing continues while it stays in view.
+ */
 export default function useLazyLoad({
-  data,
-  hasNextPage,
-  callback,
-  callBackParams,
-  sortSelect,
-}: any) {
-  const observedRef = useRef<any>(null);
-  const [pageNumber, setPageNumber] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const chunks = sliceIntoChunks(data, 2);
-  const [chunkedData, setChunkedData] = useState(chunks[0]);
+  total,
+  canFetchMore,
+  fetchMore,
+  chunkSize = REVEAL_CHUNK,
+}: UseLazyLoadOptions) {
+  const [requested, setRequested] = useState(chunkSize);
+  const visibleCount = Math.min(requested, total);
+  const hasMore = visibleCount < total || canFetchMore;
 
-  const updateData = () => {
-    if (pageNumber < chunks.length - 1) {
-      setChunkedData((prev) => {
-        return [...prev, ...chunks[pageNumber + 1]];
-      });
-      setPageNumber(pageNumber + 1);
+  const onSentinelVisible = useCallback(() => {
+    if (visibleCount < total) {
+      setRequested(visibleCount + chunkSize);
+    } else if (canFetchMore) {
+      fetchMore();
     }
-  };
+  }, [visibleCount, total, canFetchMore, fetchMore, chunkSize]);
 
-  const reset = () => {
-    setPageNumber(0);
-    setHasMore(true);
+  const sentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) onSentinelVisible();
+        },
+        { rootMargin: "0px 0px 600px 0px" }
+      );
+      observer.observe(node);
+      return () => observer.disconnect();
+    },
+    [onSentinelVisible]
+  );
 
-    const chunks = sliceIntoChunks(data, 2);
-    setChunkedData(chunks[0]);
-  };
-
-  const observedRefCallBack = (el: any) => {
-    if (observedRef.current) {
-      observedRef.current.disconnect();
-    }
-    observedRef.current = new IntersectionObserver(
-      (el) => {
-        if (el[0].isIntersecting) {
-          if (pageNumber < chunks.length - 1) {
-            updateData();
-          } else if (hasNextPage) {
-            console.log("client call");
-            callback(callBackParams);
-          } else {
-            setHasMore(false);
-          }
-        }
-      },
-      { root: null, rootMargin: "0px", threshold: 0.15 }
-    );
-    if (el) {
-      observedRef.current.observe(el);
-    }
-  };
-
-  useEffect(() => {
-    reset();
-  }, [sortSelect]);
-
-  return {
-    observedRefCallBack,
-    pageNumber,
-    setPageNumber,
-    chunks,
-    chunkedData,
-    setChunkedData,
-    setHasMore,
-    updateData,
-    hasMore,
-    reset,
-  };
+  return { visibleCount, hasMore, sentinelRef };
 }

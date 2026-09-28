@@ -1,143 +1,103 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/server/auth";
-import UserModel from "@/server/mongodb/models/User";
-import dbConnect from "@/server/lib/dbConnect";
+import { toObjectId, usersCollection } from "@/server/lib/userList";
+import { normalizeMedia } from "@/lib/anime/normalize";
+import { DEFAULT_USER_DATA, ListEntry, isListStatus } from "@/lib/anime/types";
+
+/**
+ * POST   { data: AniListMedia, status?: ListStatus } → add to the caller's list
+ * DELETE { data: { id: number } }                    → remove from the caller's list
+ *
+ * Clients branch on the exact `message` strings below; keep them stable.
+ */
+
+/** Keeps a user document well under MongoDB's 16 MB limit. */
+const MAX_LIST_SIZE = 2_000;
+
+const unauthorized = () =>
+  NextResponse.json({ error: "User is not authenticated" }, { status: 401 });
+
+const readJson = async (request: NextRequest): Promise<Record<string, any> | null> => {
+  try {
+    const body = await request.json();
+    return body && typeof body === "object" ? body : null;
+  } catch {
+    return null;
+  }
+};
 
 export async function POST(request: NextRequest) {
-  await dbConnect();
-
   const session = await getServerSession(authOptions);
+  const userId = toObjectId(session?.objectId);
+  if (!userId) return unauthorized();
 
-  if (!session?.objectId) {
+  const body = await readJson(request);
+  const media = normalizeMedia(body?.data);
+  if (!media) {
     return NextResponse.json(
-      { error: "User is not authenticated" },
-      { status: 401 }
+      { error: "Anime data with a numeric id is required" },
+      { status: 400 }
     );
   }
 
+  const entry: ListEntry = {
+    ...media,
+    userData: {
+      ...DEFAULT_USER_DATA,
+      listType: isListStatus(body?.status) ? body.status : DEFAULT_USER_DATA.listType,
+    },
+  };
+
   try {
-    const body = await request.json();
-    const data = body.data;
-
-    if (!data) {
-      return NextResponse.json(
-        { error: "Anime data is required" },
-        { status: 400 }
-      );
-    }
-
-    const query = {
-      _id: session.objectId,
-    };
-
-    // Check if anime already exists in list
-    const users = await UserModel.find(query, {
-      following: { $elemMatch: { id: data.id } },
-    });
-
-    const inList = users[0]?.following?.length > 0;
-
-    if (inList) {
-      return NextResponse.json({
-        message: "Already In List",
-      });
-    }
-
-    // Add to list
-    const update = {
-      $addToSet: {
-        following: data,
+    const users = await usersCollection();
+    // Atomic "add if absent": the filter only matches when the id isn't there yet.
+    const res = await users.updateOne(
+      {
+        _id: userId,
+        "following.id": { $ne: media.id },
+        [`following.${MAX_LIST_SIZE - 1}`]: { $exists: false },
       },
-    };
-    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-
-    const res = await UserModel.updateOne(query, update, options);
-
-    if (res?.modifiedCount > 0) {
-      console.log("Successfully Added to List");
-      return NextResponse.json({
-        message: "Successfully Added to List",
-      });
+      { $push: { following: entry } }
+    );
+    if (res.modifiedCount > 0) {
+      return NextResponse.json({ message: "Successfully Added to List", entry });
     }
-
-    return NextResponse.json({
-      message: "Already In List",
-    });
+    const alreadyThere = await users.countDocuments({ _id: userId, "following.id": media.id });
+    if (alreadyThere) return NextResponse.json({ message: "Already In List" });
+    return NextResponse.json(
+      { error: `Your list is full (${MAX_LIST_SIZE.toLocaleString("en-US")} shows)` },
+      { status: 409 }
+    );
   } catch (err) {
     console.error("Error adding to anime list:", err);
-    return NextResponse.json(
-      { error: "Failed to add anime to list" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to add anime to list" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  await dbConnect();
-
   const session = await getServerSession(authOptions);
+  const userId = toObjectId(session?.objectId);
+  if (!userId) return unauthorized();
 
-  if (!session?.objectId) {
-    return NextResponse.json(
-      { error: "User is not authenticated" },
-      { status: 401 }
-    );
+  const body = await readJson(request);
+  const animeId = Number(body?.data?.id);
+  if (!Number.isInteger(animeId) || animeId <= 0) {
+    return NextResponse.json({ error: "Anime data with id is required" }, { status: 400 });
   }
 
   try {
-    const body = await request.json();
-    const data = body.data;
-
-    if (!data || !data.id) {
-      return NextResponse.json(
-        { error: "Anime data with id is required" },
-        { status: 400 }
-      );
+    const users = await usersCollection();
+    const res = await users.updateOne(
+      { _id: userId },
+      { $pull: { following: { id: animeId } } }
+    );
+    if (res.modifiedCount > 0) {
+      return NextResponse.json({ message: "Successfully Removed From List" });
     }
-
-    const query = {
-      _id: session.objectId,
-    };
-
-    // Check if anime exists in list
-    const users = await UserModel.find(query, {
-      following: { $elemMatch: { id: data.id } },
-    });
-
-    const inList = users[0]?.following?.length > 0;
-
-    if (!inList) {
-      return NextResponse.json({
-        message: "Did Not Remove",
-      });
-    }
-
-    // Remove from list
-    const updateRemove = {
-      $pull: {
-        following: { id: data.id },
-      },
-    };
-    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-
-    const res = await UserModel.updateOne(query, updateRemove, options);
-
-    if (res?.modifiedCount > 0) {
-      console.log("Successfully Removed From List");
-      return NextResponse.json({
-        message: "Successfully Removed From List",
-      });
-    }
-
-    return NextResponse.json({
-      message: "Did Not Remove",
-    });
+    return NextResponse.json({ message: "Did Not Remove" });
   } catch (err) {
     console.error("Error removing from anime list:", err);
-    return NextResponse.json(
-      { error: "Failed to remove anime from list" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to remove anime from list" }, { status: 500 });
   }
 }

@@ -1,28 +1,32 @@
-// import { Suspense } from "react"
+import type { Metadata } from "next";
 import { Boundary } from "./Boundary";
+import TopAnimeShell from "./TopAnimeShell";
 
-export const revalidate = 60;
+// The MyAnimeList ranking moves slowly; regenerate at most once an hour.
+export const revalidate = 3600;
 
-export default async function TopAnime() {
+const description = "MyAnimeList's highest-rated anime, ranked (via Jikan).";
+
+export const metadata: Metadata = {
+  title: "Top Anime",
+  description,
+  openGraph: {
+    title: "Top Anime",
+    description,
+    images: [
+      {
+        url: "/rimuru.png",
+        width: 200,
+        height: 141,
+      },
+    ],
+  },
+};
+
+export default function TopAnime() {
   return (
-    <div
-      id="container"
-      className="
-        flex 
-        flex-col 
-        justify-center 
-        items-center 
-        sm:p-4
-        text-white
-      "
-    >
-      <div className="pb-4">
-        <p className="text-4xl">Ranking</p>
-      </div>
-      {/* <Suspense fallback={<p>Loading Top Anime...</p>}> */}
-      {/* @ts-ignore */}
+    <TopAnimeShell>
       <Boundary />
-      {/* </Suspense> */}
-    </div>
+    </TopAnimeShell>
   );
 }

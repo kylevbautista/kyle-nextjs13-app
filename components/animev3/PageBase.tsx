@@ -1,201 +1,166 @@
 "use client";
-import React, { ReactNode, useContext, useEffect, useState } from "react";
-import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
-import Grid from "./../common/Grid";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import AnimeInfoGrid from "./AnimeInfoGrid";
+import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
+import Grid from "../common/Grid";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
-import { HeaderSelectorSkeleton } from "./layoutSelector/HeaderSelectorSkeleton";
-import { getInitialTimes, getSeasonFromParams } from "./helpers";
 import useLazyLoad from "./utils/useLazyLoad";
-import { usePrefetch } from "./utils/usePrefetch";
 import { getAniListData } from "./utils/getAniListData";
-import { compareFnCountDown } from "./helpers";
-
-const clone = (items: any) =>
-  items.map((item: any) => (Array.isArray(item) ? clone(item) : item));
-
-const getAniListClient = async ({
-  year,
-  season,
-  dataReference,
-  setDataReference,
-  page,
-  setPage,
-  animeList,
-  setAnimeList,
-}: any) => {
-  try {
-    const { data = {} } =
-      (await getAniListData({
-        page: page,
-        year: year,
-        season: season,
-        timeout: 8000,
-        enableLogs: false,
-      })) || {};
-    dataReference.page.pageInfo = data?.page?.pageInfo || {
-      hasNextPage: false,
-    };
-    data?.page?.media?.forEach((item: any) => {
-      // Since I saved the obj mem reference in the state,
-      // Im actually mutating data.page.media when I mutate dataReference.page.media
-      dataReference.page.media.push(item);
-      animeList.push(item);
-    });
-    setDataReference({ ...dataReference });
-
-    setAnimeList([...animeList]);
-    setPage(page + 1);
-  } catch (err) {
-    console.log(err);
-  }
-};
+import { compareByNextAiring } from "@/lib/anime/airing";
+import type { AnimeMedia } from "@/lib/anime/types";
+import { SEASON_LABELS, SeasonName } from "@/lib/season";
 
 interface PageBaseProps {
-  data?: any;
-  year?: any;
-  params?: any;
-  enablePrefetch?: Boolean;
-  children?: ReactNode;
+  year: number;
+  season: SeasonName;
+  /** Page 1 from AniList (server-fetched), most popular first. */
+  initialMedia: AnimeMedia[];
+  initialHasNextPage: boolean;
 }
 
-enum Season {
-  WINTER,
-  SPRING,
-  SUMMER,
-  FALL,
-}
+type LoadStatus = "idle" | "loading" | "error";
 
-const getSeason = (season: Season) => {
-  if (season === Season.WINTER) {
-    return "Winter";
+/** In countdown mode, pages up to this one load eagerly (seasons rarely pass 3 pages). */
+const MAX_EAGER_PAGE = 6;
+
+/** Appends shows not seen yet, keeping AniList's popularity order. */
+function appendUnique(current: AnimeMedia[], incoming: AnimeMedia[]) {
+  const seen = new Set(current.map((item) => item.id));
+  const added: AnimeMedia[] = [];
+  for (const item of incoming) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    added.push(item);
   }
-  if (season === Season.SPRING) {
-    return "Spring";
-  }
-  if (season === Season.SUMMER) {
-    return "Summer";
-  }
-  if (season === Season.FALL) {
-    return "Fall";
-  }
-};
+  return added.length ? [...current, ...added] : current;
+}
 
 export default function PageBase({
-  data,
   year,
-  params,
-  enablePrefetch = true,
-  children,
+  season,
+  initialMedia,
+  initialHasNextPage,
 }: PageBaseProps) {
-  const header = useContext(HeaderContext);
-  const { byCount, byPopularity } = header;
-  const season = getSeasonFromParams(params.season);
-  const [dataReference, setDataReference] = useState(data);
-  const [page, setPage] = useState(2);
-  const [animeList, setAnimeList] = useState(
-    data?.page?.media ? clone(data?.page?.media).sort(compareFnCountDown) || [] : []
-  );
-  const [option, setOption] = useState(byCount ? true : false);
+  const { sort } = useContext(HeaderContext);
 
-  const {
-    observedRefCallBack: observedCountRef,
-    chunkedData,
-    hasMore,
-  } = useLazyLoad({
-    data: animeList,
-    hasNextPage: dataReference?.page?.pageInfo?.hasNextPage,
-    callback: getAniListClient,
-    callBackParams: {
-      year: params.year,
-      season: params.season,
-      dataReference,
-      setDataReference,
-      page,
-      setPage,
-      animeList,
-      setAnimeList,
-    },
-    sortSelect: option,
-  });
+  // Every fetched show, deduped, in popularity (fetch) order. Everything shown is derived from it.
+  const [media, setMedia] = useState(() => appendUnique([], initialMedia));
+  const [cursor, setCursor] = useState({ nextPage: 2, hasNextPage: initialHasNextPage });
+  const [status, setStatus] = useState<LoadStatus>("idle");
 
-  const selectorDiv = !header.headerYear
-    ? "w-full sm:mb-4 flex flex-wrap justify-center laptop:justify-between items-center"
-    : "invisible";
+  // Cards already on screen keep their place when later pages arrive; those
+  // pages are sorted in *behind* them (a strict re-sort would reshuffle the
+  // cards being read, e.g. the 12 in the server HTML). Changing the sort
+  // re-sorts everything.
+  const [pinnedIds, setPinnedIds] = useState<number[]>([]);
+  const [pinnedForSort, setPinnedForSort] = useState(sort);
+  if (pinnedForSort !== sort) {
+    setPinnedForSort(sort);
+    setPinnedIds([]);
+  }
+  /** Ids on screen as of the last render (read when a page arrives). */
+  const visibleIds = useRef<number[]>([]);
 
-  usePrefetch({
-    year,
-    season,
-    enablePrefetch,
-    header,
+  // Guards: one request at a time, and never a page that already loaded
+  // (an observer holding an older fetchMore can fire before the re-render).
+  const busy = useRef(false);
+  const loadedThrough = useRef(1);
+
+  const fetchMore = useCallback(async () => {
+    const page = cursor.nextPage;
+    if (busy.current || !cursor.hasNextPage || page <= loadedThrough.current) return;
+
+    busy.current = true;
+    setStatus("loading");
+    const result = await getAniListData({ page, year, season });
+    busy.current = false;
+
+    if (!result.ok) {
+      setStatus("error");
+      return;
+    }
+    loadedThrough.current = page;
+    if (sort === "countdown") setPinnedIds(visibleIds.current);
+    setMedia((current) => appendUnique(current, result.media));
+    setCursor({ nextPage: page + 1, hasNextPage: result.hasNextPage });
+    setStatus("idle");
+  }, [cursor, year, season, sort]);
+
+  // In countdown mode, load the rest of the season right away (not on scroll),
+  // so the order behind the pinned cards is complete before the reader gets there.
+  useEffect(() => {
+    if (sort !== "countdown" || !cursor.hasNextPage || status !== "idle") return;
+    if (cursor.nextPage > MAX_EAGER_PAGE) return;
+    const timer = setTimeout(() => void fetchMore(), 0);
+    return () => clearTimeout(timer);
+  }, [sort, cursor, status, fetchMore]);
+
+  // Array.prototype.sort is stable, so shows with the same (or no) air time keep popularity order.
+  const sorted = useMemo(() => {
+    if (sort !== "countdown") return media;
+    const byId = new Map(media.map((item) => [item.id, item]));
+    const pinned = pinnedIds.flatMap((id) => byId.get(id) ?? []);
+    const pinnedSet = new Set(pinnedIds);
+    const rest = media.filter((item) => !pinnedSet.has(item.id)).sort(compareByNextAiring);
+    return [...pinned, ...rest];
+  }, [media, sort, pinnedIds]);
+
+  const { visibleCount, hasMore, sentinelRef } = useLazyLoad({
+    total: sorted.length,
+    canFetchMore: cursor.hasNextPage && status !== "error",
+    fetchMore,
   });
 
   useEffect(() => {
-    const pop = data.page?.media;
+    visibleIds.current = sorted.slice(0, visibleCount).map((item) => item.id);
+  });
 
-    // Deep cloning due to sort method directly affecting the original data
-    const count = pop ? clone(pop).sort(compareFnCountDown) : [];
+  const allFetchedVisible = visibleCount >= sorted.length;
 
-    if (byCount) {
-      setAnimeList([...count]);
-
-      // cant use global byCount inside useLazy directly since it is set before new data is set
-      // so creating local option toggler to keep track and avoid race condition
-      setOption(!option);
-    } else {
-      setAnimeList([...pop]);
-
-      // cant use global byCount directly useLazy directly since it is set before new data is set
-      // so creating local option toggler to keep track and avoid race condition
-      setOption(!option);
-    }
-  }, [byCount]);
+  if (media.length === 0 && !cursor.hasNextPage) {
+    return (
+      <div className="flex flex-col items-center px-4 py-16 text-center text-white">
+        <p className="text-4xl" aria-hidden="true">
+          (・_・?)
+        </p>
+        <p className="mt-3 text-lg font-bold">
+          {`No anime listed for ${SEASON_LABELS[season]} ${year} yet.`}
+        </p>
+        <p className="text-sm text-[rgb(164,164,164)]">
+          AniList adds shows as they are announced. Check back closer to the season!
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      id="container"
-      className="
-        flex 
-        flex-col 
-        justify-center 
-        items-center 
-        sm:p-4
-        text-white
-      "
-    >
-      <div className={selectorDiv}>
-        <HeaderSelectorSkeleton
-          byPopularity={byPopularity}
-          year={year}
-          season={season}
-          contextFound={header.headerYear}
-        />
-        {!header.headerYear && (
-          <div className="bg-[rgb(38,38,38)] w-[350px] sm:w-[350px] h-[40px] flex items-center justify-between gap-3 p-2">
-            <p className="text-bold font-bold">
-              Sorted: {byCount ? "By Countdown" : "By Popularity"}
-            </p>
-            <p className="text-bold font-bold">Season: {getSeason(season)}</p>
-          </div>
-        )}
-        {!header.headerYear && (
-          <div className="border-b border-[rgb(38,38,38)] w-full"></div>
-        )}
-      </div>
+    <div className="flex flex-col items-center justify-center text-white sm:p-4">
       <Grid>
-        {chunkedData?.map((info: any, index: number) => (
-          <AnimeInfoGrid
-            key={info.idMal || index}
-            id={index}
-            info={info}
-            initialTimes={getInitialTimes(
-              info?.upcomingEpisode?.timeUntilAiring
-            )}
-          />
+        {sorted.slice(0, visibleCount).map((info) => (
+          <AnimeInfoGrid key={info.id} info={info} />
         ))}
-
-        {hasMore && <AnimeInfoSkeleton forwardedRef={observedCountRef} />}
+        {hasMore && <AnimeInfoSkeleton forwardedRef={sentinelRef} />}
       </Grid>
+
+      <p className="sr-only" aria-live="polite">
+        {status === "loading" ? "Loading more anime…" : ""}
+      </p>
+
+      {status === "error" && allFetchedVisible && (
+        <div
+          role="alert"
+          className="mt-6 flex flex-wrap items-center justify-center gap-3 rounded-lg border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-4 py-3 text-sm"
+        >
+          <span>Couldn&apos;t load more from AniList.</span>
+          <button
+            type="button"
+            onClick={() => void fetchMore()}
+            className="rounded-full bg-blue-600 px-4 py-1.5 font-bold text-white hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
     </div>
   );
 }

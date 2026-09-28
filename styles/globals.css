@@ -39,26 +39,25 @@
   color-scheme: dark;
 }
 
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 20px;
+  border: 6px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #c0a0b9;
+}
+
 .scrollbar {
   scrollbar-gutter: stable;
 }
 
-#anime-card * {
-  border-color: rgb(53, 53, 53);
-}
-/*
-y = -25px
-x = -27px
-*/
-
-.eye {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px 0px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
+/* Sprite icons: each is a 30px cell of public/assets/animeSprites.png. */
 
 .mal {
   display: block;
@@ -71,86 +70,6 @@ x = -27px
 .crunchyroll {
   display: block;
   background: url(/assets/animeSprites.png) 0px -360px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.adb {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -300px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.cut {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -270px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.fox {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -240px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-.globe {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -210px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.planet {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -180px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.twitter {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -150px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.dot {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -120px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.ven {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -90px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.anisearch {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -60px;
   background-repeat: no-repeat;
   background-size: 200%;
   width: 30px;

@@ -1,36 +1,14 @@
-import Image from "next/image";
-import FixLoading from "../../components/common/FixLoading";
-
 export default function Loading() {
   return (
     <div
-      id="container"
-      className="
-        flex 
-        flex-col 
-        justify-center 
-        items-center 
-        sm:p-4
-        text-white
-        transition-all
-      "
+      role="status"
+      className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-[rgb(164,164,164)]"
     >
-      <div className="absolute left-0 top-10">
-        <p>Loading...</p>
-      </div>
-      <div className="absolute right-0 top-10">
-        <p>Loading...</p>
-      </div>
-      <div className="">
-        <p>Loading...</p>
-      </div>
-      <Image
-        src="/assets/cidkagenou.gif"
-        width={640}
-        height={360}
-        alt="I AM AOTMIC"
+      <span
+        aria-hidden="true"
+        className="h-10 w-10 animate-spin rounded-full border-4 border-[rgb(53,53,53)] border-t-[#95ccff] motion-reduce:animate-none"
       />
-      <FixLoading />
+      <span>Loading…</span>
     </div>
   );
 }

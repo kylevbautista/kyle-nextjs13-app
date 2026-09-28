@@ -1,48 +1,35 @@
-import { HeaderProvider } from "../../../components/mylist/layout/HeaderProvider";
-import { HeaderSelector } from "../../../components/mylist/layout/HeaderSelector";
+import type { Metadata } from "next";
+import { requireListOwner } from "@/server/lib/listRoute";
+import { airingSchedulePath } from "@/lib/routes";
 
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL("https://kylevb.com"),
-  title: "My List",
-  description: "My anime list",
+  title: "Airing Schedule",
+  description: "What's airing from an anime list, with live episode countdowns.",
   openGraph: {
-    title: "My List",
-    description: "My anime list",
-    images: [
-      {
-        url: "/rimuru.png",
-        width: 200,
-        height: 141,
-      },
-    ],
+    title: "Airing Schedule",
+    description: "What's airing from an anime list, with live episode countdowns.",
+    images: [{ url: "/rimuru.png", width: 200, height: 141 }],
   },
 };
 
-export default function MyListLayout({
-  params,
+/**
+ * Validates the list URL here, outside loading.tsx, so unknown lists get a
+ * real 404 and legacy/non-canonical URLs a real 307 (see server/lib/listRoute.ts).
+ */
+export default async function AiringScheduleLayout({
   children,
+  params,
 }: {
-  params: any;
   children: React.ReactNode;
+  params: Promise<{ user?: string[] }>;
 }) {
+  const { user } = await params;
+  await requireListOwner(user, airingSchedulePath);
+
   return (
-    <div id="my-list">
-      {/* <div
-        id="container"
-        className="
-        flex 
-        flex-col 
-        justify-center 
-        items-center 
-        sm:pt-4 sm:px-4
-        text-white
-        border
-      "
-      ></div> */}
-      <HeaderProvider>
-        <HeaderSelector />
-        {children}
-      </HeaderProvider>
-    </div>
+    <main id="airing-schedule" className="w-full px-3 pb-8 pt-2 sm:px-4">
+      {children}
+    </main>
   );
 }

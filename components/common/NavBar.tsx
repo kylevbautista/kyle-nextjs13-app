@@ -1,52 +1,24 @@
-import Link from "next/link";
-// import { unstable_getServerSession } from "next-auth/next";
-// import { authOptions } from "../../server/auth";
 import LoginBox from "./LogInBox";
-import { AnimeBar } from "./AnimeBar";
-import { LinkRouterWrapper } from "./LinkRouterWrapper";
-
-const getCurrentYear = (shifted: Boolean = false) => {
-  const dateObject = new Date();
-  const currentYear = dateObject.getUTCFullYear();
-  const currentMonth = dateObject.getUTCMonth();
-  if (currentMonth === 11 && !shifted) {
-    return currentYear + 1;
-  }
-  return currentYear;
-};
+import { AnimeBar, NavLink } from "./AnimeBar";
+import NavSearch from "./NavSearch";
 
 export default function NavBar() {
-  // const session = await unstable_getServerSession(authOptions);
-
   return (
     <nav
       id="main-nav"
-      className="flex justify-between bg-[rgb(38,38,38)] text-white mb-2 sticky top-0 z-[1]"
+      aria-label="Main"
+      className="sticky top-0 z-20 mb-2 flex h-16 items-center justify-between gap-1 bg-[rgb(38,38,38)] px-1 text-white sm:gap-4 sm:px-2"
     >
-      <div className="flex justify-items-center">
-        {/* <div
-          className="
-            hidden
-            sm:block
-            p-5
-          "
-        >
-          <p>Kyle</p>
-        </div> */}
-        <LinkRouterWrapper
-          href="/"
-          className="
-            block
-            p-5
-            hover:bg-blue-500
-            rounded-2xl
-          "
-        >
-          <p>Home</p>
-        </LinkRouterWrapper>
+      <div className="flex min-w-0 items-center">
+        <NavLink href="/" match="exact">
+          Home
+        </NavLink>
         <AnimeBar />
       </div>
-      <LoginBox />
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <NavSearch />
+        <LoginBox />
+      </div>
     </nav>
   );
 }
