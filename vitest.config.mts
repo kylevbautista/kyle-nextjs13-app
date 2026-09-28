@@ -7,6 +7,6 @@ export default defineConfig({
   },
   test: {
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", ".next/**", "_bmad/**"],
+    exclude: ["node_modules/**", ".next/**"],
   },
 });

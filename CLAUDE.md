@@ -278,7 +278,6 @@ components/
 styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anilist .crunchyroll .star)
 @types/                     Session.objectId, global _mongoClientPromise
 .github/workflows/          cron.yaml (curl /anime every 5 min), health-check.yml. GitHub auto-disabled both (re-enable in the Actions tab)
-docs/                       BMAD-generated docs from before this refactor (untracked, outdated); trust the code
 ```
 
 ---
