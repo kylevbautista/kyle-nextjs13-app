@@ -227,7 +227,21 @@ function ExternalIcon({
   );
 }
 
-export default function AnimeInfoGrid({ info }: { info: AnimeMedia }) {
+/** "Spring 2026" from AniList's season fields, else the start year. */
+function premiereSeason(info: AnimeMedia) {
+  const season = info.season ? info.season.charAt(0) + info.season.slice(1).toLowerCase() : null;
+  const year = info.seasonYear ?? info.startDate?.year;
+  return [season, year].filter(Boolean).join(" ") || null;
+}
+
+export default function AnimeInfoGrid({
+  info,
+  continuing = false,
+}: {
+  info: AnimeMedia;
+  /** Started in an earlier season and still airing in the one being browsed. */
+  continuing?: boolean;
+}) {
   const title = displayTitle(info);
   const anilistUrl = `https://anilist.co/anime/${info.id}`;
   const malUrl = info.idMal ? `https://myanimelist.net/anime/${info.idMal}` : null;
@@ -302,6 +316,15 @@ export default function AnimeInfoGrid({ info }: { info: AnimeMedia }) {
               {info.averageScore ? (info.averageScore / 10).toFixed(1) : "N/A"}
             </p>
           </div>
+          {continuing && (
+            <p
+              className="absolute right-1 top-[28px] rounded-full bg-[rgba(37,99,235,0.9)] px-2 py-0.5 text-[11px] font-bold"
+              title={premiereSeason(info) ? `Continuing from ${premiereSeason(info)}` : "Continuing"}
+            >
+              Continuing
+              {premiereSeason(info) && <span className="sr-only">{` from ${premiereSeason(info)}`}</span>}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-rows-[25px_25px_25px_126px] border-[rgb(53,53,53)] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px]">

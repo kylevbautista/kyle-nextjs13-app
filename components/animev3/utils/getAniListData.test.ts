@@ -49,6 +49,7 @@ describe("getAniListData", () => {
   };
 
   it("returns normalized media and does not sleep when the rate-limit header is missing", async () => {
+    vi.setSystemTime(new Date("2026-10-15T00:00:00Z")); // fall 2026 has started
     fetchMock.mockResolvedValueOnce(respond(pageBody([1, 2], true)));
     const result = await run({ page: 1, year: 2026, season: "fall" });
 
@@ -59,7 +60,66 @@ describe("getAniListData", () => {
     expect(sleeps(timeoutSpy)).toEqual([]);
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.variables).toEqual({ page: 1, year: 2026, season: "FALL" });
+    expect(body.variables).toEqual({
+      page: 1,
+      year: 2026,
+      season: "FALL",
+      withCarryOver: false,
+      startBefore: 20261001,
+      endAfter: 20261001,
+      airingSort: ["POPULARITY_DESC"],
+    });
+    expect(result.carryOver).toEqual([]);
+  });
+
+  it("returns continuing series from the same request when asked", async () => {
+    const started = (id: number, year: number, popularity: number) => ({
+      ...media(id),
+      status: "RELEASING",
+      episodes: null,
+      popularity,
+      startDate: { year, month: 4, day: 1 },
+    });
+    fetchMock.mockResolvedValueOnce(
+      respond({
+        data: {
+          page: { pageInfo: { hasNextPage: false }, media: [media(1)] },
+          ended: { media: [started(30, 2026, 10)] },
+          airing: { media: [started(21, 1999, 500), started(30, 2026, 10), { ...media(1), startDate: { year: 2026, month: 4 } }] },
+        },
+      })
+    );
+    vi.setSystemTime(new Date("2026-10-15T00:00:00Z"));
+    const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    if (!result.ok) throw new Error("expected ok");
+    // Deduped, the season's own show excluded, most popular first — one request.
+    expect(result.carryOver.map((m) => m.id)).toEqual([21, 30]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.withCarryOver).toBe(true);
+  });
+
+  it("asks for the oldest airing shows first when the season hasn't started", async () => {
+    vi.setSystemTime(new Date("2026-09-15T00:00:00Z"));
+    fetchMock.mockResolvedValueOnce(respond(pageBody([1])));
+    await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.airingSort).toEqual(["START_DATE"]);
+  });
+
+  it("falls back to the season alone when the combined request fails", async () => {
+    fetchMock
+      .mockResolvedValueOnce(respond({ errors: [{ message: "boom" }], data: null }, 500))
+      .mockResolvedValueOnce(respond(pageBody([7])));
+    const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    expect(result).toMatchObject({ ok: true, carryOver: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.withCarryOver).toBe(false);
+  });
+
+  it("does not retry without carry-overs after a 429", async () => {
+    fetchMock.mockResolvedValue(respond({}, 429, { "retry-after": "1" }));
+    const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    expect(result).toMatchObject({ ok: false, status: 429 });
+    expect(fetchMock).toHaveBeenCalledTimes(2); // the request + its one 429 retry
   });
 
   it("does not sleep when plenty of requests remain", async () => {

@@ -2,7 +2,9 @@ import { allCurrAnimeTag } from "../../utils/anilist-queries/allCurrAnimeTag";
 import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import { normalizeMedia } from "@/lib/anime/normalize";
 import type { AnimeMedia } from "@/lib/anime/types";
+import { seasonStartMs, shiftSeason, toFuzzyDateInt } from "@/lib/season";
 import type { SeasonName } from "@/lib/season";
+import { selectCarryOver } from "@/lib/anime/carryOver";
 
 /**
  * One page (50 shows, most popular first) of an AniList season.
@@ -25,7 +27,14 @@ const DEFAULT_RETRY_AFTER_MS = 2_000;
 const MAX_RETRY_AFTER_MS = 5_000;
 
 export type SeasonPageResult =
-  | { ok: true; media: AnimeMedia[]; hasNextPage: boolean; page: number }
+  | {
+      ok: true;
+      media: AnimeMedia[];
+      hasNextPage: boolean;
+      page: number;
+      /** Shows continuing from earlier seasons (only with `withCarryOver`). */
+      carryOver: AnimeMedia[];
+    }
   | { ok: false; error: string; status?: number };
 
 interface SeasonPageOptions {
@@ -34,6 +43,8 @@ interface SeasonPageOptions {
   season: SeasonName;
   /** Per-request timeout in ms. */
   timeout?: number;
+  /** Also fetch shows continuing from earlier seasons (same request; used for page 1). */
+  withCarryOver?: boolean;
   enableLogs?: boolean;
 }
 
@@ -73,7 +84,16 @@ function retryAfterMs(res: Response) {
 }
 
 export function getAniListData(options: SeasonPageOptions): Promise<SeasonPageResult> {
-  return enqueue(() => fetchSeasonPage(options));
+  return enqueue(async () => {
+    const result = await fetchSeasonPage(options);
+    // The carry-over lists are extras: if the combined request fails (AniList
+    // nulls every field when one errors), retry once with the season alone.
+    // Not after a 429, which would only spend more of the rate limit.
+    if (!result.ok && options.withCarryOver && result.status !== 429) {
+      return fetchSeasonPage({ ...options, withCarryOver: false });
+    }
+    return result;
+  });
 }
 
 async function fetchSeasonPage({
@@ -82,14 +102,30 @@ async function fetchSeasonPage({
   season,
   timeout = 8_000,
   enableLogs = false,
+  withCarryOver = false,
 }: SeasonPageOptions): Promise<SeasonPageResult> {
+  const seasonStart = seasonStartMs(Number(year), season);
+  const following = shiftSeason(Number(year), season, 1);
+  const seasonEnd = seasonStartMs(following.year, following.season);
+  const now = Date.now();
   const request = () =>
     fetchWithTimeout(ANILIST_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         query: allCurrAnimeTag,
-        variables: { page, year: Number(year), season: season.toUpperCase() },
+        variables: {
+          page,
+          year: Number(year),
+          season: season.toUpperCase(),
+          withCarryOver,
+          startBefore: toFuzzyDateInt(seasonStart),
+          // Exclusive, and AniList dates are Japanese: a finale on the season's
+          // first (JST) day is usually the previous evening in UTC, so require
+          // the end date to be after it.
+          endAfter: toFuzzyDateInt(seasonStart),
+          airingSort: now < seasonStart ? ["START_DATE"] : ["POPULARITY_DESC"],
+        },
       }),
       timeout,
     });
@@ -125,13 +161,28 @@ async function fetchSeasonPage({
       };
     }
 
+    const normalize = (list: unknown): AnimeMedia[] =>
+      Array.isArray(list)
+        ? list.map(normalizeMedia).filter((item): item is AnimeMedia => item !== null)
+        : [];
+    const media = normalize(pageData.media);
+
     return {
       ok: true,
-      media: pageData.media
-        .map(normalizeMedia)
-        .filter((item: AnimeMedia | null): item is AnimeMedia => item !== null),
+      media,
       hasNextPage: pageData.pageInfo?.hasNextPage === true,
       page,
+      carryOver: withCarryOver
+        ? selectCarryOver({
+            ended: normalize(json.data.ended?.media),
+            airing: normalize(json.data.airing?.media),
+            seasonMedia: media,
+            season: { season: season.toUpperCase(), year: Number(year) },
+            seasonStart,
+            seasonEnd,
+            now,
+          })
+        : [],
     };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };

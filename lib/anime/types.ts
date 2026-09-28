@@ -76,6 +76,8 @@ export interface AnimeMedia {
   source: string | null;
   genres: string[];
   averageScore: number | null;
+  /** Number of AniList users with the show on a list (drives "By Popularity"). */
+  popularity?: number | null;
   studios: { nodes: { name: string | null }[] };
   startDate: { year: number | null; month: number | null; day: number | null };
   externalLinks: AnimeExternalLink[];

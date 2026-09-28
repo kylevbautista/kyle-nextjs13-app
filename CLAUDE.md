@@ -111,6 +111,7 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Feature | User sees | Implementation | Key files |
 |---|---|---|---|
 | Season browser | Every non-adult TV/movie/OVA/special (not TV_SHORT/ONA) premiering that season | Server fetches page 1 (50) → client reveals 12 at a time (IntersectionObserver sentinel) and fetches pages 2+ from the browser, one request at a time | `components/animev3/PageBase.tsx`, `utils/useLazyLoad.tsx`, `utils/getAniListData.ts` |
+| Continuing series | Shows that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; header toggle (default on) | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1) | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx` |
 | Sort | By Countdown (default) / By Popularity | `HeaderContext.sort` (layout-level, survives season nav); countdown uses absolute `airingAt` (`compareByNextAiring`), stable so ties keep popularity order | `layoutSelector/*`, `lib/anime/airing.ts` |
 | Season header | "Summer 2026 Anime", months, prev/next, "Current season →" | `useSelectedLayoutSegments()` reads the child route; prev/next are `<Link>`s, hidden outside the valid year window | `layoutSelector/HeaderSelector*.tsx`, `lib/season.ts` |
 | Anime card | Title, genres, cover, countdown, score, studio, premiere (PT), source, eps × min, synopsis, links | `AnimeInfoGrid({ info })`, shared by season, search and schedule pages | `components/animev3/AnimeInfoGrid.tsx` |
@@ -130,7 +131,23 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 
 ### 5.1 Season page `/anime/2026/fall`
 1. `proxy.ts` validates the slug with `seasonRouteRedirect()` (pure, `lib/season.ts`) and 307s if needed.
-2. `Boundary.tsx` → `getAniListData({page:1})`. It returns `{ok, media, hasNextPage}` and never throws.
+2. `Boundary.tsx` → `getAniListData({page:1, withCarryOver: true})`. It returns
+   `{ok, media, hasNextPage, carryOver}` and never throws. The same single request also asks for
+   TV series that started before the season (`seasonStartMs`, app convention) and either ended
+   after it began (`ended`) or are still RELEASING (`airing`). AniList's `endDate_greater` skips
+   null end dates, hence two lists. `lib/anime/carryOver.ts#selectCarryOver` dedupes them, drops
+   the season's own shows (page 1, or anything AniList files under that season), and sorts by
+   popularity.
+   For a season that **hasn't started**, `airsDuring()` keeps only shows expected to air in it:
+   - A show whose next episode comes after the whole season (a break) is dropped.
+   - An unknown episode count means "long runner" only past episode 26, or after 6+ months on
+     air. Otherwise one 13-episode cour is assumed and the last episode estimated.
+   - The `airing` list is fetched oldest first (`$airingSort`), so its 50-item cap drops the
+     newest premieres, which are the least likely to continue.
+   The end-date bound is the day after the season start, because AniList dates are Japanese and
+   a first-day finale is usually the previous evening in UTC. If the combined request fails,
+   `getAniListData` retries once without the carry-over lists (never after a 429). Known limit:
+   for a past season, a long runner that was on a break then but is airing today still counts.
    On `ok:false`, Boundary **throws**, so ISR keeps serving the last good page and a first-ever
    failure shows `error.tsx`. A successful empty result (e.g. a far-future season) renders the
    "No anime listed yet" state.
@@ -140,6 +157,13 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
    In countdown mode, pages 2–6 load right after hydration, not on scroll. Cards already on
    screen are **pinned**, and later pages are sorted in behind them, so the server-rendered top
    12 never reshuffle. Changing the sort re-sorts everything.
+   Continuing series merge into both sorts ("By Popularity" uses AniList's `popularity` count).
+   They are deduped against later season pages and hidden by the `showContinuing` toggle in
+   `HeaderContext`, which also re-sorts.
+   Countdown order counts only episodes airing **within the browsed season**, ties broken by
+   popularity, so past and upcoming seasons don't open with today's long runners. In popularity
+   mode, carry-overs less popular than every loaded season show wait until the season's later
+   pages load.
 4. Pages 2+ are fetched in the browser. Refs guard against double fetches; a failure shows an inline
    Retry, and the season is never silently truncated.
 5. AniList throttling in `getAniListData`: a per-process queue serializes requests. It pauses 2 s
@@ -208,7 +232,7 @@ ListEntry = AnimeMedia & { userData: UserAnimeData }  // lib/anime/types.ts
 AnimeMedia  // mirrors components/utils/anilist-queries/mediaFields.ts (the GraphQL fragment IS the schema)
 { id /* AniList id — the key everywhere */, idMal, title{romaji,english,native}, description /* sanitized HTML */,
   coverImage{extraLarge,large,medium,color} /* AniList CDN only */, season, seasonYear, format, status,
-  episodes, duration, source, genres[], averageScore, studios{nodes[{name}]}, startDate{year,month,day},
+  episodes, duration, source, genres[], averageScore, popularity, studios{nodes[{name}]}, startDate{year,month,day},
   externalLinks[{id,url,site}] /* http(s) only */,
   upcomingEpisode /* alias of nextAiringEpisode */, upComingAirDate{episode[{airingAt,timeUntilAiring,episode}]},
   firstEpisode{episode[{airingAt,episode}]} }

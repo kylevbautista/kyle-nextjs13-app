@@ -8,7 +8,13 @@ interface BoundaryProps {
 }
 
 export default async function Boundary({ year, season }: BoundaryProps) {
-  const result = await getAniListData({ page: 1, year, season, timeout: 8_000 });
+  const result = await getAniListData({
+    page: 1,
+    year,
+    season,
+    timeout: 8_000,
+    withCarryOver: true,
+  });
 
   // Throwing (instead of rendering an empty grid) makes ISR keep serving the
   // last good page, and shows error.tsx when there is none.
@@ -25,6 +31,7 @@ export default async function Boundary({ year, season }: BoundaryProps) {
       season={season}
       initialMedia={result.media}
       initialHasNextPage={result.hasNextPage}
+      initialCarryOver={result.carryOver}
     />
   );
 }

@@ -106,3 +106,13 @@ export const seasonRouteRedirect = (
   }
   return null;
 };
+
+/** First instant of a season (UTC), in epoch ms. */
+export const seasonStartMs = (year: number, season: SeasonName) =>
+  Date.UTC(year, SEASONS.indexOf(season) * 3, 1);
+
+/** AniList FuzzyDateInt (YYYYMMDD) for an epoch-ms instant (UTC). */
+export const toFuzzyDateInt = (ms: number) => {
+  const date = new Date(ms);
+  return date.getUTCFullYear() * 10_000 + (date.getUTCMonth() + 1) * 100 + date.getUTCDate();
+};

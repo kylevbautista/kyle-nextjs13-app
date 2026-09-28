@@ -18,6 +18,8 @@ interface HeaderSelectorProps {
   yearRange: { min: number; max: number };
   sort: SortMode;
   setSort: (sort: SortMode) => void;
+  showContinuing: boolean;
+  setShowContinuing: (show: boolean) => void;
 }
 
 const FOCUS_RING =
@@ -81,6 +83,8 @@ export function HeaderSelector({
   yearRange,
   sort,
   setSort,
+  showContinuing,
+  setShowContinuing,
 }: HeaderSelectorProps) {
   const prev = shiftSeason(year, season, -1);
   const next = shiftSeason(year, season, 1);
@@ -101,8 +105,8 @@ export function HeaderSelector({
 
         <div
           role="group"
-          aria-label="Sort anime"
-          className="flex basis-full items-center justify-center gap-5 sm:flex-initial"
+          aria-label="Sort and filter anime"
+          className="flex basis-full flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:flex-initial"
         >
           {(["popularity", "countdown"] as const).map((mode) => {
             const active = sort === mode;
@@ -122,6 +126,20 @@ export function HeaderSelector({
               </button>
             );
           })}
+          <button
+            type="button"
+            aria-pressed={showContinuing}
+            onClick={() => setShowContinuing(!showContinuing)}
+            title="Series that started in an earlier season and are still airing"
+            className={`flex h-[32px] items-center gap-1 rounded-full border px-3 text-sm ${FOCUS_RING} ${
+              showContinuing
+                ? "border-blue-500 bg-blue-600/20 text-[#95ccff]"
+                : "border-[rgb(53,53,53)] text-[rgb(164,164,164)] hover:border-blue-500 hover:text-white"
+            }`}
+          >
+            <span aria-hidden="true">{showContinuing ? "✓" : "+"}</span>
+            Continuing series
+          </button>
         </div>
       </div>
 

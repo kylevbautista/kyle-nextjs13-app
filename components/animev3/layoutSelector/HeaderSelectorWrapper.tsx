@@ -22,7 +22,7 @@ interface HeaderSelectorWrapperProps {
  * commits.
  */
 export function HeaderSelectorWrapper({ renderedAt }: HeaderSelectorWrapperProps) {
-  const { sort, setSort } = useContext(HeaderContext);
+  const { sort, setSort, showContinuing, setShowContinuing } = useContext(HeaderContext);
   // The [...anime] catch-all shows up as one "2026/fall" segment.
   const parts = useSelectedLayoutSegments().flatMap((segment) => segment.split("/"));
   const now = new Date(renderedAt);
@@ -39,6 +39,8 @@ export function HeaderSelectorWrapper({ renderedAt }: HeaderSelectorWrapperProps
         yearRange={validYearRange(now)}
         sort={sort}
         setSort={setSort}
+        showContinuing={showContinuing}
+        setShowContinuing={setShowContinuing}
       />
     </div>
   );

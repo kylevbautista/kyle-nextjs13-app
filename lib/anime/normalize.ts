@@ -102,6 +102,7 @@ export const MEDIA_SNAPSHOT_FIELDS = [
   "source",
   "genres",
   "averageScore",
+  "popularity",
   "studios",
   "startDate",
   "externalLinks",
@@ -149,6 +150,7 @@ export function normalizeMedia(input: unknown): AnimeMedia | null {
     source: str(input.source, 50),
     genres: list(input.genres, 30, (genre) => str(genre, 60)),
     averageScore: num(input.averageScore),
+    popularity: int(input.popularity),
     studios: {
       nodes: list(obj(input.studios).nodes, 20, (node) =>
         isObj(node) ? { name: str(node.name, 200) } : null

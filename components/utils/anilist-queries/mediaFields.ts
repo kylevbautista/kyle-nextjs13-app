@@ -46,6 +46,7 @@ fragment mediaFields on Media {
   source
   genres
   averageScore
+  popularity
   upcomingEpisode: nextAiringEpisode {
     id
     episode
