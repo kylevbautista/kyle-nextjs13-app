@@ -3,6 +3,7 @@ import {
   allSeasonParams,
   currentSeasonPath,
   getCurrentSeason,
+  landingSeason,
   seasonForMonth,
   seasonRouteRedirect,
   shiftSeason,
@@ -67,5 +68,53 @@ describe("seasonRouteRedirect", () => {
   it("normalizes case and drops extra segments", () => {
     expect(seasonRouteRedirect(["2026", "Fall"], now)).toBe("/anime/2026/fall");
     expect(seasonRouteRedirect(["2026", "fall", "extra"], now)).toBe("/anime/2026/fall");
+  });
+});
+
+describe("landingSeason", () => {
+  it("stays on the current season until the next one is 14 days out", () => {
+    expect(landingSeason(at("2026-09-16T23:59:59Z"))).toEqual({
+      year: 2026,
+      season: "summer",
+      preview: false,
+      startsAtMs: Date.UTC(2026, 6, 1),
+    });
+  });
+
+  it("previews the next season from exactly 14 days before it starts", () => {
+    expect(landingSeason(at("2026-09-17T00:00:00Z"))).toEqual({
+      year: 2026,
+      season: "fall",
+      preview: true,
+      startsAtMs: Date.UTC(2026, 9, 1),
+    });
+    expect(landingSeason(at("2026-09-29T12:00:00Z"))).toMatchObject({
+      year: 2026,
+      season: "fall",
+      preview: true,
+    });
+  });
+
+  it("drops preview mode once the season has started", () => {
+    expect(landingSeason(at("2026-10-01T00:00:00Z"))).toEqual({
+      year: 2026,
+      season: "fall",
+      preview: false,
+      startsAtMs: Date.UTC(2026, 9, 1),
+    });
+  });
+
+  it("previews across the year boundary", () => {
+    expect(landingSeason(at("2026-12-17T23:59:00Z"))).toMatchObject({
+      year: 2026,
+      season: "fall",
+      preview: false,
+    });
+    expect(landingSeason(at("2026-12-18T00:00:00Z"))).toEqual({
+      year: 2027,
+      season: "winter",
+      preview: true,
+      startsAtMs: Date.UTC(2027, 0, 1),
+    });
   });
 });

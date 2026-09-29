@@ -1,10 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import Luffy from "@/public/assets/Monkey_D_Luffy.png";
-import { useMyList } from "@/components/utils/useMyList";
 import { useNow } from "@/components/utils/useNow";
 import {
   DISPLAY_TIME_ZONE,
@@ -17,12 +13,10 @@ import {
 } from "@/lib/anime/airing";
 import { sanitizeDescription } from "@/lib/anime/sanitize";
 import { AnimeMedia, displayTitle } from "@/lib/anime/types";
-import { signInPath } from "@/lib/routes";
+import ListToggle from "./ListToggle";
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]";
-
-const PILL = `inline-flex h-[24px] min-w-[108px] shrink-0 items-center justify-center rounded-full px-3 text-xs font-bold ${FOCUS_RING}`;
 
 /**
  * Some ICU versions put U+202F / U+00A0 before "AM"/"PM" and others a plain
@@ -78,129 +72,6 @@ function Countdown({ airingAt, episodeNumber }: { airingAt: number; episodeNumbe
     <p className="truncate px-1" title={`${episode} airs ${exactTime}`}>
       <time dateTime={new Date(airingAt * 1000).toISOString()}>{text}</time>
     </p>
-  );
-}
-
-function ListToggle({ info }: { info: AnimeMedia }) {
-  const { sessionStatus, signedIn, loaded, isInList, add, remove } = useMyList();
-  const pathname = usePathname();
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  // Removing deletes the show's progress, score and dates, so it takes a second
-  // tap (touch screens never see the hover "✕ Remove" hint).
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const title = displayTitle(info);
-
-  useEffect(
-    () => () => {
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    },
-    []
-  );
-
-  const cancelConfirm = () => {
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-    confirmTimer.current = null;
-    setConfirmingRemove(false);
-  };
-
-  if (sessionStatus === "loading") {
-    return <span aria-hidden="true" className={`${PILL} animate-pulse bg-[rgb(53,53,53)]`} />;
-  }
-
-  if (!signedIn) {
-    return (
-      <Link
-        href={signInPath(pathname ?? undefined)}
-        prefetch={false}
-        onClick={(event) => {
-          // Include the query string (e.g. /search?q=…), which usePathname() omits.
-          if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-          event.preventDefault();
-          router.push(signInPath(window.location.pathname + window.location.search));
-        }}
-        className={`${PILL} border border-[rgb(53,53,53)] text-[#95ccff] hover:border-[#95ccff]`}
-      >
-        Sign in to track
-      </Link>
-    );
-  }
-
-  if (!loaded) {
-    return (
-      <button
-        type="button"
-        disabled
-        aria-label="Loading your list"
-        className={`${PILL} bg-[rgb(53,53,53)] text-[rgb(164,164,164)]`}
-      >
-        …
-      </button>
-    );
-  }
-
-  const inList = isInList(info.id);
-  const toggle = async () => {
-    if (pending) return;
-    setPending(true);
-    try {
-      await (inList ? remove(info) : add(info));
-    } finally {
-      setPending(false);
-    }
-  };
-  // aria-disabled instead of `disabled`: a disabled button drops keyboard focus
-  // mid-request, and the add → remove swap reuses this same <button>.
-  const busy = pending || undefined;
-
-  if (inList) {
-    if (confirmingRemove) {
-      return (
-        <button
-          type="button"
-          onClick={() => {
-            cancelConfirm();
-            void toggle();
-          }}
-          onBlur={cancelConfirm}
-          aria-disabled={busy}
-          aria-label={`Confirm: remove ${title} and its progress from your list`}
-          className={`${PILL} border border-red-400 bg-red-500/15 text-red-300 aria-disabled:cursor-wait aria-disabled:opacity-60`}
-        >
-          Tap again to remove
-        </button>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          if (pending) return;
-          setConfirmingRemove(true);
-          confirmTimer.current = setTimeout(cancelConfirm, 4_000);
-        }}
-        aria-disabled={busy}
-        aria-pressed={true}
-        aria-label={`Remove ${title} from your list`}
-        className={`group ${PILL} border border-[#95ccff] text-[#95ccff] hover:border-red-400 hover:text-red-300 focus-visible:border-red-400 focus-visible:text-red-300 aria-disabled:cursor-wait aria-disabled:opacity-60`}
-      >
-        <span className="group-hover:hidden group-focus-visible:hidden">✓ On my list</span>
-        <span className="hidden group-hover:inline group-focus-visible:inline">✕ Remove</span>
-      </button>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-disabled={busy}
-      aria-label={`Add to list: ${title}`}
-      className={`${PILL} bg-blue-600 text-white hover:bg-blue-500 aria-disabled:cursor-wait aria-disabled:opacity-60`}
-    >
-      + Add to list
-    </button>
   );
 }
 
