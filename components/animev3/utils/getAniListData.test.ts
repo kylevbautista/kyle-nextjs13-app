@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { getAniListData } from "./getAniListData";
+import { enqueueAniListRequest, getAniListData } from "./getAniListData";
 
 const media = (id: number) => ({
   id,
@@ -218,5 +218,63 @@ describe("getAniListData", () => {
 
     expect((await results).every((result) => result.ok)).toBe(true);
     expect(maxActive).toBe(1);
+  });
+
+  it("counts the HTTP requests each call sent (the landing's 2-request budget)", async () => {
+    fetchMock.mockResolvedValueOnce(respond(pageBody([1])));
+    expect(await run({ year: 2026, season: "fall" })).toMatchObject({ ok: true, requests: 1 });
+
+    // A 429 and its one retry.
+    fetchMock
+      .mockResolvedValueOnce(respond({}, 429, { "retry-after": "1" }))
+      .mockResolvedValueOnce(respond(pageBody([1])));
+    expect(await run({ year: 2026, season: "fall" })).toMatchObject({ ok: true, requests: 2 });
+    fetchMock
+      .mockResolvedValueOnce(respond({}, 429))
+      .mockResolvedValueOnce(respond({}, 429));
+    expect(await run({ year: 2026, season: "fall" })).toMatchObject({ ok: false, requests: 2 });
+
+    // Failures still report what they spent, including a thrown fetch.
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    expect(await run({ year: 2026, season: "fall" })).toMatchObject({ ok: false, requests: 1 });
+
+    // The season-only fallback adds its own requests (here a 429 retry: 1 + 2).
+    fetchMock
+      .mockResolvedValueOnce(respond({ errors: [{ message: "boom" }], data: null }, 500))
+      .mockResolvedValueOnce(respond({}, 429))
+      .mockResolvedValueOnce(respond(pageBody([7])));
+    expect(
+      await run({ page: 1, year: 2026, season: "fall", withCarryOver: true })
+    ).toMatchObject({ ok: true, carryOverIncluded: false, requests: 3 });
+  });
+
+  it("shares its one-at-a-time queue with other AniList callers", async () => {
+    const order: string[] = [];
+    fetchMock.mockImplementation(async () => {
+      order.push("season:start");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      order.push("season:end");
+      return respond(pageBody([1]));
+    });
+
+    const season = getAniListData({ year: 2026, season: "fall" });
+    const other = enqueueAniListRequest(async () => {
+      order.push("other");
+      return "done";
+    });
+    await vi.runAllTimersAsync();
+
+    expect((await season).ok).toBe(true);
+    expect(await other).toBe("done");
+    expect(order).toEqual(["season:start", "season:end", "other"]);
+  });
+
+  it("keeps the queue running after a task throws", async () => {
+    const failed = enqueueAniListRequest(async () => {
+      throw new Error("boom");
+    });
+    const next = enqueueAniListRequest(async () => "next");
+    await expect(failed).rejects.toThrow("boom");
+    expect(await next).toBe("next");
   });
 });

@@ -3,7 +3,8 @@
 An anime **season browser + personal watchlist tracker**. Browse every anime premiering in a season
 (live per-episode countdowns, sort by countdown or popularity), search all of AniList, sign in with
 Google, add shows to a list, and track status, episode progress, score and dates. Lists are public by
-link; only the owner can edit. Production: https://kylevb.com (Vercel).
+link; only the owner can edit. The landing page (`/`) sells all of it with live data, a no-sign-in
+tracker demo and a post-sign-in Quest Log. Production: https://kylevb.com (Vercel).
 
 - **Stack:** Next.js 16.3 App Router (Turbopack) · React 19 · TypeScript · Tailwind 3.4 · NextAuth v4
   (database sessions) · MongoDB native driver 4.x · SWR · react-hot-toast · Vitest
@@ -19,7 +20,7 @@ link; only the owner can edit. Production: https://kylevb.com (Vercel).
 ```bash
 npm ci               # install exactly what package-lock.json pins
 npm run dev          # next dev on :3000 (also re-adds the Next.js agent-rules block at the end of this file)
-npm run build        # prerenders 28 season pages + /topanime by calling AniList/Jikan (needs network)
+npm run build        # prerenders 28 season pages, /topanime and / by calling AniList/Jikan (needs network)
 npm start            # serve the production build
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint . (flat config; includes React Compiler rules, see §9)
@@ -52,6 +53,7 @@ throwaway DB (e.g. `mongodb-memory-server`). Insert a `users` doc and a
 ```
  Browser ── HTML/RSC ──►  Next.js 16 (Vercel, Node runtime)
    │                       proxy.ts ............ request-time season redirects (/anime → current season)
+   │                       / (landing) ......... ISR 600s ── server/lib/landing ─ ≤ 2 req (1 h data cache) ─► AniList
    │                       /anime/[...anime] ... ISR 300s ── getAniListData ─────────────► AniList
    │                       /topanime ........... ISR 3600s ─ getTopAnimeJinkan ──────────► Jikan
    │                       /search ............. dynamic ─── server/lib/anilist ─────────► AniList
@@ -76,7 +78,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 
 | URL | Files | Rendering | Auth | What |
 |---|---|---|---|---|
-| `/` | `app/(home)/page.tsx`, `components/home/{Hero,PageBase}.tsx` | static | – | Hero with CTAs + the "I / am / atomic" scroll reveal |
+| `/` | `app/(home)/{page,opengraph-image}.tsx`, `components/home/*`, `server/lib/landing.ts`, `lib/landing.ts` | **ISR 600s**, live AniList data; never throws | – | Landing (§5.7): hero with a live "Next episodes" card, Magic Sense countdowns, tracker demo, schedule preview, search console, Tempest Archive, FAQ, #quests (sign-up pitch / Quest Log), the "I / am / atomic" post-credits. Session UI is client-only; `?add=<id>&as=<status>` finishes a sign-in intent |
 | `/anime`, `/anime/<year>` | `proxy.ts` (fallback: `app/anime/page.tsx`, force-dynamic) | 307 | – | → current season, computed **per request** |
 | `/anime/<year>/<season>` | `app/anime/layout.tsx`, `app/anime/[...anime]/{page,Boundary,error,loading}.tsx`, `components/animev3/*` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4) | – | Season grid (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
 | `/search?q=&page=` | `app/search/*` | dynamic | – | AniList title search, 30/page (§5.4) |
@@ -116,13 +118,18 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Season header | "Summer 2026 Anime", months, prev/next, "Current season →" | `useSelectedLayoutSegments()` reads the child route; prev/next are `<Link>`s, hidden outside the valid year window | `layoutSelector/HeaderSelector*.tsx`, `lib/season.ts` |
 | Anime card | Title, genres, cover, countdown, score, studio, premiere (PT), source, eps × min, synopsis, links | `AnimeInfoGrid({ info })`, shared by season, search and schedule pages | `components/animev3/AnimeInfoGrid.tsx` |
 | Live countdown | "EP13: 1d 7h 14m 52s", "Airing now", or a status ("Finished · 12 eps") | One shared 1 s clock (`useNow`, null during SSR, so no hydration mismatch) | `components/utils/useNow.ts`, `lib/anime/airing.ts` |
-| List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `useMyList()`: SWR key `/api/anime-list/ids`, optimistic with rollback, toasts | `components/utils/useMyList.ts` |
+| List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card; landing options: add status/label, `block` size, sign-in intent) on `useMyList()`: SWR key `/api/anime-list/ids`, optimistic with rollback, toasts; `count` = list size | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
 | Search | Any anime incl. older seasons, movies, ONAs | Server `searchAnime()`; result links don't prefetch (AniList budget) | `app/search/*`, `server/lib/anilist.ts` |
 | My List | Header + copy link; tabs All/Watching/Plan to Watch/Completed/Paused/Dropped with counts; filters (text, year, season, airing day PT, release status); sort (next episode, title, my score, progress, recently added) | One client root with local state; owner-only +1 / Edit dialog (status, progress, score, start/finish dates, remove); PATCH → server-normalized `userData`; background `router.refresh()` 2 s after edits | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)` |
 | Tracker rules | Auto-complete at the last episode, dates auto-filled, score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
 | Airing Schedule | Day tabs Mon…Sun (today highlighted), shows grouped by weekday, "Not airing right now" section | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule | `components/mylist/{AiringSchedule,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
 | Top Anime | Real MAL rank, poster, title, score, type · eps · year, members, Track | Slim `TopAnimeItem`s; in-flight guard + dedupe; inline retry | `app/topanime/*`, `components/animev3/utils/jinkanData/getTopAnimeJinkan.ts` |
+| Landing | Hero (H1 is the LCP), live "Next episodes" card, 7 live countdown cards with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
+| Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
+| Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers | `components/home/TrackerDemo.tsx` |
+| Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
+| Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user; status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Friendly error/404 pages with retry | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime). Retry must refetch the server render: Next 16.3's `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
 
 ---
@@ -235,6 +242,29 @@ On every list read (both list pages and `GET /api/anime-list/user/<id>`):
 it and list URLs use it.** Switching to JWT sessions breaks both. `authOptions.adapter` is a getter
 that rebuilds the adapter after a failed Mongo connection (`server/auth/index.ts`).
 
+### 5.7 Landing `/` (`server/lib/landing.ts#loadLandingData`, ISR 600 s)
+1. **Season.** `landingSeason()` (`lib/season.ts`): the current UTC season, or the next one when it
+   starts within 14 days (**preview**: labels say "Preview Fall 2026" and link the explicit season
+   path, since `/anime` still resolves to the current season).
+2. **Season request** (1 AniList request, 2 after a 429 retry): exactly `/anime`'s page 1
+   (`getAniListData`, carry-over on, no fallback, 6 s), default fetch cache, so the route stays ISR.
+   `pickAiringCandidates()` keeps up to 12 shows whose next episode airs within
+   [now − 30 min, now + 7 days] (16 in preview): the 30 most popular, soonest first.
+3. **Extras request** (0 on a data-cache hit, else 1; skipped when step 2 spent 2): the Tensura
+   franchise + banners, the Rimuru character and the season's id pages for an exact show count
+   (`landingExtrasQuery`), with `cache: "force-cache"`, `next.revalidate` 3600, tag
+   `landing-extras`, through `enqueueAniListRequest`. `parseLandingExtras()` validates each part on
+   its own; images only from `https://s4.anilist.co/`. **Never use `pageInfo.total`** (AniList
+   reports 5000).
+4. **Never throws.** Season down → `season: null`, no countdowns, fallback panels. Extras down →
+   `TEMPEST_FALLBACK` (static, "Find it" search links instead of adds) and a "50+" count. So at most
+   2 AniList requests per regeneration, and the degraded render is cached ≤ 10 min.
+5. **Client.** Only `{generatedAt, season, mediaById (≤ 21 full snapshots, so adds store complete
+   data), continuingIds}` reach `LandingProvider`. Islands pick rows with `useVisibleAiring()`
+   (server time until hydrated, then a 30 s clock; aired rows are backfilled in place). The landing
+   never calls `/api/anime-list/user/<id>` (it can trigger AniList refreshes); personalization is
+   only the `/api/anime-list/ids` count and membership that `useMyList` already loads.
+
 ---
 
 ## 6. Data model (MongoDB, one database)
@@ -277,13 +307,16 @@ drops duplicates, re-sanitizes, and bounds dates.
 
 | Layer | Where | Notes |
 |---|---|---|
-| ISR | season pages 300 s, `/topanime` 3600 s | Upstream failure **throws** → last good page kept |
+| ISR | season pages 300 s, `/topanime` 3600 s, `/` 600 s | Season/Top Anime: upstream failure **throws** → last good page kept. `/` never throws: it renders fallbacks |
+| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s | `revalidateTag("landing-extras")` refreshes it; only 200s are cached |
 | Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
 | SWR | `/api/anime-list/ids` (list membership, all cards) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode), under `app/anime/layout.tsx` | |
 | Local state | My List (`MyList.tsx`), Top Anime list, season `PageBase` | |
 | Shared clock | `useNow()` | `useSyncExternalStore`; one interval for the page |
 | Mongo | `listRefreshedAt` | Refresh lock/throttle |
+| sessionStorage | `kv:add-intent` | Landing sign-in intent `{id, status?, at, media}`; auto-add only within 15 min, consumed once |
+| localStorage | `kv:quests:<userId>` (Quest 2/3 flags), `kv:live-timers` (pause live timers) | Per device; read via `useSyncExternalStore`, every access in try/catch |
 
 ---
 
@@ -292,18 +325,22 @@ drops duplicates, re-sanitizes, and bounds dates.
 ```
 proxy.ts                    request-time /anime season redirects
 lib/                        pure, shared by server + client (unit-tested)
-  season.ts                   season math: current season, valid years, route validation, shiftSeason
+  season.ts                   season math: current season, valid years, route validation, shiftSeason, landingSeason
+  landing.ts                  landing constants/types + pure helpers (airing candidates, extras parsing, Tempest,
+                              tiers, schedule grouping, add-intent parse/serialize)
   routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath
   anime/types.ts              AnimeMedia, ListEntry, UserAnimeData, LIST_STATUSES(+labels), displayTitle
   anime/normalize.ts          normalizeMedia/Entry/UserData — whitelist, coercion, tracker rules
   anime/sanitize.ts           sanitizeDescription (allow-list <br><i><b><em><strong>, balanced), descriptionToText
   anime/airing.ts             nextAiring, countdown formatting, premiereLabel, airingWeekday (PT), compareByNextAiring
+  anime/statusBadge.ts        STATUS_BADGE_CLASS (list-status badge colors)
 server/                     server-only
   auth/index.ts               authOptions (Google + optional GitHub/Twitter, lazy MongoDBAdapter, session.objectId)
   lib/mongodb.ts              the only MongoClient (cached on globalThis, retries, failed connects not cached)
   lib/anilist.ts              anilistQuery (throws AniListError, 429 retry), fetchMediaByIds, searchAnime
   lib/userList.ts             resolveListOwner, readEntries, loadListEntries, refreshEntriesIfStale, getListIds
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
+  lib/landing.ts              loadLandingData (≤ 2 AniList requests, never throws), fetchLandingExtras
 app/
   layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster, Analytics}
   error.tsx, global-error.tsx, not-found.tsx
@@ -314,8 +351,20 @@ components/
                               layoutSelector/ (header + sort context), utils/ (getAniListData, useLazyLoad, jinkanData/)
   mylist/                     Airing Schedule UI + schedule.ts (grouping)
   common/                     NavBar, AnimeBar (nav links), NavSearch, LogInBox (account menu), Grid
-  home/, auth/                hero/splash, sign-in + sign-out
-  utils/                      anilist-queries/ (mediaFields fragment + queries), fetchWithTimeout, useMyList, useNow
+  animev3/ListToggle.tsx      the shared add/remove toggle (every card)
+  home/                       the landing (§5.7):
+    LandingProvider             media by id, useLanding, useVisibleAiring, the sign-in intent <dialog>
+    useLandingSession           loading | signedOut | signedIn {userId, firstName, count, tier}
+    SessionCta, StickyCta       primary CTA slot + status line (fixed boxes), sticky bar / pill
+    LandingAddButton            ListToggle + intent dialog + list_add analytics
+    QuestSection, QuestLog      #quests: sign-up pitch or Quest Log + AddIntentHandler; questStore (flags)
+    Hero, HeroSlime, HeroNextUp, NightSky, AiringNext, AiringGrid, CountdownText, TrackerDemo,
+    ScheduleDemo, SageSearch, TempestArchive, TempestShelf, Faq, PostCredits, Reveal
+                                the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines)
+    analytics.ts                typed Vercel Analytics events (trackLanding, trackOnce)
+  auth/                       sign-in page, SignOutButton, GoogleIcon
+  utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
+                              useMyList, useNow
 styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anilist .crunchyroll .star)
 @types/                     Session.objectId, global _mongoClientPromise
 .github/workflows/          cron.yaml (curl /anime every 5 min), health-check.yml. GitHub auto-disabled both (re-enable in the Actions tab)
@@ -352,13 +401,29 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
     "bundler"`. Both are expected; commit them.
 12. Route handlers need the Node runtime (the MongoDB driver). Don't add `runtime = "edge"`.
 13. `body` is `grid-rows-[auto_1fr_auto]` (nav / page / footer). Extra in-flow children at the root
-    shift the rows.
+    shift the rows. Its single column is `auto`, so a fixed-width child wider than the phone widens
+    the whole page; the landing's `main` has `min-w-0` and its sections `[contain:inline-size]`.
+14. **Never use `server/lib/anilist.ts#anilistQuery` on static or ISR pages.** Its `cache: "no-store"`
+    makes the route dynamic, and every view would call AniList. Use `getAniListData` (default fetch
+    cache) or a `force-cache` fetch through `enqueueAniListRequest`, as `server/lib/landing.ts` does.
+15. **The landing is static: nothing on the server may know the visitor.** No `cookies()`,
+    `headers()`, `searchParams` or `getServerSession` in `app/(home)`; session UI goes through
+    `useLandingSession()` and renders a same-size placeholder while it loads. Don't add a
+    `loading.tsx` to `app/(home)`: the page is async, so the static HTML would ship the fallback and
+    hide the whole landing in a `<div hidden>` until JavaScript swaps it in (no-JS visitors and the
+    H1's LCP both suffer).
+16. Tailwind scans `app/`, `components/` and `lib/` (`tailwind.config.js` `content`). Class maps
+    shared from elsewhere (e.g. `lib/anime/statusBadge.ts`) are silently dropped from the CSS unless
+    their folder is listed there.
 
 ---
 
 ## 10. Known limitations / next steps
 
 - Lists are public to anyone with the link; there's no private-list setting.
+- Landing: if AniList fails during a regeneration, the degraded `/` (no countdowns) is cached for up
+  to 10 minutes. The Tensura data (`TEMPEST_IDS`, short labels, `TEMPEST_FALLBACK`) is static and
+  needs a code change for new franchise entries.
 - A stale ISR season page is corrected in the browser about a second after load (§5.1). Visitors
   without JavaScript still get the cached copy until Next's background rebuild lands.
 - `SessionProvider` has no server session, so the nav avatar and card toggles show a loading pill

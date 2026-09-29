@@ -93,3 +93,232 @@
   width: 15px;
   height: 15px;
 }
+
+/* ==========================================================================
+   Landing page ("/"): rules Tailwind classes can't express.
+   Every animation here sits behind prefers-reduced-motion: no-preference.
+   ========================================================================== */
+
+/* Reveal system (components/home/Reveal.tsx). Only JS ever sets "pending",
+   and only on elements below the fold, so no-JS and reduced-motion visitors
+   (and anything visible at load) are never hidden. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  [data-reveal="pending"] {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  [data-reveal="done"] .sage-scan-reveal {
+    @apply animate-sage-scan;
+  }
+  [data-reveal="pending"] .atomic-word {
+    opacity: 0;
+  }
+  [data-reveal="done"] .atomic-word {
+    @apply animate-slideInFromLeft;
+    animation-delay: var(--d, 0ms);
+    animation-fill-mode: both;
+  }
+  [data-reveal="done"] .atomic-ring {
+    @apply animate-ring-out;
+    animation-delay: 1.8s;
+    animation-fill-mode: both;
+  }
+  [data-reveal="done"] .tempest-sheen::after {
+    @apply animate-sheen;
+    animation-delay: 0.35s;
+    animation-fill-mode: both;
+  }
+}
+
+/* The post-credits ripple only exists as motion; never show it static. */
+.atomic-ring {
+  opacity: 0;
+}
+
+/* A light sheen that crosses the Rimuru portrait once, on first reveal. */
+.tempest-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: translateX(-130%) skewX(-18deg);
+}
+
+/* Hero forest parallax: CSS scroll-driven animation, no JS scroll listener. */
+@keyframes forest-near {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(40px);
+  }
+}
+@keyframes forest-far {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(15px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .forest-near {
+      animation: forest-near linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+    .forest-far {
+      animation: forest-far linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+  }
+}
+
+/* Session skeletons are pointless without JS (a <noscript> link stands in). */
+@media (scripting: none) {
+  .js-only {
+    display: none !important;
+  }
+}
+
+/* Slime face hooks (components/home/Slime.tsx). --look-x/--look-y (-1…1)
+   are written by the hero's pointer listener; React never re-renders for it. */
+.slime-pupils {
+  transform: translate(
+    calc(var(--look-x, 0) * 4px),
+    calc(var(--look-y, 0) * 3px)
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .slime-pupils {
+    transition: transform 120ms ease-out;
+  }
+  .slime-eyes-open,
+  .slime-eyes-happy {
+    transition: opacity 120ms ease-out;
+  }
+}
+
+/* Happy eyes while the hero's primary CTA is hovered or focused. This is a
+   state change, not motion, so it also applies under reduced motion. */
+.hero:has([data-cta-primary]:is(:hover, :focus-visible)) .slime-eyes-open {
+  opacity: 0;
+}
+.hero:has([data-cta-primary]:is(:hover, :focus-visible)) .slime-eyes-happy {
+  opacity: 1;
+}
+
+/* Hero slime "wake": happy arcs, a hop, then open eyes at 900 ms. The eye
+   swap has no fill-mode, so afterwards the :has() rule above keeps working.
+   Replays on the eyes (not the hop) after an add, when the gulp remounts
+   the face: that's the "happy after an add" state. */
+@keyframes slime-wake-hide {
+  from,
+  to {
+    opacity: 0;
+  }
+}
+@keyframes slime-wake-show {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .slime-wake .slime-hop {
+    @apply animate-slime-wake;
+  }
+  .slime-wake .slime-eyes-open {
+    animation: slime-wake-hide 900ms steps(1, end);
+  }
+  .slime-wake .slime-eyes-happy {
+    animation: slime-wake-show 900ms steps(1, end);
+  }
+}
+
+/* Happy eyes for the length of a gulp (components/home/Reveal.tsx#SlimeGulp
+   re-keys the body, so this plays once per add). */
+@media (prefers-reduced-motion: no-preference) {
+  .slime-gulping .slime-eyes-open {
+    animation: slime-wake-hide 700ms steps(1, end);
+  }
+  .slime-gulping .slime-eyes-happy {
+    animation: slime-wake-show 700ms steps(1, end);
+  }
+}
+
+/* Every hero animation (and any slime scrolled out of view) pauses offscreen. */
+[data-offscreen] *,
+[data-offscreen] *::before,
+[data-offscreen] *::after {
+  animation-play-state: paused !important;
+}
+
+/* Keeps the landing's fixed CTA bar off focused content and the footer. */
+@media (max-width: 1023px) {
+  html:has(#landing) {
+    scroll-padding-bottom: 5rem;
+  }
+}
+
+/* Gradient headline with a solid fallback. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hero-title {
+    background: none;
+    color: #fff;
+  }
+}
+
+/* FAQ answers fade in when their <details> opens. */
+@media (prefers-reduced-motion: no-preference) {
+  .faq-item[open] > .faq-answer {
+    @apply animate-fade-in;
+    animation-duration: 150ms;
+  }
+}
+
+/* The share-link pill: one subtle shimmer pass every 6 s. */
+@keyframes url-shimmer {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  22%,
+  100% {
+    transform: translateX(330%) skewX(-18deg);
+  }
+}
+.url-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.url-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(149, 204, 255, 0.16),
+    transparent
+  );
+  transform: translateX(-130%) skewX(-18deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .url-shimmer::after {
+    animation: url-shimmer 6s ease-in-out 1.5s infinite;
+  }
+}

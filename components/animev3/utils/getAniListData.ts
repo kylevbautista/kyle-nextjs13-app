@@ -38,8 +38,16 @@ export type SeasonPageResult =
       carryOverIncluded: boolean;
       /** When AniList answered (epoch ms); lets a cached page tell how old its data is. */
       fetchedAt: number;
+      /** HTTP requests this call sent (2 after a 429 retry). */
+      requests: number;
     }
-  | { ok: false; error: string; status?: number };
+  | {
+      ok: false;
+      error: string;
+      status?: number;
+      /** HTTP requests this call sent (up to 4 with the no-carry-over fallback). */
+      requests: number;
+    };
 
 interface SeasonPageOptions {
   page?: number;
@@ -72,10 +80,11 @@ function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
  * Runs one AniList request (including its rate-limit pauses) at a time per
  * process. `next build` renders several season pages concurrently; without
  * this they would all hit AniList at once and the low-remaining pause would
- * not throttle anything.
+ * not throttle anything. Exported so other server-side AniList calls (the
+ * landing's extras, server/lib/landing.ts) share the same queue.
  */
 let queue: Promise<unknown> = Promise.resolve();
-function enqueue<T>(task: () => Promise<T>): Promise<T> {
+export function enqueueAniListRequest<T>(task: () => Promise<T>): Promise<T> {
   const run = queue.then(task, task);
   queue = run.catch(() => undefined);
   return run;
@@ -90,7 +99,7 @@ function retryAfterMs(res: Response) {
 }
 
 export function getAniListData(options: SeasonPageOptions): Promise<SeasonPageResult> {
-  return enqueue(async () => {
+  return enqueueAniListRequest(async () => {
     const result = await fetchSeasonPage(options);
     // The carry-over lists are extras: if the combined request fails (AniList
     // nulls every field when one errors), retry once with the season alone.
@@ -101,7 +110,8 @@ export function getAniListData(options: SeasonPageOptions): Promise<SeasonPageRe
       options.fallbackWithoutCarryOver !== false &&
       result.status !== 429
     ) {
-      return fetchSeasonPage({ ...options, withCarryOver: false });
+      const fallback = await fetchSeasonPage({ ...options, withCarryOver: false });
+      return { ...fallback, requests: result.requests + fallback.requests };
     }
     return result;
   });
@@ -119,8 +129,10 @@ async function fetchSeasonPage({
   const following = shiftSeason(Number(year), season, 1);
   const seasonEnd = seasonStartMs(following.year, following.season);
   const now = Date.now();
-  const request = () =>
-    fetchWithTimeout(ANILIST_URL, {
+  let requests = 0;
+  const request = () => {
+    requests++;
+    return fetchWithTimeout(ANILIST_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
@@ -140,6 +152,7 @@ async function fetchSeasonPage({
       }),
       timeout,
     });
+  };
 
   try {
     let res = await request();
@@ -154,7 +167,7 @@ async function fetchSeasonPage({
     }
 
     if (!res.ok) {
-      return { ok: false, status: res.status, error: `AniList responded ${res.status}` };
+      return { ok: false, status: res.status, error: `AniList responded ${res.status}`, requests };
     }
 
     // A missing header (e.g. not exposed to the browser via CORS) is not "0 remaining".
@@ -169,6 +182,7 @@ async function fetchSeasonPage({
         ok: false,
         status: res.status,
         error: json?.errors?.[0]?.message ?? "AniList returned no media",
+        requests,
       };
     }
 
@@ -184,6 +198,7 @@ async function fetchSeasonPage({
       hasNextPage: pageData.pageInfo?.hasNextPage === true,
       page,
       fetchedAt: Date.now(),
+      requests,
       carryOverIncluded: withCarryOver,
       carryOver: withCarryOver
         ? selectCarryOver({
@@ -198,6 +213,6 @@ async function fetchSeasonPage({
         : [],
     };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: err instanceof Error ? err.message : String(err), requests };
   }
 }

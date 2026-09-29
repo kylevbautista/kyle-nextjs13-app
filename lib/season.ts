@@ -116,3 +116,31 @@ export const toFuzzyDateInt = (ms: number) => {
   const date = new Date(ms);
   return date.getUTCFullYear() * 10_000 + (date.getUTCMonth() + 1) * 100 + date.getUTCDate();
 };
+
+/** The landing previews the next season once it starts within this many days. */
+export const LANDING_PREVIEW_DAYS = 14;
+
+/**
+ * The season the landing page features (UTC): the current one, or the next
+ * one when it starts within LANDING_PREVIEW_DAYS ("preview" mode). /anime
+ * keeps resolving to the current season; the landing links the explicit path.
+ */
+export function landingSeason(now: Date = new Date()): {
+  year: number;
+  season: SeasonName;
+  preview: boolean;
+  startsAtMs: number;
+} {
+  const current = getCurrentSeason(now);
+  const next = shiftSeason(current.year, current.season, 1);
+  const nextStart = seasonStartMs(next.year, next.season);
+  const untilNext = nextStart - now.getTime();
+  if (untilNext > 0 && untilNext <= LANDING_PREVIEW_DAYS * 24 * 60 * 60 * 1000) {
+    return { ...next, preview: true, startsAtMs: nextStart };
+  }
+  return {
+    ...current,
+    preview: false,
+    startsAtMs: seasonStartMs(current.year, current.season),
+  };
+}

@@ -141,6 +141,11 @@ export function useMyList() {
      * while SWR keeps retrying in the background.
      */
     loaded: !signedIn || ids !== undefined || error !== undefined,
+    /**
+     * How many shows are on the list, including in-flight adds/removes; null
+     * while signed out or until the ids have loaded (or when loading failed).
+     */
+    count: signedIn && ids !== undefined ? idSet.size : null,
     isInList: (id: number) => idSet.has(id),
     /** True while an add/remove for this id is in flight. */
     isPending: (id: number) => pending.has(id),
