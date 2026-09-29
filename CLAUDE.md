@@ -166,6 +166,23 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
    pages load.
 4. Pages 2+ are fetched in the browser. Refs guard against double fetches; a failure shows an inline
    Retry, and the season is never silently truncated.
+   **Stale ISR pages.** ISR serves the first visit after a quiet spell the last render, while Next
+   rebuilds it in the background. `getAniListData` stamps `fetchedAt`, and Boundary passes it on.
+   If the page's data is over 10 minutes old (`components/animev3/utils/seasonFreshness.ts`),
+   `PageBase` re-fetches page 1 + continuing series from the browser right after load: one AniList
+   request, queued before the eager page loads, with no season-only fallback (a failed refresh
+   keeps the page as is; `carryOverIncluded` says whether continuing series were fetched).
+   - **Merging.** Page 1 is replaced outright if no later page has loaded (the usual case).
+     Otherwise `mergeFresh` replaces shows by id. Every browser-fetched page also updates shows
+     already in the list.
+   - **Ordering.** The list re-sorts unless `window.scrollY` shows the reader has scrolled; then
+     the revealed cards stay pinned. (Revealed count is no signal: wide screens reveal 24 cards on
+     load.)
+   - **Remembering.** The refreshed data is kept per season for the browser session
+     (`rememberRefresh`), so back/forward, which replays the original payload, doesn't refresh
+     again.
+   The season header also switches from the layout's render time to the real clock after
+   hydration (`useNow() ?? renderedAt`), so a stale page doesn't mislabel the current season.
 5. AniList throttling in `getAniListData`: a per-process queue serializes requests. It pauses 2 s
    when `x-ratelimit-remaining` < 10, retries a 429 once after `min(Retry-After, 5 s)`, and times out
    the body read. The build prerenders on 1 CPU (`next.config.js`) with `staticGenerationRetryCount: 2`.
@@ -342,14 +359,13 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 ## 10. Known limitations / next steps
 
 - Lists are public to anyone with the link; there's no private-list setting.
-- The first visitor after a long idle can get a stale ISR season page (countdowns read "Airing now"
-  until it regenerates, ≤ 5 min).
+- A stale ISR season page is corrected in the browser about a second after load (§5.1). Visitors
+  without JavaScript still get the cached copy until Next's background rebuild lands.
 - `SessionProvider` has no server session, so the nav avatar and card toggles show a loading pill
   for a moment on full page loads.
 - `+1` sends `current + 1`. A stale tab could still overwrite a newer value; an atomic increment
   endpoint would fix it.
-- No per-user rate limiting on the write APIs, and no cap on list size (MongoDB's 16 MB document limit
-  applies).
+- No per-user rate limiting on the write APIs. Lists are capped at 2,000 shows.
 - GitHub auto-disabled the cache-warm and health-check crons; re-enable them or use Vercel Cron and
   an uptime monitor.
 - `next build` fails if AniList or Jikan stays down past the prerender retries. This is deliberate:

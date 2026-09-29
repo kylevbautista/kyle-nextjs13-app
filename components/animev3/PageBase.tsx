@@ -5,6 +5,7 @@ import AnimeInfoSkeleton from "./AnimeInfoSkeleton";
 import Grid from "../common/Grid";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
 import useLazyLoad from "./utils/useLazyLoad";
+import { isStale, mergeFresh, recallRefresh, rememberRefresh } from "./utils/seasonFreshness";
 import { getAniListData } from "./utils/getAniListData";
 import { nextAiring } from "@/lib/anime/airing";
 import type { AnimeMedia } from "@/lib/anime/types";
@@ -18,6 +19,8 @@ interface PageBaseProps {
   initialHasNextPage: boolean;
   /** Series from earlier seasons still airing in this one (lib/anime/carryOver.ts). */
   initialCarryOver: AnimeMedia[];
+  /** When the server fetched that data (the page may be an old ISR render). */
+  fetchedAt: number;
 }
 
 type LoadStatus = "idle" | "loading" | "error";
@@ -65,6 +68,7 @@ export default function PageBase({
   initialMedia,
   initialHasNextPage,
   initialCarryOver,
+  fetchedAt,
 }: PageBaseProps) {
   const { sort, showContinuing } = useContext(HeaderContext);
   const compareCountdown = useMemo(() => {
@@ -72,10 +76,25 @@ export default function PageBase({
     return countdownComparator(seasonStartMs(year, season), seasonStartMs(following.year, following.season));
   }, [year, season]);
 
+  // Page-1 data: the server's, or this session's newer browser refresh of it
+  // (see seasonFreshness.ts — back/forward replays the original payload).
+  const seasonKey = `${year}-${season}`;
+  const [seed] = useState(
+    () =>
+      recallRefresh(seasonKey, fetchedAt) ?? {
+        at: fetchedAt,
+        media: initialMedia,
+        carryOver: initialCarryOver,
+        hasNextPage: initialHasNextPage,
+      }
+  );
+
   // Every fetched show, deduped, in popularity (fetch) order. Everything shown is derived from it.
-  const [media, setMedia] = useState(() => appendUnique([], initialMedia));
-  const [cursor, setCursor] = useState({ nextPage: 2, hasNextPage: initialHasNextPage });
+  const [media, setMedia] = useState(() => appendUnique([], seed.media));
+  const [cursor, setCursor] = useState({ nextPage: 2, hasNextPage: seed.hasNextPage });
   const [status, setStatus] = useState<LoadStatus>("idle");
+  const [carryOver, setCarryOver] = useState(seed.carryOver);
+  const [announcement, setAnnouncement] = useState("");
 
   // Continuing series, minus any that turn up in the season's own pages
   // (AniList files e.g. late-June premieres under summer). In popularity mode,
@@ -88,10 +107,10 @@ export default function PageBase({
       sort === "popularity" && cursor.hasNextPage && media.length
         ? Math.min(...media.map((item) => item.popularity ?? 0))
         : Number.NEGATIVE_INFINITY;
-    return initialCarryOver.filter(
+    return carryOver.filter(
       (item) => !seasonIds.has(item.id) && (item.popularity ?? 0) >= floor
     );
-  }, [initialCarryOver, media, showContinuing, sort, cursor.hasNextPage]);
+  }, [carryOver, media, showContinuing, sort, cursor.hasNextPage]);
   const continuingIds = useMemo(() => new Set(continuing.map((item) => item.id)), [continuing]);
 
   // Cards already on screen keep their place when later pages arrive; those
@@ -119,6 +138,7 @@ export default function PageBase({
 
     busy.current = true;
     setStatus("loading");
+    setAnnouncement("");
     const result = await getAniListData({ page, year, season });
     busy.current = false;
 
@@ -128,10 +148,56 @@ export default function PageBase({
     }
     loadedThrough.current = page;
     setPinnedIds(visibleIds.current);
-    setMedia((current) => appendUnique(current, result.media));
+    // Browser-fetched pages are fresher than the (possibly old) server data,
+    // so they also update shows already in the list.
+    setMedia((current) => mergeFresh(current, result.media));
     setCursor({ nextPage: page + 1, hasNextPage: result.hasNextPage });
     setStatus("idle");
   }, [cursor, year, season]);
+
+  // The page may be a cached (ISR) render from a while ago: the first visit
+  // after a quiet spell gets the last render while Next rebuilds it. If the
+  // data is over 10 minutes old, re-fetch page 1 + continuing series from the
+  // browser right away (one AniList request, queued before later pages).
+  useEffect(() => {
+    if (!isStale(seed.at, Date.now())) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      // No season-only fallback here: if this fails, the page keeps what it has.
+      const result = await getAniListData({
+        page: 1,
+        year,
+        season,
+        withCarryOver: true,
+        fallbackWithoutCarryOver: false,
+      });
+      if (cancelled || !result.ok) return;
+      // Not scrolled yet: re-sort (the stale countdown order is wrong anyway).
+      // Scrolled: keep the revealed cards where they are.
+      setPinnedIds(window.scrollY > 50 ? visibleIds.current : []);
+      // Before page 2 has loaded (the usual case: the queue runs this first),
+      // page 1 is replaced outright, so shows that left it don't linger stale.
+      const onlyPageOne = loadedThrough.current === 1;
+      setMedia((current) =>
+        onlyPageOne ? appendUnique([], result.media) : mergeFresh(current, result.media)
+      );
+      if (result.carryOverIncluded) setCarryOver(result.carryOver);
+      setCursor((current) =>
+        current.nextPage === 2 ? { ...current, hasNextPage: result.hasNextPage } : current
+      );
+      setAnnouncement("Updated with the latest schedule from AniList.");
+      rememberRefresh(seasonKey, {
+        at: Date.now(),
+        media: result.media,
+        carryOver: result.carryOver,
+        hasNextPage: result.hasNextPage,
+      });
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [seed, seasonKey, year, season]);
 
   // In countdown mode, load the rest of the season right away (not on scroll),
   // so the order behind the pinned cards is complete before the reader gets there.
@@ -196,7 +262,7 @@ export default function PageBase({
       </Grid>
 
       <p className="sr-only" aria-live="polite">
-        {status === "loading" ? "Loading more anime…" : ""}
+        {status === "loading" ? "Loading more anime…" : announcement}
       </p>
 
       {status === "error" && allFetchedVisible && (

@@ -32,6 +32,7 @@ export default async function Boundary({ year, season }: BoundaryProps) {
       initialMedia={result.media}
       initialHasNextPage={result.hasNextPage}
       initialCarryOver={result.carryOver}
+      fetchedAt={result.fetchedAt}
     />
   );
 }

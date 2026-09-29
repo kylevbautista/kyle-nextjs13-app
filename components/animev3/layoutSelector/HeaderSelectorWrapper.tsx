@@ -3,15 +3,20 @@ import { useContext } from "react";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { HeaderContext } from "./HeaderProvider";
 import { HeaderSelector } from "./HeaderSelector";
+import { useNow } from "@/components/utils/useNow";
 import {
   SeasonName,
   getCurrentSeason,
-  seasonRouteRedirect,
+  isSeasonName,
   validYearRange,
 } from "@/lib/season";
 
 interface HeaderSelectorWrapperProps {
-  /** Server render time (ms), so server and client agree on the current season and year range. */
+  /**
+   * Server render time (ms), used until hydration so server and client HTML
+   * match; afterwards the real clock takes over (a cached page can predate a
+   * season change).
+   */
   renderedAt: number;
 }
 
@@ -25,10 +30,12 @@ export function HeaderSelectorWrapper({ renderedAt }: HeaderSelectorWrapperProps
   const { sort, setSort, showContinuing, setShowContinuing } = useContext(HeaderContext);
   // The [...anime] catch-all shows up as one "2026/fall" segment.
   const parts = useSelectedLayoutSegments().flatMap((segment) => segment.split("/"));
-  const now = new Date(renderedAt);
+  const now = new Date(useNow() ?? renderedAt);
 
-  // Not a valid season (e.g. /anime while it redirects): render nothing.
-  if (parts.length === 0 || seasonRouteRedirect(parts, now) !== null) return null;
+  // Not a season URL (e.g. /anime while it redirects): render nothing. Only the
+  // shape is checked: proxy.ts enforces the year window at request time, and a
+  // live-clock range check would hide the header of an open page at New Year.
+  if (!/^\d{4}$/.test(parts[0] ?? "") || !isSeasonName(parts[1]) || parts.length !== 2) return null;
 
   return (
     <div className="flex flex-col items-center justify-center text-white sm:px-4 sm:pt-4">

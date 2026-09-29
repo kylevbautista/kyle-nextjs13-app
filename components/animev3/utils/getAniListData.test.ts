@@ -70,6 +70,8 @@ describe("getAniListData", () => {
       airingSort: ["POPULARITY_DESC"],
     });
     expect(result.carryOver).toEqual([]);
+    expect(result.carryOverIncluded).toBe(false);
+    expect(result.fetchedAt).toBe(Date.parse("2026-10-15T00:00:00Z"));
   });
 
   it("returns continuing series from the same request when asked", async () => {
@@ -92,6 +94,7 @@ describe("getAniListData", () => {
     vi.setSystemTime(new Date("2026-10-15T00:00:00Z"));
     const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
     if (!result.ok) throw new Error("expected ok");
+    expect(result.carryOverIncluded).toBe(true);
     // Deduped, the season's own show excluded, most popular first — one request.
     expect(result.carryOver.map((m) => m.id)).toEqual([21, 30]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -110,9 +113,23 @@ describe("getAniListData", () => {
       .mockResolvedValueOnce(respond({ errors: [{ message: "boom" }], data: null }, 500))
       .mockResolvedValueOnce(respond(pageBody([7])));
     const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
-    expect(result).toMatchObject({ ok: true, carryOver: [] });
+    // carryOverIncluded tells callers the empty list means "not fetched", not "none".
+    expect(result).toMatchObject({ ok: true, carryOver: [], carryOverIncluded: false });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.withCarryOver).toBe(false);
+  });
+
+  it("can skip the season-only fallback (the browser refresh keeps what it has)", async () => {
+    fetchMock.mockResolvedValue(respond({ errors: [{ message: "boom" }], data: null }, 500));
+    const result = await run({
+      page: 1,
+      year: 2026,
+      season: "fall",
+      withCarryOver: true,
+      fallbackWithoutCarryOver: false,
+    });
+    expect(result).toMatchObject({ ok: false, status: 500 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry without carry-overs after a 429", async () => {

@@ -34,6 +34,10 @@ export type SeasonPageResult =
       page: number;
       /** Shows continuing from earlier seasons (only with `withCarryOver`). */
       carryOver: AnimeMedia[];
+      /** False when `carryOver` wasn't fetched (not asked for, or the fallback ran). */
+      carryOverIncluded: boolean;
+      /** When AniList answered (epoch ms); lets a cached page tell how old its data is. */
+      fetchedAt: number;
     }
   | { ok: false; error: string; status?: number };
 
@@ -45,6 +49,8 @@ interface SeasonPageOptions {
   timeout?: number;
   /** Also fetch shows continuing from earlier seasons (same request; used for page 1). */
   withCarryOver?: boolean;
+  /** If the combined request fails, retry with the season alone (default true). */
+  fallbackWithoutCarryOver?: boolean;
   enableLogs?: boolean;
 }
 
@@ -89,7 +95,12 @@ export function getAniListData(options: SeasonPageOptions): Promise<SeasonPageRe
     // The carry-over lists are extras: if the combined request fails (AniList
     // nulls every field when one errors), retry once with the season alone.
     // Not after a 429, which would only spend more of the rate limit.
-    if (!result.ok && options.withCarryOver && result.status !== 429) {
+    if (
+      !result.ok &&
+      options.withCarryOver &&
+      options.fallbackWithoutCarryOver !== false &&
+      result.status !== 429
+    ) {
       return fetchSeasonPage({ ...options, withCarryOver: false });
     }
     return result;
@@ -172,6 +183,8 @@ async function fetchSeasonPage({
       media,
       hasNextPage: pageData.pageInfo?.hasNextPage === true,
       page,
+      fetchedAt: Date.now(),
+      carryOverIncluded: withCarryOver,
       carryOver: withCarryOver
         ? selectCarryOver({
             ended: normalize(json.data.ended?.media),
