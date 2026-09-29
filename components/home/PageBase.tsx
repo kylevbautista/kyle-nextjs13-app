@@ -1,104 +1,46 @@
 "use client";
-import React, { ReactNode, useState, useEffect } from "react";
-interface PageBaseProps {
-  children?: ReactNode;
-}
+import { useEffect, useRef } from "react";
 
-export default function PageBase({ children }: PageBaseProps) {
+const WORDS = ["I", "am", "atomic"];
+
+/** The "I / am / atomic" scroll-reveal: each word slides in as it enters the viewport. */
+export default function PageBase() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const observer = new IntersectionObserver((elements) => {
-      elements.forEach((el) => {
-        if (el.isIntersecting) {
-          el.target.classList.add("animate-slideInFromLeft");
-        } else {
-          el.target.classList.remove("animate-slideInFromLeft");
-        }
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        entry.target.toggleAttribute("data-visible", entry.isIntersecting);
       });
     });
-
-    const hiddenElements = document.querySelectorAll("[data-observe]");
-    hiddenElements.forEach((el) => observer.observe(el));
+    container
+      .querySelectorAll("[data-observe]")
+      .forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
   }, []);
 
   return (
     <div
-      id="container"
-      className="
-        flex 
-        flex-col 
-        justify-center 
-        items-center 
-        sm:p-4
-        text-white
-        transition-all
-      "
+      ref={containerRef}
+      className="flex flex-col items-center overflow-x-clip text-white sm:p-4"
     >
-      <div
-        className="
-          flex 
-          justify-center 
-          items-center
-          min-h-screen 
-          min-w-full
-        "
-      >
+      {WORDS.map((word) => (
         <div
-          className=" 
-          flex 
-          justify-center 
-          items-center 
-          min-w-full
-          opacity-0
-        "
-          data-observe
+          key={word}
+          className="flex min-h-screen w-full items-center justify-center"
         >
-          <p className="text-9xl">I</p>
+          <div
+            data-observe
+            className="flex w-full justify-center px-4 opacity-0 data-[visible]:animate-slideInFromLeft motion-reduce:opacity-100 motion-reduce:!animate-none"
+          >
+            <p className="break-words text-7xl sm:text-8xl md:text-9xl">
+              {word}
+            </p>
+          </div>
         </div>
-      </div>
-      <div
-        className="
-          flex 
-          justify-center 
-          items-center
-          min-h-screen 
-          min-w-full
-        "
-      >
-        <div
-          className=" 
-          flex 
-          justify-center 
-          items-center 
-          min-w-full
-          opacity-0
-        "
-          data-observe
-        >
-          <p className="text-9xl">am</p>
-        </div>
-      </div>
-      <div
-        className="
-          flex 
-          justify-center 
-          items-center
-          min-h-screen 
-          min-w-full
-        "
-      >
-        <div
-          className=" 
-          flex 
-          justify-center 
-          items-center 
-          min-w-full
-          opacity-0
-        "
-          data-observe
-        >
-          <p className="text-9xl">atomic</p>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }

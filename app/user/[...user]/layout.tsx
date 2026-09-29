@@ -1,28 +1,22 @@
-export const metadata = {
-  title: "My List",
-  description: "My anime list",
-  openGraph: {
-    title: "My List",
-    description: "My anime list",
-    images: [
-      {
-        url: "/rimuru.png",
-        width: 200,
-        height: 141,
-      },
-    ],
-  },
-};
+import { requireListOwner } from "@/server/lib/listRoute";
+import { myListPath } from "@/lib/routes";
 
-export default function MyListLayout({
-  params,
+/**
+ * Validates the list URL here, outside loading.tsx, so unknown lists get a
+ * real 404 and legacy/non-canonical URLs a real 307 (see server/lib/listRoute.ts).
+ */
+export default async function MyListLayout({
   children,
+  params,
 }: {
-  params: any;
   children: React.ReactNode;
+  params: Promise<{ user?: string[] }>;
 }) {
+  const { user } = await params;
+  await requireListOwner(user, myListPath);
+
   return (
-    <div id="my-list" className="grid grid-cols-[auto_1fr] px-8">
+    <div id="my-list" className="mx-auto w-full max-w-screen-2xl px-4 pb-8 md:px-6">
       {children}
     </div>
   );

@@ -1,29 +1,55 @@
-import { MongoClient } from "mongodb";
+import { Db, MongoClient } from "mongodb";
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
-}
+/**
+ * The app's only MongoDB client. It is shared by the NextAuth adapter
+ * (server/auth) and all list reads/writes (server/lib/userList.ts).
+ *
+ * The connection promise is cached on globalThis so dev hot reloads and
+ * warm serverless invocations reuse one pool. A failed connect is NOT cached:
+ * the next caller starts a fresh attempt.
+ */
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+const CONNECT_ATTEMPTS = 2;
+/** Fail fast when the cluster is unreachable (the driver default is 30 s per attempt). */
+const SERVER_SELECTION_TIMEOUT_MS = 8_000;
 
-let client;
-let clientPromise: Promise<MongoClient>;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
+async function connectWithRetry(uri: string): Promise<MongoClient> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < CONNECT_ATTEMPTS; attempt++) {
+    try {
+      return await new MongoClient(uri, {
+        serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
+      }).connect();
+    } catch (err) {
+      lastError = err;
+      if (attempt < CONNECT_ATTEMPTS - 1) await sleep(250 * 2 ** attempt);
+    }
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  throw lastError;
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise;
+export function getMongoClient(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    return Promise.reject(
+      new Error('Missing environment variable "MONGODB_URI" (see CLAUDE.md §1)')
+    );
+  }
+  if (!globalThis._mongoClientPromise) {
+    const promise = connectWithRetry(uri);
+    globalThis._mongoClientPromise = promise;
+    promise.catch(() => {
+      if (globalThis._mongoClientPromise === promise) {
+        globalThis._mongoClientPromise = undefined;
+      }
+    });
+  }
+  return globalThis._mongoClientPromise;
+}
+
+/** The default database from MONGODB_URI (same one NextAuth uses). */
+export async function getDb(): Promise<Db> {
+  return (await getMongoClient()).db();
+}

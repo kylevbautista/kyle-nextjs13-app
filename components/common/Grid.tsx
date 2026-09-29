@@ -4,7 +4,6 @@ interface GridProps {
 export default function Grid({ children }: GridProps) {
   return (
     <div
-      id="main-grid"
       className="
         grid
         grid-cols-1

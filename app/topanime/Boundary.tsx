@@ -1,20 +1,17 @@
 import {
-  getTopAnimeJinkanInitalPages,
   getTopAnimeJinkan,
-} from "../../components/animev3/utils/jinkanData/getTopAnimeJinkan";
-import { parseJinkanPromiseAll } from "../../components/animev3/utils/jinkanData/parseJinkanPromiseAll";
-import { Test } from "./Test";
+  JikanError,
+} from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import TopAnimeList from "./TopAnimeList";
 
-const Boundary = async () => {
-  // const dataArray =
-  //   (await getTopAnimeJinkanInitalPages({ pages: 2, enableLogs: false })) || [];
-  // const { data, pagination } = parseJinkanPromiseAll(dataArray);
-  const { data, pagination } = await getTopAnimeJinkan({ page: 1 });
-  return (
-    <div className="w-full laptop2:w-fit">
-      <Test data={data} pagination={pagination} />
-    </div>
-  );
-};
-
-export { Boundary };
+/**
+ * Fetches page 1 of the ranking. Throws when Jikan fails or sends an empty
+ * ranking, so ISR keeps the last good page (or error.tsx shows a Retry).
+ */
+export async function Boundary() {
+  const firstPage = await getTopAnimeJinkan({ page: 1 });
+  if (firstPage.items.length === 0) {
+    throw new JikanError("Jikan returned an empty ranking for page 1");
+  }
+  return <TopAnimeList initialPage={firstPage} />;
+}

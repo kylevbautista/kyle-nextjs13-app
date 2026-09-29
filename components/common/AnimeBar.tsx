@@ -1,59 +1,51 @@
 "use client";
-import { useContext } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HydrationContext } from "./HydrationProvider";
-import { getCurrentSeasonPath } from "../animev3/helpers";
-import { LinkRouterWrapper } from "./LinkRouterWrapper";
 
-const getCurrentYear = (shifted: Boolean = false) => {
-  const dateObject = new Date();
-  const currentYear = dateObject.getUTCFullYear();
-  const currentMonth = dateObject.getUTCMonth();
-  if (currentMonth === 11 && !shifted) {
-    return currentYear + 1;
-  }
-  return currentYear;
-};
+const NAV_LINK_CLASS =
+  "flex h-16 shrink-0 items-center rounded-2xl px-2 text-sm hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#95ccff] aria-[current=page]:text-[#95ccff] aria-[current=page]:hover:text-white sm:px-4 sm:text-base";
 
+interface NavLinkProps {
+  href: string;
+  /** How the current pathname marks this link active: exact match, or `href` and anything below it. */
+  match?: "exact" | "prefix" | "none";
+  className?: string;
+  children: ReactNode;
+}
+
+export function NavLink({ href, match = "prefix", className = "", children }: NavLinkProps) {
+  const pathname = usePathname() ?? "";
+  const active =
+    match === "exact"
+      ? pathname === href
+      : match === "prefix" && (pathname === href || pathname.startsWith(`${href}/`));
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`${NAV_LINK_CLASS} ${className}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * Anime section links. "/anime" resolves to the current season on each
+ * request, so these never carry a build-time date.
+ */
 export function AnimeBar() {
-  const pathname = usePathname();
-  const hydrated = useContext(HydrationContext);
-  const values = pathname?.split("/");
-  const [, anime = ""] = values || [];
-  let isAnimeRoute = false;
-  if (anime === "anime" || anime === "topanime") {
-    isAnimeRoute = true;
-  }
-
   return (
     <>
-      <LinkRouterWrapper
-        href={`/anime/${getCurrentYear(true)}/${getCurrentSeasonPath(
-          null,
-          true
-        )}`}
-        className="
-            block
-            p-5
-            hover:bg-blue-500
-            rounded-2xl
-          "
-      >
-        <p>カイル</p>
-      </LinkRouterWrapper>
-      {hydrated && isAnimeRoute && (
-        <LinkRouterWrapper
-          href={`/topanime`}
-          className="
-            block
-            p-5
-            hover:bg-blue-500
-            rounded-2xl
-          "
-        >
-          <p>Top Anime</p>
-        </LinkRouterWrapper>
-      )}
+      <NavLink href="/anime" match="none" className="font-semibold">
+        カイル
+      </NavLink>
+      {/* On phones the brand link (same destination) stands in for "Seasons". */}
+      <NavLink href="/anime" className="hidden sm:flex">
+        Seasons
+      </NavLink>
+      <NavLink href="/topanime">Top Anime</NavLink>
     </>
   );
 }

@@ -1,11 +1,9 @@
 import { redirect } from "next/navigation";
+import { currentSeasonPath } from "@/lib/season";
 
-export default async function Anime() {
-  //redirect("/anime/2022/fall");
+// Resolved per request: a build-time redirect would freeze "current season" at deploy time.
+export const dynamic = "force-dynamic";
 
-  return (
-    <div>
-      <div>animev3</div>
-    </div>
-  );
+export default function AnimeIndexPage() {
+  redirect(currentSeasonPath());
 }

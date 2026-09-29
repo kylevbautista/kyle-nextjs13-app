@@ -1,11 +1,26 @@
-import PageBase from "../../../components/auth/signIn/PageBase";
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import PageBase, { SignInCard } from "../../../components/auth/signIn/PageBase";
 
-/**
- * Can't invalidate cache in nextjs13 with graphqlrequest
- * Have to use native fetch api to make graphql post request
- * @returns data
- */
+export const metadata: Metadata = {
+  title: "Sign in",
+};
 
-export default function Home() {
-  return <PageBase />;
+export default function SignInPage() {
+  return (
+    <main className="flex justify-center px-4 py-10 sm:py-16">
+      <Suspense
+        fallback={
+          <SignInCard>
+            <div
+              aria-hidden="true"
+              className="h-12 w-full animate-pulse rounded-xl bg-[rgb(53,53,53)]"
+            />
+          </SignInCard>
+        }
+      >
+        <PageBase />
+      </Suspense>
+    </main>
+  );
 }

@@ -1,234 +1,88 @@
-# Kyle's Anime Tracking Application 🎌
+# Kyle's Anime Tracker 🎌
 
-A production-grade anime discovery and watchlist platform that helps users browse seasonal anime, build personalized watchlists, and track episode air dates in real-time.
+Browse every anime airing this season with live episode countdowns, search all of AniList, and keep a
+list of what you're watching with progress, scores and dates.
 
-**Live Site:** [kylevb.com](https://kylevb.com)
+**Live site:** [kylevb.com](https://kylevb.com)
 
-## 🎯 Overview
+## ✨ Features
 
-An anime tracking web app that combines real-time countdown timers, intelligent prefetching, and multi-provider authentication to create a seamless anime browsing experience. Think of it as your personalized anime encyclopedia with social features.
+- **Seasonal browser** (`/anime/<year>/<season>`): every TV show, movie, OVA and special premiering in a
+  season, with live per-episode countdowns. Sort by countdown or popularity, step between seasons,
+  and infinite scroll through AniList's pages. `/anime` always lands on the current season.
+- **Search** (`/search`): any anime on AniList, including older seasons and ONAs.
+- **My List** (`/user/<id>`): a full tracker. Statuses (Watching, Plan to Watch, Completed, Paused,
+  Dropped), +1 episode, score, start/finish dates, filters and sorting. Shows auto-complete at the
+  final episode. Lists are public by link; only you can edit yours.
+- **Airing Schedule** (`/mylist/<id>`): the shows on your list that have an upcoming episode, grouped
+  by weekday (Pacific Time).
+- **Top Anime** (`/topanime`): MyAnimeList's ranking via Jikan, with a "Track" shortcut into search.
+- **Google sign-in** via NextAuth, with sessions stored in MongoDB.
 
-## ✨ Key Features
+## 🛠️ Tech stack
 
-### 🔥 Real-Time Features
-- **Live Episode Countdowns**: Precise countdown timers showing days, hours, minutes, and seconds until the next episode airs
-- **Automatic Season Detection**: Smart routing that automatically redirects to the current anime season
-- **Dynamic Episode Updates**: Automatic refresh of episode air dates from AniList API
-- **Toast Notifications**: Real-time feedback for user actions (add/remove from watchlist)
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3.4 · NextAuth v4 · MongoDB
+(native driver) · SWR · Vitest. Data comes from [AniList](https://anilist.co) (GraphQL) and
+[Jikan](https://jikan.moe) (MyAnimeList). Hosted on Vercel.
 
-### 📚 Content Discovery
-- **Seasonal Anime Browse**: Explore anime organized by year and season (Winter, Spring, Summer, Fall)
-- **Multiple Sorting Options**: Toggle between "Popularity" and "Countdown" sorting
-- **Top Anime Rankings**: Dedicated page for highly-rated anime
-- **Detailed Anime Cards**: Rich information including studios, genres, synopsis, scores, and air dates
+## 🚦 Getting started
 
-### 👤 User Features
-- **Personal Watchlist**: Build and manage your custom "My List" of anime to follow
-- **Multi-Provider Auth**: Login with GitHub, Twitter, or Google via NextAuth
-- **Persistent Sessions**: MongoDB-backed session storage across all devices
-- **Optimistic UI Updates**: Instant feedback with cache manipulation for smooth UX
+Prerequisites: Node.js 22, a MongoDB database (Atlas or local), and Google OAuth credentials.
 
-### 🔗 External Integrations
-- Direct links to MyAnimeList, Crunchyroll, AniWatch, and other anime platforms
-- One-click access to streaming services and anime databases
-
-## 🚀 Performance Optimizations
-
-### Smart Data Loading
-- **Lazy Loading with Intersection Observer**: Custom `useLazyLoad` hook loads content as users scroll (2 items at a time)
-- **Intelligent Prefetching**: `usePrefetch` hook automatically prefetches adjacent seasons for instant navigation
-  - Example: Viewing Winter 2024 → prefetches Spring 2024, Fall 2023, etc.
-- **Static Site Generation (SSG)**: Pre-builds 24+ season pages (5 years × 4 seasons) with 60-second revalidation
-
-### API Rate Limiting Protection
-- Monitors AniList API's `x-ratelimit-remaining` header
-- Automatically throttles requests when approaching limits (< 20 calls remaining)
-- Sleeps for 1.5 seconds to prevent rate limit violations
-- Request timeout protection to prevent hanging requests
-
-### State Management
-- **SWR Caching**: Implements `useSWRConfig()` for efficient cache manipulation
-- **LocalStorage Integration**: Tracks list refresh timestamps to avoid redundant API calls
-- **Race Condition Prevention**: Safe async operation patterns
-- **Deep Cloning for Sorting**: Prevents mutation of original data
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Next.js 16.1.1** with App Router
-- **React 19.2.3** - Latest React with concurrent features
-- **TypeScript 5.0.4** - Full type safety
-- **Tailwind CSS 3.2.2** - Utility-first styling with custom responsive breakpoints
-- **SWR 2.0** - Data fetching and caching
-- **React Hot Toast** - Elegant notification system
-- **NProgress** - Page loading indicators
-
-### Backend
-- **Next.js API Routes** - Serverless API endpoints
-- **NextAuth.js 4.24.5** - Multi-provider authentication
-- **MongoDB 4.13** + **Mongoose 6.8.1** - Data persistence
-- **Node.js 22.x** - Runtime environment
-
-### External APIs
-- **AniList GraphQL API** - Primary anime data source (50 items per page)
-- **Jikan API** - Alternative MyAnimeList data source
-- **Vercel Analytics** - Performance monitoring
-
-## 📁 Project Structure
-
-```
-/app                       # Next.js app directory with routes
-  /anime/[...anime]       # Dynamic catch-all route for seasons
-  /mylist                 # User's personal anime list
-  /top                    # Top-rated anime page
-/components               # React components
-  /animev3               # Main anime card and grid components
-  /mylist                # Watchlist components
-  /auth                  # Authentication components
-  /common                # Shared components (providers, headers)
-  /utils                 # Utility functions and custom hooks
-/server                   # Backend logic
-  /auth                  # NextAuth configuration
-  /mongodb               # Mongoose models (User, AnimeInfo)
-  /lib                   # Database utilities
-/styles                   # Global CSS and Tailwind configuration
-/@types                   # TypeScript type definitions
+```bash
+npm ci
+touch .env.local          # then fill it in (see below)
+npm run dev               # http://localhost:3000
 ```
 
-## 🎨 Advanced Implementations
+`.env.local`:
 
-### Custom Hooks
-- **`useLazyLoad`**: Intersection Observer-based lazy loading with configurable thresholds
-- **`usePrefetch`**: Smart prefetching of adjacent season data
-- **`useInterval`**: Safe interval hook with cleanup and pause functionality
-- **`useLazyFetch`**: Combines lazy loading with data fetching
-
-### Clever Patterns
-- **Boundary Components**: Async server components that fetch data and pass to client components
-- **Provider Pattern**: Session, Hydration, and Header context providers wrap the application
-- **Duplicate Model Prevention**: Try-catch patterns in Mongoose models prevent hot reload errors
-- **Bulk Operations**: Efficient batch MongoDB updates for multiple anime records
-
-### Database Design
-- **Embedded Documents**: User model with nested anime list arrays
-- **Compound Indexes**: Optimized queries for user lookups
-- **Safe Upserts**: Proper update/insert logic with duplicate prevention
-
-## 🔧 Configuration Highlights
-
-### Build Optimizations
-- **Single-Threaded SSG**: Prevents API rate limiting during static generation
-- **Optimized CSS Compilation**: Tailwind JIT compilation
-- **Remote Image Optimization**: Configured for anilist.co images
-
-### Environment Variables
 ```env
-# AniList GraphQL API
+MONGODB_URI=mongodb+srv://…
+NEXTAUTH_SECRET=…                 # e.g. `openssl rand -base64 32`
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+
+# Optional (these are the defaults)
 GRAPHQL_ANILIST=https://graphql.anilist.co
 NEXT_PUBLIC_GRAPHQL_ANILIST=https://graphql.anilist.co
+JINKANV4_URL=https://api.jikan.moe/v4
+NEXT_PUBLIC_JINKANV4_URL=https://api.jikan.moe/v4
 
-# MongoDB Connection
-MONGODB_URI=your_mongodb_connection_string
-
-# NextAuth Configuration
-NEXTAUTH_URL=your_deployment_url
-NEXTAUTH_SECRET=your_secret_key
-
-# OAuth Providers
-GITHUB_ID=your_github_client_id
-GITHUB_SECRET=your_github_client_secret
-TWITTER_CLIENT_ID=your_twitter_client_id
-TWITTER_CLIENT_SECRET=your_twitter_client_secret
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
+# Optional extra providers (registered only when both values are set; the sign-in page shows Google)
+GITHUB_ID=…
+GITHUB_SECRET=…
+TWITTER_CLIENT_ID=…
+TWITTER_CLIENT_SECRET=…
 ```
 
-## 🚦 Getting Started
-
-### Prerequisites
-- Node.js 22.x
-- MongoDB instance (local or Atlas)
-- OAuth credentials from GitHub, Twitter, and/or Google
-
-### Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/kyle-nextjs13-app.git
-cd kyle-nextjs13-app
-```
-
-2. Install dependencies
-```bash
-npm install
-```
-
-3. Set up environment variables
-```bash
-cp .env.example .env.local
-# Edit .env.local with your credentials
-```
-
-4. Run the development server
-```bash
-npm run dev
-```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-### Available Scripts
+### Scripts
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm start            # Start production server
-npm run lint         # Run ESLint
-npm run clean        # Remove node_modules and .next
-npm run resetlocal   # Clean and reinstall dependencies
+npm run dev         # development server
+npm run build       # production build (prerenders 28 season pages from AniList, so it needs network)
+npm start           # serve the production build
+npm run typecheck   # tsc --noEmit
+npm run lint        # ESLint (next/core-web-vitals + React Compiler rules)
+npm test            # Vitest unit tests
+npm run check       # typecheck + lint + tests
 ```
 
-## 📊 Performance Metrics
+## 🧭 How it works
 
-- **SSG**: Pre-renders 24+ pages at build time
-- **Lazy Loading**: Reduces initial bundle size by ~40%
-- **Prefetching**: Near-instant navigation between seasons
-- **Rate Limit Protection**: Handles 90 requests/minute safely
-- **Optimistic UI**: Sub-100ms perceived action feedback
+- **Season pages** are ISR (regenerated at most every 5 minutes). Page 1 comes from AniList on the
+  server; further pages load in the browser. If AniList fails, the last good page keeps being served.
+- **Your list** is stored in your MongoDB user document as sanitized AniList snapshots plus your
+  progress. Every write is validated and sanitized on the server, and descriptions are sanitized
+  again when rendered.
+- **Air dates stay fresh**: when a list is viewed and its snapshot is older than 10 minutes, the
+  server re-fetches airing data for shows that haven't finished.
+- **Rate limits**: AniList allows about 30 requests a minute, so the app queues and throttles its
+  requests and the build prerenders on a single worker.
 
-## 🎓 Technical Highlights
-
-### Why This Project Is Cool
-
-1. **Production-Ready Error Handling**: Request timeouts, rate limiting, duplicate prevention
-2. **Real-Time UX Without Performance Degradation**: Live countdowns using efficient timestamp calculations
-3. **Intelligent Data Loading**: Predictive prefetching based on user navigation patterns
-4. **Sophisticated State Management**: Multi-layer caching with SWR + LocalStorage + Context API
-5. **SEO Optimized**: Dynamic metadata generation + SSG for search engine visibility
-6. **Edge Case Coverage**: Handles race conditions, hot reload issues, API throttling
-
-### Notable Code Patterns
-
-- **Countdown Timer Logic**: Converts Unix timestamps to human-readable formats updated every second
-- **Deep Cloning for Safety**: Prevents accidental state mutations during sort operations
-- **Race Condition Prevention**: Local option toggler pattern for async state sync
-- **Request Timeout Protection**: `fetchWithTimeout` utility prevents hanging requests
-- **Worker Thread Limiting**: Next.js config restricts builds to prevent API throttling
-
-## 🐛 Known Issues & Future Improvements
-
-### Potential Enhancements
-- [ ] Add anime search functionality
-- [ ] Implement user reviews and ratings
-- [ ] Add anime recommendation engine
-- [ ] Mobile app with React Native
-- [ ] WebSocket support for real-time updates
-- [ ] Advanced filtering (genre, studio, year range)
-
-### Dependencies to Update
-- MongoDB: 4.13 → 6.21 (major version update)
-- Mongoose: 6.8 → 8.21 (requires migration)
-- Tailwind CSS: 3.2 → 4.x (major rewrite)
-- Prettier: 2.8 → 3.7 (stable upgrade)
+See [`CLAUDE.md`](./CLAUDE.md) for the full architecture: route map, data flows, data model and
+conventions.
 
 ## 📄 License
 
@@ -236,11 +90,6 @@ This project is private and not licensed for public use.
 
 ## 🙏 Acknowledgments
 
-- **AniList** - For providing the comprehensive GraphQL anime API
-- **Vercel** - For hosting and analytics
-- **Next.js Team** - For the amazing framework
-- **The Anime Community** - For inspiration and feedback
-
----
+[AniList](https://anilist.co) and [Jikan](https://jikan.moe) for the APIs, and Vercel for hosting.
 
 Built with ❤️ by Kyle | [kylevb.com](https://kylevb.com)
