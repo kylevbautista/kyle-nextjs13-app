@@ -42,8 +42,9 @@ export default function HeroNextUp({ ids }: { ids: number[] }) {
     } else {
       resting = {
         text: "Those episodes just aired. Fresh countdowns are on the season page.",
-        href: "/anime",
-        label: "Browse this season",
+        // In preview, "/anime" is still the ending season: use the page's own link.
+        href: season.browseHref,
+        label: season.browseLabel,
       };
     }
   }

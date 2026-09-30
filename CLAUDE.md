@@ -78,7 +78,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 
 | URL | Files | Rendering | Auth | What |
 |---|---|---|---|---|
-| `/` | `app/(home)/{page,opengraph-image}.tsx`, `components/home/*`, `server/lib/landing.ts`, `lib/landing.ts` | **ISR 600s**, live AniList data; never throws | – | Landing (§5.7): hero with a live "Next episodes" card, Magic Sense countdowns, tracker demo, schedule preview, search console, Tempest Archive, FAQ, #quests (sign-up pitch / Quest Log), the "I / am / atomic" post-credits. Session UI is client-only; `?add=<id>&as=<status>` finishes a sign-in intent |
+| `/` | `app/(home)/{page,opengraph-image}.tsx`, `components/home/*`, `server/lib/landing.ts`, `lib/landing.ts` | **ISR 600s**, live AniList data | – | Landing (§5.7): hero with a live "Next episodes" card, Magic Sense countdowns, tracker demo, schedule preview, search console, Tempest Archive, FAQ, #quests (sign-up pitch / Quest Log), the "I / am / atomic" post-credits. Session UI is client-only; `?add=<id>&as=<status>` finishes a sign-in intent |
 | `/anime`, `/anime/<year>` | `proxy.ts` (fallback: `app/anime/page.tsx`, force-dynamic) | 307 | – | → current season, computed **per request** |
 | `/anime/<year>/<season>` | `app/anime/layout.tsx`, `app/anime/[...anime]/{page,Boundary,error,loading}.tsx`, `components/animev3/*` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4) | – | Season grid (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
 | `/search?q=&page=` | `app/search/*` | dynamic | – | AniList title search, 30/page (§5.4) |
@@ -118,7 +118,7 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Season header | "Summer 2026 Anime", months, prev/next, "Current season →" | `useSelectedLayoutSegments()` reads the child route; prev/next are `<Link>`s, hidden outside the valid year window | `layoutSelector/HeaderSelector*.tsx`, `lib/season.ts` |
 | Anime card | Title, genres, cover, countdown, score, studio, premiere (PT), source, eps × min, synopsis, links | `AnimeInfoGrid({ info })`, shared by season, search and schedule pages | `components/animev3/AnimeInfoGrid.tsx` |
 | Live countdown | "EP13: 1d 7h 14m 52s", "Airing now", or a status ("Finished · 12 eps") | One shared 1 s clock (`useNow`, null during SSR, so no hydration mismatch) | `components/utils/useNow.ts`, `lib/anime/airing.ts` |
-| List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card; landing options: add status/label, `block` size, sign-in intent) on `useMyList()`: SWR key `/api/anime-list/ids`, optimistic with rollback, toasts; `count` = list size | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
+| List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card; landing options: add status/label, `block` size, sign-in intent) on `useMyList()`: SWR key `[/api/anime-list/ids, userId]` (a 401 is an error, never an empty list), optimistic with rollback, toasts; `count` = list size incl. in-flight changes, `confirmedCount` = server-confirmed | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
 | Search | Any anime incl. older seasons, movies, ONAs | Server `searchAnime()`; result links don't prefetch (AniList budget) | `app/search/*`, `server/lib/anilist.ts` |
 | My List | Header + copy link; tabs All/Watching/Plan to Watch/Completed/Paused/Dropped with counts; filters (text, year, season, airing day PT, release status); sort (next episode, title, my score, progress, recently added) | One client root with local state; owner-only +1 / Edit dialog (status, progress, score, start/finish dates, remove); PATCH → server-normalized `userData`; background `router.refresh()` 2 s after edits | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)` |
 | Tracker rules | Auto-complete at the last episode, dates auto-filled, score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
@@ -256,9 +256,12 @@ that rebuilds the adapter after a failed Mongo connection (`server/auth/index.ts
    `landing-extras`, through `enqueueAniListRequest`. `parseLandingExtras()` validates each part on
    its own; images only from `https://s4.anilist.co/`. **Never use `pageInfo.total`** (AniList
    reports 5000).
-4. **Never throws.** Season down → `season: null`, no countdowns, fallback panels. Extras down →
-   `TEMPEST_FALLBACK` (static, "Find it" search links instead of adds) and a "50+" count. So at most
-   2 AniList requests per regeneration, and the degraded render is cached ≤ 10 min.
+4. **Failures.** Season request down on a production server → `loadLandingData` **throws**, so ISR
+   keeps the last good page and retries on the next request (like the season pages). During
+   `next build` (`NEXT_PHASE`) and `next dev` it renders fallbacks instead: `season: null`, no
+   countdowns, fallback panels. Extras down (any phase) → `TEMPEST_FALLBACK` (static, "Find it"
+   search links instead of adds) and a "50+" count. Either way, at most 2 AniList requests per
+   regeneration.
 5. **Client.** Only `{generatedAt, season, mediaById (≤ 21 full snapshots, so adds store complete
    data), continuingIds}` reach `LandingProvider`. Islands pick rows with `useVisibleAiring()`
    (server time until hydrated, then a 30 s clock; aired rows are backfilled in place). The landing
@@ -307,10 +310,10 @@ drops duplicates, re-sanitizes, and bounds dates.
 
 | Layer | Where | Notes |
 |---|---|---|
-| ISR | season pages 300 s, `/topanime` 3600 s, `/` 600 s | Season/Top Anime: upstream failure **throws** → last good page kept. `/` never throws: it renders fallbacks |
-| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s | `revalidateTag("landing-extras")` refreshes it; only 200s are cached |
+| ISR | season pages 300 s, `/topanime` 3600 s, `/` 600 s | Season/Top Anime: upstream failure **throws** → last good page kept. `/` throws only for the season request (the build renders fallbacks) |
+| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached |
 | Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
-| SWR | `/api/anime-list/ids` (list membership, all cards) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
+| SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode), under `app/anime/layout.tsx` | |
 | Local state | My List (`MyList.tsx`), Top Anime list, season `PageBase` | |
 | Shared clock | `useNow()` | `useSyncExternalStore`; one interval for the page |
@@ -340,7 +343,7 @@ server/                     server-only
   lib/anilist.ts              anilistQuery (throws AniListError, 429 retry), fetchMediaByIds, searchAnime
   lib/userList.ts             resolveListOwner, readEntries, loadListEntries, refreshEntriesIfStale, getListIds
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
-  lib/landing.ts              loadLandingData (≤ 2 AniList requests, never throws), fetchLandingExtras
+  lib/landing.ts              loadLandingData (≤ 2 AniList requests; throws only at runtime when the season fails), fetchLandingExtras
 app/
   layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster, Analytics}
   error.tsx, global-error.tsx, not-found.tsx
@@ -421,8 +424,8 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 ## 10. Known limitations / next steps
 
 - Lists are public to anyone with the link; there's no private-list setting.
-- Landing: if AniList fails during a regeneration, the degraded `/` (no countdowns) is cached for up
-  to 10 minutes. The Tensura data (`TEMPEST_IDS`, short labels, `TEMPEST_FALLBACK`) is static and
+- Landing: a build while AniList is down ships a fallback `/` (no countdowns) until the first
+  successful regeneration (≤ 10 min after traffic). The Tensura data (`TEMPEST_IDS`, short labels, `TEMPEST_FALLBACK`) is static and
   needs a code change for new franchise entries.
 - A stale ISR season page is corrected in the browser about a second after load (§5.1). Visitors
   without JavaScript still get the cached copy until Next's background rebuild lands.

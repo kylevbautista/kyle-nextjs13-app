@@ -13,12 +13,18 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useMyList } from "@/components/utils/useMyList";
-import { displayTitle, isListStatus, type AnimeMedia, type ListStatus } from "@/lib/anime/types";
+import {
+  LIST_STATUS_LABELS,
+  displayTitle,
+  type AnimeMedia,
+  type ListStatus,
+} from "@/lib/anime/types";
 import {
   ADD_INTENT_KEY,
   QUEST_TARGET,
   TIER_LABELS,
   TIER_THRESHOLDS,
+  evolutionTier,
   nextTier,
   parseAddIntent,
   showsLabel,
@@ -182,14 +188,19 @@ function QuestLogLoading() {
 // ---------------------------------------------------------------------------
 
 function SignedInQuestLog({ session, airingIds }: { session: SignedIn; airingIds: number[] }) {
-  const { userId, firstName: name, count, tier } = session;
+  const { userId, firstName: name, count, confirmedCount, tier } = session;
   const { isInList } = useMyList();
   const flags = useQuestFlags(userId);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Visuals follow the optimistic count (in-flight adds included); the
+  // announcements and analytics below wait for the server (confirmedCount),
+  // so a failed add never reports a quest or an evolution it rolls back.
   const done1 = count !== null && count >= QUEST_TARGET;
   const allCleared = done1 && flags.schedule && flags.share;
+  const confirmedDone1 = confirmedCount !== null && confirmedCount >= QUEST_TARGET;
+  const confirmedTier = evolutionTier(true, confirmedCount);
 
   // Quest 1's cards exclude what was already on the list when it loaded, so a
   // show added here stays put (as "✓ On my list") instead of vanishing
@@ -205,8 +216,13 @@ function SignedInQuestLog({ session, airingIds }: { session: SignedIn; airingIds
     schedule: boolean;
     share: boolean;
     message: StatusMessage;
-  }>({ count, schedule: flags.schedule, share: flags.share, message: null });
-  if (seen.count !== count || seen.schedule !== flags.schedule || seen.share !== flags.share) {
+  }>({ count: confirmedCount, schedule: flags.schedule, share: flags.share, message: null });
+  if (
+    seen.count !== confirmedCount ||
+    seen.schedule !== flags.schedule ||
+    seen.share !== flags.share
+  ) {
+    const count = confirmedCount;
     let message = seen.message;
     if (seen.count !== null && count !== null && count > seen.count) {
       if (seen.count < TIER_THRESHOLDS.lord && count >= TIER_THRESHOLDS.lord) {
@@ -243,23 +259,23 @@ function SignedInQuestLog({ session, airingIds }: { session: SignedIn; airingIds
     cleared: boolean;
   } | null>(null);
   useEffect(() => {
-    if (count === null) return;
+    if (confirmedCount === null) return;
     const base = baseline.current;
     if (!base) {
       baseline.current = {
-        done1,
+        done1: confirmedDone1,
         schedule: flags.schedule,
         share: flags.share,
-        tier,
+        tier: confirmedTier,
         cleared: allCleared,
       };
       return;
     }
-    if (done1 && !base.done1) trackOnce("quest_complete", { quest: 1 });
+    if (confirmedDone1 && !base.done1) trackOnce("quest_complete", { quest: 1 });
     if (flags.schedule && !base.schedule) trackOnce("quest_complete", { quest: 2 });
     if (flags.share && !base.share) trackOnce("quest_complete", { quest: 3 });
-    if (tier !== "slime" && TIER_RANK[tier] > TIER_RANK[base.tier]) {
-      trackOnce("evolution", { tier });
+    if (confirmedTier !== "slime" && TIER_RANK[confirmedTier] > TIER_RANK[base.tier]) {
+      trackOnce("evolution", { tier: confirmedTier });
     }
     if (allCleared && !base.cleared) {
       baseline.current = { ...base, cleared: true };
@@ -270,7 +286,7 @@ function SignedInQuestLog({ session, airingIds }: { session: SignedIn; airingIds
         headingRef.current?.focus();
       }
     }
-  }, [count, done1, flags.schedule, flags.share, tier, allCleared]);
+  }, [confirmedCount, confirmedDone1, flags.schedule, flags.share, confirmedTier, allCleared]);
 
   const header = allCleared ? (
     <>
@@ -714,7 +730,9 @@ function AddIntentHandler({
   const params = useSearchParams();
   const addId = parseAddParam(params.get("add"));
   const asParam = params.get("as");
-  const urlStatus = isListStatus(asParam) ? asParam : undefined;
+  // Only the status the landing itself generates (Tempest "+ Plan to Watch"):
+  // a shared link must not be able to file a show under Dropped or Completed.
+  const urlStatus: ListStatus | undefined = asParam === "planning" ? "planning" : undefined;
   const { media } = useLanding();
   const { signedIn, loaded, add, isInList } = useMyList();
   const prompt = useSyncExternalStore(subscribePrompt, getPrompt, getServerPrompt);
@@ -793,7 +811,8 @@ function AddIntentHandler({
     <div className="mt-4 rounded-xl border border-[#95ccff]/30 bg-[#0a1528]/80 p-4">
       <p className="text-[#e6f3ff]">
         <SageTag kind="Question" />
-        Add {prompt.title} to your list?
+        Add {prompt.title} to your list
+        {prompt.status ? ` as ${LIST_STATUS_LABELS[prompt.status]}` : ""}?
       </p>
       <div className="mt-3 flex flex-wrap gap-3">
         <button

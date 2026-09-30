@@ -117,6 +117,7 @@ describe("loadLandingData", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -183,7 +184,7 @@ describe("loadLandingData", () => {
     expect(Object.keys(data.mediaById).map(Number).sort((a, b) => a - b)).toEqual([1, 2, 4]);
   });
 
-  it("never throws when AniList is down, and still spends at most 2 requests", async () => {
+  it("outside a production server, renders fallbacks when AniList is down (at most 2 requests)", async () => {
     fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
       calls.push({ ...JSON.parse(String(init.body)), init });
       throw new TypeError("fetch failed");
@@ -199,6 +200,47 @@ describe("loadLandingData", () => {
       mediaById: {},
     });
     expect(data.tempest).toMatchObject({ live: false, entries: TEMPEST_FALLBACK });
+  });
+
+  describe("on a production server", () => {
+    const failEverything = () =>
+      fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+        calls.push({ ...JSON.parse(String(init.body)), init });
+        throw new TypeError("fetch failed");
+      });
+
+    it("throws when the season request fails, so ISR keeps the last good page", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PHASE", "");
+      failEverything();
+      const promise = loadLandingData();
+      const outcome = expect(promise).rejects.toThrow(/keeping the last good page/);
+      await vi.runAllTimersAsync();
+      await outcome;
+      // It gives up before spending anything on the extras.
+      expect(extrasCalls()).toHaveLength(0);
+    });
+
+    it("still renders the fallbacks during next build", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PHASE", "phase-production-build");
+      failEverything();
+      const data = await load();
+      expect(data.season).toBeNull();
+      expect(data.tempest.live).toBe(false);
+    });
+
+    it("degrades (doesn't throw) when only the extras fail", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_PHASE", "");
+      route(
+        () => respond(seasonBody()),
+        () => respond({}, 500)
+      );
+      const data = await load();
+      expect(data.airingIds).toEqual([2, 4, 1]);
+      expect(data.tempest.live).toBe(false);
+    });
   });
 
   it("keeps the season live when only the extras fail", async () => {

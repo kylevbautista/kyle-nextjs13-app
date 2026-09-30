@@ -18,7 +18,9 @@ import { loadLandingData } from "@/server/lib/landing";
  * The landing page. Static and ISR (10 min): it reads no cookies, headers or
  * search params, and nothing on the server knows who is visiting. Session UI
  * lives in client islands (components/home/useLandingSession.ts).
- * loadLandingData() never throws and spends at most 2 AniList requests.
+ * loadLandingData() spends at most 2 AniList requests. When AniList fails
+ * during a regeneration it throws, and ISR keeps the last good page; the
+ * build renders fallbacks instead.
  */
 export const revalidate = 600;
 

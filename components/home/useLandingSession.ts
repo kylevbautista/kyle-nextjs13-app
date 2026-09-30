@@ -18,14 +18,16 @@ export type LandingSession =
       userId: string;
       /** Shown only to its owner. */
       firstName: string | null;
-      /** List size (useMyList().count); null while the ids load. */
+      /** List size including in-flight adds (useMyList().count); null while the ids load. */
       count: number | null;
+      /** List size the server has confirmed: milestones and analytics use this one. */
+      confirmedCount: number | null;
       tier: EvolutionTier;
     };
 
 export function useLandingSession(): LandingSession {
   const { data: session, status } = useSession();
-  const { count } = useMyList();
+  const { count, confirmedCount } = useMyList();
   const userId = status === "authenticated" ? (session?.objectId ?? null) : null;
   const name = session?.user?.name ?? null;
 
@@ -37,7 +39,8 @@ export function useLandingSession(): LandingSession {
       userId,
       firstName: firstName(name),
       count,
+      confirmedCount,
       tier: evolutionTier(true, count),
     };
-  }, [status, userId, name, count]);
+  }, [status, userId, name, count, confirmedCount]);
 }
