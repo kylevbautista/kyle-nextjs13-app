@@ -160,7 +160,7 @@ function QuestLogLoading() {
       {/* w-full + max-w: a fixed width here would be this column's min-content
           width and widen the page on phones (the body grid's column is auto). */}
       <div aria-hidden="true" className="js-only flex flex-col items-center gap-5">
-        <div className="h-[136px] w-[160px] max-w-full rounded-full bg-white/5 motion-safe:animate-pulse" />
+        <div className="h-[136px] w-[160px] max-w-full rounded-full bg-white/5 animate-pulse" />
         <div className="h-10 w-full max-w-60 rounded-md bg-white/5" />
         <div className="h-12 w-full max-w-[26rem] rounded-lg bg-white/10" />
         <div className="h-6 w-full max-w-80 rounded bg-white/5" />
@@ -367,7 +367,7 @@ function StateIcon({ done, n }: { done: boolean; n: number }) {
             d="M5 12.5l4.5 4.5L19 7.5"
             pathLength={1}
             strokeDasharray="1"
-            className="motion-safe:animate-draw-check"
+            className="animate-draw-check"
           />
         </svg>
       </span>
@@ -485,7 +485,7 @@ function PredatorQuest({
         className="-mt-1 mb-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
       >
         <div
-          className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500 motion-reduce:transition-none"
+          className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500"
           style={{ width: `${(progress / QUEST_TARGET) * 100}%` }}
         />
       </div>
@@ -517,7 +517,7 @@ function PredatorQuest({
 function CardPlaceholder() {
   return (
     <div className="overflow-hidden rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)]">
-      <div className="aspect-[2/3] bg-white/5 motion-safe:animate-pulse" />
+      <div className="aspect-[2/3] bg-white/5 animate-pulse" />
       <div className="flex flex-col gap-2 p-3">
         <div className="h-8 rounded bg-white/5" />
         <div className="h-9 rounded-lg bg-white/10" />
@@ -665,7 +665,7 @@ function EvolutionCard({ count, tier }: { count: number | null; tier: EvolutionT
         <>
           <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500 motion-reduce:transition-none"
+              className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500"
               style={{ width: `${ratio * 100}%` }}
             />
           </div>

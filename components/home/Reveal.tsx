@@ -13,11 +13,11 @@ import { SLIME_COLORS } from "./slimeArt";
 /**
  * One IntersectionObserver for every `[data-reveal]` element on the landing.
  *
- * On mount (unless reduced motion is on) it marks only the elements whose top
- * is below the viewport as `data-reveal="pending"` (hidden by globals.css under
- * motion-safe), then flips each to "done" as it enters view. It only touches
- * DOM attributes; there is no React state. No-JS and reduced-motion visitors,
- * and anything visible at load, are never hidden.
+ * On mount it marks only the elements whose top is below the viewport as
+ * `data-reveal="pending"` (hidden by globals.css), then flips each to "done"
+ * as it enters view. It only touches DOM attributes; there is no React state.
+ * No-JS visitors and anything visible at load are never hidden. Landing motion
+ * deliberately runs regardless of the operating system's motion preference.
  *
  * It also hosts one delegated click listener for server-rendered links that
  * carry `data-cta` / `data-cta-location` (server components can't attach
@@ -26,7 +26,6 @@ import { SLIME_COLORS } from "./slimeArt";
 export default function Reveal() {
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
     const viewportBottom = window.innerHeight;
     const pending = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]")).filter(
@@ -178,7 +177,7 @@ const isGulp = (from: GulpKey, to: GulpKey) =>
  * and a "+1" floating up) each time `gulpKey` changes after mount, by
  * re-keying itself: no effect, the previous key is state derived during
  * render. The first key (e.g. the list count arriving) never gulps, and a
- * count going down (a removal) doesn't either. Motion-safe only.
+ * count going down (a removal) doesn't either.
  */
 export function SlimeGulp({
   gulpKey,
@@ -198,7 +197,7 @@ export function SlimeGulp({
   return (
     <g
       key={seen.gulps}
-      className={gulping ? "slime-gulping motion-safe:animate-slime-gulp" : undefined}
+      className={gulping ? "slime-gulping animate-slime-gulp" : undefined}
       style={style}
     >
       {children}
@@ -214,7 +213,7 @@ export function SlimeGulp({
           fontSize="26"
           fontWeight={800}
           fontFamily="ui-sans-serif, system-ui, sans-serif"
-          className="motion-safe:animate-slime-sparkle"
+          className="animate-slime-sparkle"
         >
           +1
         </text>

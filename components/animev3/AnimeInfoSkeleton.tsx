@@ -13,7 +13,7 @@ export default function AnimeInfoSkeleton({ forwardedRef }: AnimeInfoSkeletonPro
     <div
       ref={forwardedRef}
       aria-hidden="true"
-      className="grid animate-pulse grid-rows-[60px_201px_32px] rounded-sm border-[rgb(53,53,53)] bg-[rgb(38,38,38)] shadow-md dark:bg-[rgb(30,30,30)] sm:grid-rows-[60px_250px_32px]"
+      className="grid min-w-0 animate-pulse grid-rows-[60px_201px_auto] rounded-sm border-[rgb(53,53,53)] bg-[rgb(38,38,38)] shadow-md dark:bg-[rgb(30,30,30)] sm:grid-rows-[60px_250px_auto] md:grid-rows-[60px_250px_32px]"
     >
       <div className="grid h-[60px] grid-rows-[38px_22px] place-items-center border-b border-inherit">
         <div className="flex h-full w-full items-center justify-center">
@@ -24,7 +24,7 @@ export default function AnimeInfoSkeleton({ forwardedRef }: AnimeInfoSkeletonPro
         </div>
       </div>
 
-      <div className="grid grid-cols-[auto_1fr]">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)]">
         <div className="relative h-[201px] w-[135px] border-b border-l border-r border-[rgb(53,53,53)] sm:h-[250px] sm:w-[175px]">
           <div className="flex h-full items-center justify-center">
             <svg
@@ -45,7 +45,7 @@ export default function AnimeInfoSkeleton({ forwardedRef }: AnimeInfoSkeletonPro
           </div>
         </div>
 
-        <div className="grid grid-rows-[25px_25px_25px_126px] border-[rgb(53,53,53)] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px]">
+        <div className="grid min-w-0 grid-cols-1 grid-rows-[25px_40px_40px_96px] border-[rgb(53,53,53)] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px]">
           <div className="flex items-center justify-center border-b border-inherit">
             <div className={`h-2.5 w-[94px] ${BAR}`}></div>
           </div>
@@ -67,12 +67,12 @@ export default function AnimeInfoSkeleton({ forwardedRef }: AnimeInfoSkeletonPro
         </div>
       </div>
 
-      <div className="flex h-[32px] items-center justify-between gap-2 px-2">
-        <div className={`h-[24px] w-[108px] ${BAR}`}></div>
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-2 px-2 py-1 md:h-[32px] md:min-h-0 md:flex-nowrap md:py-0">
+        <div className={`h-11 w-[108px] md:h-[24px] ${BAR}`}></div>
         <div className="flex items-center gap-2">
-          <div className="h-[26px] w-[26px] rounded-full bg-gray-700"></div>
-          <div className="h-[26px] w-[26px] rounded-full bg-gray-700"></div>
-          <div className="h-[26px] w-[26px] rounded-full bg-gray-700"></div>
+          <div className="h-11 w-11 rounded-full bg-gray-700 md:h-[26px] md:w-[26px]"></div>
+          <div className="h-11 w-11 rounded-full bg-gray-700 md:h-[26px] md:w-[26px]"></div>
+          <div className="h-11 w-11 rounded-full bg-gray-700 md:h-[26px] md:w-[26px]"></div>
         </div>
       </div>
     </div>

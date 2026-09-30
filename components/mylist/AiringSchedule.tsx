@@ -102,9 +102,9 @@ export default function AiringSchedule({
   }
 
   return (
-    <div className="flex flex-col gap-6 text-white">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
+    <div className="flex min-w-0 flex-col gap-6 text-white">
+      <header className="flex min-w-0 flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0 flex-1">
           <h1 className="break-words text-2xl font-semibold sm:text-3xl">
             {`${ownerName}'s airing schedule`}
           </h1>
@@ -124,7 +124,7 @@ export default function AiringSchedule({
         {isOwner && (
           <Link
             href={myListPath(userId)}
-            className={`inline-flex shrink-0 items-center gap-1 self-start rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-3 py-2 text-sm text-[#95ccff] hover:border-blue-500 hover:text-white sm:self-auto ${FOCUS_RING}`}
+            className={`inline-flex min-h-11 shrink-0 items-center gap-1 self-start rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-3 py-2 text-sm text-[#95ccff] hover:border-blue-500 hover:text-white md:min-h-0 md:self-auto ${FOCUS_RING}`}
           >
             View full list
             <span aria-hidden="true">→</span>
@@ -139,7 +139,7 @@ export default function AiringSchedule({
           <summary
             className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg px-4 py-3 font-semibold hover:text-[#95ccff] [&::-webkit-details-marker]:hidden ${FOCUS_RING}`}
           >
-            <span>
+            <span className="min-w-0">
               Not airing right now{" "}
               <span className="font-normal text-[rgb(164,164,164)]">
                 ({schedule.notAiring.length})
@@ -149,7 +149,7 @@ export default function AiringSchedule({
               aria-hidden="true"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-5 w-5 transition-transform group-open:rotate-180"
+              className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180"
             >
               <path
                 fillRule="evenodd"
@@ -186,7 +186,7 @@ function DayFilterBar({
     <div
       role="group"
       aria-label="Filter by day"
-      className="-mx-3 flex gap-2 overflow-x-auto px-3 py-1 sm:mx-0 sm:flex-wrap sm:px-0"
+      className="-mx-3 flex min-w-0 max-w-[calc(100%+1.5rem)] gap-2 overflow-x-auto overscroll-x-contain px-3 py-1 md:mx-0 md:max-w-none md:flex-wrap md:px-0"
     >
       <DayButton pressed={filter === "all"} onClick={() => onChange("all")} count={total}>
         All
@@ -230,7 +230,7 @@ function DayButton({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${tone} ${
+      className={`relative flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors md:min-h-0 ${tone} ${
         count === 0 && !pressed ? "opacity-60" : ""
       } ${FOCUS_RING}`}
     >
@@ -256,7 +256,7 @@ function DaySection({
 }) {
   const headingId = `schedule-${day}`;
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+    <section aria-labelledby={headingId} className="flex min-w-0 flex-col gap-3">
       <h2 id={headingId} className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold">
         {DAY_LABELS[day].long}
         <TodayBadge day={day} />
@@ -265,7 +265,7 @@ function DaySection({
         </span>
       </h2>
       {entries.length > 0 ? (
-        <Grid>
+        <Grid columnsClassName="grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {entries.map((entry) => (
             <AnimeInfoGrid key={entry.id} info={entry} />
           ))}
@@ -294,18 +294,18 @@ function EmptyState({ title, children }: { title: string; children: ReactNode })
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-4 py-10 text-center">
       <Image src="/rimuru.png" alt="" width={100} height={70} className="opacity-90" />
-      <p className="text-lg font-semibold">{title}</p>
+      <p className="max-w-full break-words text-lg font-semibold">{title}</p>
       <p className="max-w-md text-sm text-[rgb(164,164,164)]">{children}</p>
       <div className="mt-1 flex flex-wrap justify-center gap-3">
         <Link
           href="/anime"
-          className={`rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 ${FOCUS_RING}`}
+          className={`inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 md:min-h-0 ${FOCUS_RING}`}
         >
           Browse this season
         </Link>
         <Link
           href={searchPath()}
-          className={`rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-4 py-2 text-sm text-white hover:border-blue-500 ${FOCUS_RING}`}
+          className={`inline-flex min-h-11 items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-4 py-2 text-sm text-white hover:border-blue-500 md:min-h-0 ${FOCUS_RING}`}
         >
           Search anime
         </Link>

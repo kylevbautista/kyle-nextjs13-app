@@ -8,7 +8,6 @@ import { useVisibleAiring } from "./LandingProvider";
 import { SAGE_FRAME, type SageKind } from "./SageLine";
 import Slime from "./Slime";
 import { useLandingSession } from "./useLandingSession";
-import { useReducedMotion } from "./useReducedMotion";
 
 const QUIP_MS = 3500;
 const NEXT_UP_QUIP = 3;
@@ -39,7 +38,6 @@ const clamp = (value: number) => Math.max(-1, Math.min(1, value));
  */
 export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
   const session = useLandingSession();
-  const reduced = useReducedMotion();
   const nextUp = useVisibleAiring(nextUpIds, 1);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -59,7 +57,7 @@ export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
     if (!button || !hero || !svg) return;
 
     const trackPointer =
-      !reduced && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches;
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches;
     let frame = 0;
     let pointerX = 0;
     let pointerY = 0;
@@ -108,7 +106,7 @@ export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
       svg.style.removeProperty("--look-x");
       svg.style.removeProperty("--look-y");
     };
-  }, [reduced]);
+  }, []);
 
   const handlePoke = () => {
     const pokes = poke.count + 1;
@@ -147,8 +145,8 @@ export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
     poke.count === 0
       ? ""
       : poke.count % 2
-        ? "motion-safe:animate-slime-poke"
-        : "motion-safe:animate-slime-poke-2";
+        ? "animate-slime-poke"
+        : "animate-slime-poke-2";
 
   return (
     <div className="relative">
@@ -159,7 +157,7 @@ export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
         onClick={handlePoke}
         className="group relative block aspect-[200/170] w-20 rounded-[40%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1428] sm:w-[150px] laptop:w-[200px]"
       >
-        <span className="slime-wake block h-full w-full origin-bottom motion-safe:transition-transform motion-safe:duration-[180ms] motion-safe:ease-[cubic-bezier(.34,1.56,.64,1)] motion-safe:[@media(hover:hover)]:group-hover:[transform:scale(1.08,.9)]">
+        <span className="slime-wake block h-full w-full origin-bottom transition-transform duration-[180ms] ease-[cubic-bezier(.34,1.56,.64,1)] [@media(hover:hover)]:group-hover:[transform:scale(1.08,.9)]">
           <span className={`block h-full w-full origin-bottom ${pokeClass}`}>
             {/* Gulps when the list grows (never when the count first loads). */}
             <Slime size={200} tier={tier} gulpKey={count ?? undefined} className="h-full w-full" />
@@ -170,7 +168,7 @@ export default function HeroSlime({ nextUpIds }: { nextUpIds: number[] }) {
       {poke.bubble && poke.quip && (
         <p
           aria-hidden="true"
-          className={`absolute right-0 top-full z-20 mt-2 w-max max-w-[min(17rem,calc(100vw-2rem))] px-3 py-2 text-left text-xs leading-5 motion-safe:animate-rise-in sm:left-full sm:right-auto sm:top-2 sm:ml-4 sm:mt-0 laptop:left-auto laptop:right-full laptop:top-0 laptop:ml-0 laptop:mr-3 ${SAGE_FRAME} bg-[#0a1528]/95`}
+          className={`absolute right-0 top-full z-20 mt-2 w-max max-w-[min(17rem,calc(100vw-2rem))] px-3 py-2 text-left text-xs leading-5 animate-rise-in sm:left-full sm:right-auto sm:top-2 sm:ml-4 sm:mt-0 laptop:left-auto laptop:right-full laptop:top-0 laptop:ml-0 laptop:mr-3 ${SAGE_FRAME} bg-[#0a1528]/95`}
         >
           <span className="text-[#95ccff]">《{poke.quip.kind}》</span> {poke.quip.text}
         </p>

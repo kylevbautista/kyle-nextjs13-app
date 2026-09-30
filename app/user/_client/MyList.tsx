@@ -59,9 +59,9 @@ const REFRESH_DELAY_MS = 2_000;
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(18,18,18)]";
 const controlClass =
-  "w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-3 py-2 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
-const primaryLink = `inline-flex h-10 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-500 ${focusRing}`;
-const secondaryButton = `inline-flex h-9 items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-3 text-sm font-medium text-white hover:bg-[rgb(53,53,53)] ${focusRing}`;
+  "min-h-11 min-w-0 w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-3 py-2 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:min-h-0 md:text-sm";
+const primaryLink = `inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-500 md:min-h-10 ${focusRing}`;
+const secondaryButton = `inline-flex min-h-11 items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-3 text-sm font-medium text-white hover:bg-[rgb(53,53,53)] md:min-h-9 ${focusRing}`;
 
 function FilterSelect({
   id,
@@ -77,7 +77,7 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-xs font-medium text-[rgb(164,164,164)]">
         {label}
       </label>
@@ -302,13 +302,13 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   }
 
   const header = (
-    <header className="flex flex-wrap items-center gap-4 rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] p-4">
+    <header className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] p-4 md:flex md:flex-wrap md:gap-4">
       <OwnerAvatar owner={owner} name={name} />
       <div className="min-w-0 flex-1">
         <h1
           id={HEADING_ID}
           tabIndex={-1}
-          className="truncate text-2xl font-bold focus:outline-none"
+          className="break-words text-xl font-bold focus:outline-none md:truncate md:text-2xl"
         >
           {name}&apos;s list
         </h1>
@@ -318,7 +318,11 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
         </p>
       </div>
       {isOwner && (
-        <button type="button" onClick={copyLink} className={secondaryButton}>
+        <button
+          type="button"
+          onClick={copyLink}
+          className={`${secondaryButton} col-span-2 md:shrink-0`}
+        >
           Copy link
         </button>
       )}
@@ -327,7 +331,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
 
   if (items.length === 0) {
     return (
-      <main className="flex flex-col gap-6 py-4 text-white">
+      <main className="flex min-w-0 flex-col gap-6 py-4 text-white">
         {header}
         <div className="rounded-md border border-dashed border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-6 py-12 text-center">
           {isOwner ? (
@@ -341,7 +345,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 <Link href="/anime" className={primaryLink}>
                   Browse this season
                 </Link>
-                <Link href={searchPath()} className={`${secondaryButton} h-10 px-4`}>
+                <Link href={searchPath()} className={`${secondaryButton} px-4 md:min-h-10`}>
                   Search anime
                 </Link>
               </div>
@@ -360,16 +364,16 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   }
 
   return (
-    <main className="flex flex-col gap-6 py-4 text-white">
+    <main className="flex min-w-0 flex-col gap-6 py-4 text-white">
       {header}
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <aside className="flex flex-col gap-5 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:w-56 md:shrink-0 md:overflow-y-auto md:pb-2">
-          <nav aria-label="List status">
+        <aside className="flex min-w-0 flex-col gap-4 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:w-56 md:shrink-0 md:gap-5 md:overflow-y-auto md:pb-2">
+          <nav aria-label="List status" className="min-w-0">
             <h2 className="mb-2 hidden text-xs font-semibold uppercase tracking-wide text-[rgb(164,164,164)] md:block">
               Lists
             </h2>
-            <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 py-1 md:flex-col md:overflow-visible">
+            <ul className="-mx-1 flex max-w-[calc(100%+0.5rem)] gap-2 overflow-x-auto px-1 py-1 md:max-w-none md:flex-col md:overflow-visible">
               {TABS.map((value) => {
                 const selected = tab === value;
                 return (
@@ -378,7 +382,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setTab(value)}
-                      className={`flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm ${focusRing} ${
+                      className={`flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm md:min-h-0 ${focusRing} ${
                         selected
                           ? "bg-blue-600 font-semibold text-white"
                           : "bg-[rgb(30,30,30)] text-[rgb(220,220,220)] hover:bg-[rgb(53,53,53)] md:bg-transparent"
@@ -410,7 +414,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 aria-expanded={filtersOpen}
                 aria-controls="list-filters"
                 onClick={() => setFiltersOpen((open) => !open)}
-                className={`inline-flex items-center gap-2 rounded-md py-1 uppercase md:hidden ${focusRing}`}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-md px-2 uppercase md:hidden ${focusRing}`}
               >
                 Filters
                 {panelFilterCount > 0 && (
@@ -423,7 +427,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
             </h2>
             <div
               id="list-filters"
-              className={`${filtersOpen ? "flex" : "hidden"} flex-col gap-3 md:flex`}
+              className={`${filtersOpen ? "grid" : "hidden"} min-w-0 grid-cols-1 gap-3 min-[375px]:grid-cols-2 md:flex md:flex-col`}
             >
               <FilterSelect
                 id="filter-year"
@@ -471,7 +475,11 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 ]}
               />
               {filtersActive && (
-                <button type="button" onClick={clearFilters} className={secondaryButton}>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className={`${secondaryButton} min-[375px]:col-span-2`}
+                >
                   Clear filters
                 </button>
               )}
@@ -481,7 +489,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
 
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
               <label htmlFor="list-search" className="text-xs font-medium text-[rgb(164,164,164)]">
                 Search this list
               </label>
@@ -495,7 +503,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 className={`${controlClass} placeholder:text-[rgb(110,110,110)]`}
               />
             </div>
-            <div className="flex flex-col gap-1 sm:w-48">
+            <div className="flex min-w-0 flex-col gap-1 sm:w-48 sm:shrink-0">
               <label htmlFor="list-sort" className="text-xs font-medium text-[rgb(164,164,164)]">
                 Sort by
               </label>
@@ -542,7 +550,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
               <section key={section.status} aria-labelledby={`section-${section.status}`}>
                 <h2
                   id={`section-${section.status}`}
-                  className="mb-3 flex items-baseline gap-2 border-b border-[rgb(53,53,53)] pb-1 text-lg font-semibold"
+                  className="mb-3 flex flex-wrap items-baseline gap-2 border-b border-[rgb(53,53,53)] pb-1 text-lg font-semibold"
                 >
                   {LIST_STATUS_LABELS[section.status]}
                   <span className="text-sm font-normal text-[rgb(164,164,164)]">

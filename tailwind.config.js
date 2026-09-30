@@ -43,8 +43,7 @@ module.exports = {
         fade: "fadeOut 2s ease-in-out",
         grow: "grow 400ms ease-in-out",
 
-        // Landing motion. Always use these as `motion-safe:animate-<name>`
-        // (or inside a prefers-reduced-motion: no-preference block).
+        // Landing motion intentionally ignores the OS reduced-motion preference.
         "slime-jiggle": "slime-jiggle 3.2s ease-in-out infinite",
         "slime-blink": "slime-blink 5.5s infinite",
         "slime-wake": "slime-wake 900ms ease-out both",

@@ -96,7 +96,7 @@ export default function Faq() {
               <svg
                 aria-hidden="true"
                 viewBox="0 0 16 16"
-                className="col-start-2 row-span-2 row-start-1 mt-1 h-4 w-4 self-center text-[rgb(164,164,164)] group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-200 sm:col-start-3 sm:row-span-1 sm:self-start"
+                className="col-start-2 row-span-2 row-start-1 mt-1 h-4 w-4 self-center text-[rgb(164,164,164)] group-open:rotate-180 transition-transform duration-200 sm:col-start-3 sm:row-span-1 sm:self-start"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={1.75}

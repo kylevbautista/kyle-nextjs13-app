@@ -105,7 +105,7 @@ export function SessionCta({
       <div aria-busy="true" className={`relative ${box}`}>
         <span
           aria-hidden="true"
-          className={`js-only block h-full bg-white/10 motion-safe:animate-pulse ${
+          className={`js-only block h-full bg-white/10 animate-pulse ${
             size === "sticky" ? "w-40 rounded-xl" : "w-full rounded-2xl"
           }`}
         />
@@ -201,7 +201,7 @@ export function SessionStatusLine({ variant }: { variant: "hero" | "tracker" | "
       <>
         <span
           aria-hidden="true"
-          className="js-only block h-3 w-56 max-w-full rounded-full bg-white/10 motion-safe:animate-pulse"
+          className="js-only block h-3 w-56 max-w-full rounded-full bg-white/10 animate-pulse"
         />
         <noscript>{SIGNED_OUT_COPY[variant]}</noscript>
       </>

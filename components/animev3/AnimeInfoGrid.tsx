@@ -93,8 +93,10 @@ function ExternalIcon({
       rel="noopener noreferrer"
       aria-label={`${title} on ${site} (opens in a new tab)`}
       title={site}
-      className={`${sprite} shrink-0 rounded-full hover:bg-blue-500 focus-visible:bg-blue-500 ${FOCUS_RING}`}
-    />
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-blue-500 focus-visible:bg-blue-500 md:h-[30px] md:w-[30px] ${FOCUS_RING}`}
+    >
+      <span aria-hidden="true" className={sprite} />
+    </a>
   );
 }
 
@@ -135,14 +137,16 @@ export default function AnimeInfoGrid({
     <article
       className="
       grid
+      min-w-0
       animate-grow
-      grid-rows-[60px_201px_32px]
+      grid-rows-[60px_201px_auto]
       rounded-sm
       border-[rgb(53,53,53)]
       bg-[rgb(38,38,38)]
       shadow-md
       dark:bg-[rgb(30,30,30)]
-      sm:grid-rows-[60px_250px_32px]
+      sm:grid-rows-[60px_250px_auto]
+      md:grid-rows-[60px_250px_32px]
       "
     >
       <div className="grid h-[60px] grid-rows-[38px_22px] place-items-center border-b border-inherit text-[#95ccff]">
@@ -150,7 +154,7 @@ export default function AnimeInfoGrid({
           <a
             target="_blank"
             rel="noopener noreferrer"
-            className={`rounded-sm font-bold leading-4 hover:underline ${FOCUS_RING}`}
+            className={`relative min-w-0 break-words rounded-sm font-bold leading-4 hover:underline ${FOCUS_RING}`}
             href={malUrl ?? anilistUrl}
           >
             <span className="line-clamp-2">{title}</span>
@@ -165,7 +169,7 @@ export default function AnimeInfoGrid({
         </p>
       </div>
 
-      <div className="grid grid-cols-[auto_1fr]">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)]">
         <div
           className="relative h-[201px] w-[135px] border-b border-l border-r border-[rgb(53,53,53)] bg-[rgb(53,53,53)] sm:h-[250px] sm:w-[175px]"
           style={info.coverImage?.color ? { backgroundColor: info.coverImage.color } : undefined}
@@ -198,7 +202,7 @@ export default function AnimeInfoGrid({
           )}
         </div>
 
-        <div className="grid grid-rows-[25px_25px_25px_126px] border-[rgb(53,53,53)] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px]">
+        <div className="grid min-w-0 grid-cols-1 grid-rows-[25px_40px_40px_96px] border-[rgb(53,53,53)] sm:grid-rows-[25px_48px_48px_129px] tablet:grid-rows-[27px_27px_27px_169px]">
           <div className="flex justify-center border-b border-inherit px-1 text-[#95ccff]">
             <p className="line-clamp-1" title={studios}>
               {studios}
@@ -219,7 +223,7 @@ export default function AnimeInfoGrid({
           {/* Focusable so the synopsis can be scrolled from the keyboard. */}
           <div
             tabIndex={0}
-            className="scrollbar border-b border-inherit pl-1 pr-1 focus:overflow-y-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#95ccff]"
+            className="scrollbar min-h-0 min-w-0 border-b border-inherit pl-1 pr-1 [overflow-wrap:anywhere] focus:overflow-y-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#95ccff]"
           >
             {synopsis ? (
               <p className="text-xs leading-5" dangerouslySetInnerHTML={{ __html: synopsis }}></p>
@@ -230,7 +234,7 @@ export default function AnimeInfoGrid({
         </div>
       </div>
 
-      <div className="flex h-[32px] items-center justify-between gap-2 px-2">
+      <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-2 px-2 py-1 md:h-[32px] md:min-h-0 md:flex-nowrap md:py-0">
         <ListToggle info={info} />
         <div className="flex items-center gap-2">
           {malUrl && <ExternalIcon href={malUrl} site="MyAnimeList" sprite="mal" title={title} />}

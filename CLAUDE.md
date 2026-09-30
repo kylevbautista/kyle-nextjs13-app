@@ -406,6 +406,8 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 13. `body` is `grid-rows-[auto_1fr_auto]` (nav / page / footer). Extra in-flow children at the root
     shift the rows. Its single column is `auto`, so a fixed-width child wider than the phone widens
     the whole page; the landing's `main` has `min-w-0` and its sections `[contain:inline-size]`.
+    List layouts also need `min-w-0` through their grids/flex containers; schedule cards stay in one
+    column below 768px. Keep status/day scrolling inside its own row and metadata columns shrinkable.
 14. **Never use `server/lib/anilist.ts#anilistQuery` on static or ISR pages.** Its `cache: "no-store"`
     makes the route dynamic, and every view would call AniList. Use `getAniListData` (default fetch
     cache) or a `force-cache` fetch through `enqueueAniListRequest`, as `server/lib/landing.ts` does.
@@ -418,6 +420,9 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 16. Tailwind scans `app/`, `components/` and `lib/` (`tailwind.config.js` `content`). Class maps
     shared from elsewhere (e.g. `lib/anime/statusBadge.ts`) are silently dropped from the CSS unless
     their folder is listed there.
+17. **Landing motion intentionally ignores the OS reduced-motion preference.** Use ordinary
+    animation/transition utilities in `components/home`, not `motion-safe:` or `motion-reduce:`.
+    Keep offscreen pausing and the explicit "Pause live timers" control.
 
 ---
 

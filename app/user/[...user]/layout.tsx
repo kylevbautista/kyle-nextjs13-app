@@ -16,7 +16,7 @@ export default async function MyListLayout({
   await requireListOwner(user, myListPath);
 
   return (
-    <div id="my-list" className="mx-auto w-full max-w-screen-2xl px-4 pb-8 md:px-6">
+    <div id="my-list" className="mx-auto min-w-0 w-full max-w-screen-2xl px-4 pb-8 md:px-6">
       {children}
     </div>
   );

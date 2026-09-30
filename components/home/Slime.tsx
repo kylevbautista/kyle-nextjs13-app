@@ -22,7 +22,7 @@ interface SlimeProps {
   mood?: SlimeMood;
   /** Evolution accessories: gold rim + star, aura, crown. */
   tier?: EvolutionTier;
-  /** Idle jiggle and blink (motion-safe, paused offscreen). Default true. */
+  /** Idle jiggle and blink (paused offscreen). Default true. */
   animated?: boolean;
   /**
    * Changing it replays the gulp (a re-keyed <g>), e.g. the list count. The
@@ -67,7 +67,7 @@ export default function Slime({
   const blush = mood === "happy" ? 0.5 : mood === "worried" ? 0.2 : 0.3;
 
   const body = (
-    <g className={animated ? "motion-safe:animate-slime-jiggle" : undefined} style={PIVOT}>
+    <g className={animated ? "animate-slime-jiggle" : undefined} style={PIVOT}>
       <path d={SLIME_BODY_PATH} fill={`url(#${id("body")})`} />
       <rect
         x="0"
@@ -110,17 +110,17 @@ export default function Slime({
 
       {/* Evolution accessories ride on the body, so they squash with it. */}
       {(tier === "named" || tier === "demon") && (
-        <g className="motion-safe:animate-fade-in">
+        <g className="animate-fade-in">
           <path
             d={SLIME_ACCESSORIES.star}
             fill={c.gold}
-            className={animated ? "motion-safe:animate-twinkle" : undefined}
+            className={animated ? "animate-twinkle" : undefined}
           />
         </g>
       )}
 
       {tier === "lord" && (
-        <g className="motion-safe:animate-fade-in">
+        <g className="animate-fade-in">
           <g transform={SLIME_ACCESSORIES.crown.transform}>
             <path
               d={SLIME_ACCESSORIES.crown.path}
@@ -184,7 +184,7 @@ export default function Slime({
       />
 
       {hasAura && (
-        <g className="motion-safe:animate-fade-in">
+        <g className="animate-fade-in">
           <circle
             cx={SLIME_ACCESSORIES.aura.cx}
             cy={SLIME_ACCESSORIES.aura.cy}
@@ -195,7 +195,7 @@ export default function Slime({
             strokeWidth={1.75}
             strokeDasharray={SLIME_ACCESSORIES.aura.dash}
             strokeLinecap="round"
-            className={animated ? "motion-safe:animate-[spin-slow_20s_linear_infinite]" : undefined}
+            className={animated ? "animate-[spin-slow_20s_linear_infinite]" : undefined}
             style={CENTER}
           />
         </g>
@@ -246,7 +246,7 @@ function Face({ mood, animated }: { mood: SlimeMood; animated: boolean }) {
           attributes lose to any CSS rule, e.g. the hero's :has()). */}
       <g className="slime-eyes-open" opacity={happy ? 0 : 1}>
         <g className="slime-pupils">
-          <g className={animated ? "motion-safe:animate-slime-blink" : undefined} style={CENTER}>
+          <g className={animated ? "animate-slime-blink" : undefined} style={CENTER}>
             {SLIME_FACE.eyes.map((e) => (
               <ellipse key={e.cx} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={eye} />
             ))}

@@ -117,7 +117,7 @@ export default function TempestArchive({ tempest }: { tempest: LandingTempest })
                       {ARROW_DOTS.map((color, index) => (
                         <span
                           key={color}
-                          className="h-1 w-1 rounded-full motion-safe:animate-dot-flow"
+                          className="h-1 w-1 rounded-full animate-dot-flow"
                           style={{ backgroundColor: color, animationDelay: `${index * 0.2}s` }}
                         />
                       ))}

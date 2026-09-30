@@ -45,7 +45,7 @@ export default function StickyCta() {
     <div
       inert={!visible}
       aria-hidden={visible ? undefined : true}
-      className={`fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-3 border-t border-[rgb(53,53,53)] bg-[rgb(30,30,30)]/95 px-4 pb-[env(safe-area-inset-bottom)] shadow-[inset_0_1px_0_rgba(149,204,255,0.2)] transition-transform duration-200 ease-out motion-reduce:transition-none lg:inset-x-auto lg:bottom-6 lg:right-6 lg:h-auto lg:gap-2 lg:rounded-full lg:border lg:border-[#95ccff]/30 lg:p-2 lg:shadow-lg lg:shadow-black/50 ${
+      className={`fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] items-center gap-3 border-t border-[rgb(53,53,53)] bg-[rgb(30,30,30)]/95 px-4 pb-[env(safe-area-inset-bottom)] shadow-[inset_0_1px_0_rgba(149,204,255,0.2)] transition-transform duration-200 ease-out lg:inset-x-auto lg:bottom-6 lg:right-6 lg:h-auto lg:gap-2 lg:rounded-full lg:border lg:border-[#95ccff]/30 lg:p-2 lg:shadow-lg lg:shadow-black/50 ${
         visible ? "translate-y-0" : "translate-y-full lg:translate-y-[calc(100%+2rem)]"
       }`}
     >

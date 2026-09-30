@@ -28,7 +28,7 @@ export default async function AiringScheduleLayout({
   await requireListOwner(user, airingSchedulePath);
 
   return (
-    <main id="airing-schedule" className="w-full px-3 pb-8 pt-2 sm:px-4">
+    <main id="airing-schedule" className="min-w-0 w-full px-3 pb-8 pt-2 [contain:inline-size] sm:px-4">
       {children}
     </main>
   );

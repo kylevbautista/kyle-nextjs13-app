@@ -6,7 +6,7 @@ const bar = "animate-pulse rounded-full bg-[rgb(53,53,53)]";
 /** Loading placeholder shaped like the Airing Schedule (header, day filters, cards). */
 export default function ScheduleSkeleton() {
   return (
-    <div className="flex flex-col gap-6" aria-busy="true">
+    <div className="flex min-w-0 flex-col gap-6" aria-busy="true">
       <span className="sr-only" role="status">
         Loading airing schedule…
       </span>
@@ -14,14 +14,14 @@ export default function ScheduleSkeleton() {
         <div className={`${bar} h-8 w-72 max-w-full`} />
         <div className={`${bar} h-4 w-56 max-w-full`} />
       </div>
-      <div className="flex gap-2 overflow-hidden" aria-hidden="true">
+      <div className="flex min-w-0 gap-2 overflow-hidden" aria-hidden="true">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className={`${bar} h-8 w-16 shrink-0`} />
+          <div key={i} className={`${bar} h-11 w-16 shrink-0 md:h-8`} />
         ))}
       </div>
       <div className="flex flex-col gap-3" aria-hidden="true">
         <div className={`${bar} h-6 w-32`} />
-        <Grid>
+        <Grid columnsClassName="grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 6 }, (_, i) => (
             <AnimeInfoSkeleton key={i} />
           ))}
