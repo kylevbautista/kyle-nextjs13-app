@@ -9,7 +9,9 @@ import type { AnimeMedia, ListStatus } from "@/lib/anime/types";
 /**
  * The signed-in user's list membership, shared by every anime card.
  *
- * - SWR key `/api/anime-list/ids` holds the ids the server has confirmed.
+ * - SWR key [`/api/anime-list/ids`, userId] holds the ids the server has
+ *   confirmed, per user, so switching accounts without a reload (NextAuth
+ *   syncs tabs) never shows the previous account's ids.
  * - A module-level overlay holds changes still in flight, so every card shows
  *   them immediately and concurrent add/remove clicks can't clobber each other
  *   (SWR's own optimistic mutate drops overlapping async mutations).
@@ -46,9 +48,13 @@ const getPending = () => pendingOps;
 const EMPTY_PENDING: ReadonlyMap<number, PendingOp> = new Map();
 const getServerPending = () => EMPTY_PENDING;
 
-async function fetchListIds(url: string): Promise<number[]> {
+/**
+ * Only runs while the client session is authenticated, so a 401 means the
+ * server disagrees (an expired session, or a failed session lookup). It is an
+ * error, not an empty list: `count` stays null and SWR retries.
+ */
+async function fetchListIds([url]: readonly [string, string]): Promise<number[]> {
   const res = await fetch(url, { cache: "no-store" });
-  if (res.status === 401) return [];
   if (!res.ok) throw new Error(`Could not load your list (${res.status})`);
   const body = await res.json();
   return Array.isArray(body?.ids) ? body.ids : [];
@@ -73,9 +79,12 @@ export function useMyList() {
   const { data: session, status: sessionStatus } = useSession();
   const signedIn = sessionStatus === "authenticated";
   const { mutate: mutateGlobal } = useSWRConfig();
-  const { data: ids, error, mutate } = useSWR(signedIn ? MY_LIST_IDS_KEY : null, fetchListIds, {
-    dedupingInterval: 5_000,
-  });
+  const listOwner = signedIn ? (session?.objectId ?? null) : null;
+  const { data: ids, error, mutate } = useSWR(
+    listOwner ? ([MY_LIST_IDS_KEY, listOwner] as const) : null,
+    fetchListIds,
+    { dedupingInterval: 5_000 }
+  );
   const pending = useSyncExternalStore(subscribePending, getPending, getServerPending);
 
   const idSet = useMemo(() => {
@@ -146,6 +155,8 @@ export function useMyList() {
      * while signed out or until the ids have loaded (or when loading failed).
      */
     count: signedIn && ids !== undefined ? idSet.size : null,
+    /** Like `count`, but only what the server has confirmed (no in-flight changes). */
+    confirmedCount: signedIn && ids !== undefined ? new Set(ids).size : null,
     isInList: (id: number) => idSet.has(id),
     /** True while an add/remove for this id is in flight. */
     isPending: (id: number) => pending.has(id),

@@ -26,8 +26,11 @@ import { landingSeason, type SeasonName } from "@/lib/season";
  *    Next's data cache for an hour, so most regenerations spend nothing on
  *    them. Skipped when the season call already spent 2 requests (429 retry).
  *
- * Never throws: every failure degrades to a fallback, so neither the page
- * nor `next build` fails because AniList is down. Don't use the server
+ * Failures: a running production server rethrows a failed season request,
+ * so ISR keeps serving the last good page and retries on the next request
+ * (as the season pages do). `next build` has no earlier page to keep and
+ * `next dev` has no cache, so both render fallbacks instead. Everything else
+ * (the extras, parsing) always degrades to a fallback. Don't use the server
  * AniList client (server/lib/anilist.ts) here: it opts out of Next's cache,
  * which would make the route dynamic and call AniList on every view.
  */
@@ -45,6 +48,10 @@ const WINDOW_DAYS = 7;
 const PREVIEW_WINDOW_DAYS = 16;
 /** Upper bound on the requests one regeneration may send. */
 const MAX_REQUESTS = 2;
+
+/** A production server with a cached page to fall back on (not the build, not dev). */
+const keepsLastGoodPage = () =>
+  process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build";
 
 /** fetchWithTimeout only times the headers; the body read gets its own deadline. */
 function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -161,6 +168,7 @@ function buildLandingData(
 /**
  * Everything the landing renders, loaded once per regeneration. Sequential:
  * the season request first, then the extras only while the budget allows.
+ * Throws only for a failed season request on a production server (see top).
  */
 export async function loadLandingData(nowMs: number = Date.now()): Promise<LandingData> {
   const target = landingSeason(new Date(nowMs));
@@ -179,6 +187,9 @@ export async function loadLandingData(nowMs: number = Date.now()): Promise<Landi
   } catch (err) {
     // getAniListData never throws; this is belt and braces.
     console.warn("[landing] season request threw:", err instanceof Error ? err.message : err);
+  }
+  if (!season?.ok && keepsLastGoodPage()) {
+    throw new Error("Landing: the AniList season request failed; keeping the last good page");
   }
 
   const spent = season?.requests ?? 0;
