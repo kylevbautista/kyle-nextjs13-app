@@ -96,41 +96,39 @@
 
 /* ==========================================================================
    Landing page ("/"): rules Tailwind classes can't express.
-   Every animation here sits behind prefers-reduced-motion: no-preference.
+   Landing animations intentionally ignore the OS reduced-motion preference.
    ========================================================================== */
 
 /* Reveal system (components/home/Reveal.tsx). Only JS ever sets "pending",
-   and only on elements below the fold, so no-JS and reduced-motion visitors
-   (and anything visible at load) are never hidden. */
-@media (prefers-reduced-motion: no-preference) {
-  [data-reveal] {
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-  }
-  [data-reveal="pending"] {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  [data-reveal="done"] .sage-scan-reveal {
-    @apply animate-sage-scan;
-  }
-  [data-reveal="pending"] .atomic-word {
-    opacity: 0;
-  }
-  [data-reveal="done"] .atomic-word {
-    @apply animate-slideInFromLeft;
-    animation-delay: var(--d, 0ms);
-    animation-fill-mode: both;
-  }
-  [data-reveal="done"] .atomic-ring {
-    @apply animate-ring-out;
-    animation-delay: 1.8s;
-    animation-fill-mode: both;
-  }
-  [data-reveal="done"] .tempest-sheen::after {
-    @apply animate-sheen;
-    animation-delay: 0.35s;
-    animation-fill-mode: both;
-  }
+   and only on elements below the fold, so no-JS visitors and anything visible
+   at load are never hidden. */
+[data-reveal] {
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+[data-reveal="done"] .sage-scan-reveal {
+  @apply animate-sage-scan;
+}
+[data-reveal="pending"] .atomic-word {
+  opacity: 0;
+}
+[data-reveal="done"] .atomic-word {
+  @apply animate-slideInFromLeft;
+  animation-delay: var(--d, 0ms);
+  animation-fill-mode: both;
+}
+[data-reveal="done"] .atomic-ring {
+  @apply animate-ring-out;
+  animation-delay: 1.8s;
+  animation-fill-mode: both;
+}
+[data-reveal="done"] .tempest-sheen::after {
+  @apply animate-sheen;
+  animation-delay: 0.35s;
+  animation-fill-mode: both;
 }
 
 /* The post-credits ripple only exists as motion; never show it static. */
@@ -171,18 +169,16 @@
     transform: translateY(15px);
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: scroll()) {
-    .forest-near {
-      animation: forest-near linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 100vh;
-    }
-    .forest-far {
-      animation: forest-far linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 100vh;
-    }
+@supports (animation-timeline: scroll()) {
+  .forest-near {
+    animation: forest-near linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100vh;
+  }
+  .forest-far {
+    animation: forest-far linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100vh;
   }
 }
 
@@ -201,18 +197,16 @@
     calc(var(--look-y, 0) * 3px)
   );
 }
-@media (prefers-reduced-motion: no-preference) {
-  .slime-pupils {
-    transition: transform 120ms ease-out;
-  }
-  .slime-eyes-open,
-  .slime-eyes-happy {
-    transition: opacity 120ms ease-out;
-  }
+.slime-pupils {
+  transition: transform 120ms ease-out;
+}
+.slime-eyes-open,
+.slime-eyes-happy {
+  transition: opacity 120ms ease-out;
 }
 
 /* Happy eyes while the hero's primary CTA is hovered or focused. This is a
-   state change, not motion, so it also applies under reduced motion. */
+   state change controlled by the primary CTA. */
 .hero:has([data-cta-primary]:is(:hover, :focus-visible)) .slime-eyes-open {
   opacity: 0;
 }
@@ -236,27 +230,23 @@
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  .slime-wake .slime-hop {
-    @apply animate-slime-wake;
-  }
-  .slime-wake .slime-eyes-open {
-    animation: slime-wake-hide 900ms steps(1, end);
-  }
-  .slime-wake .slime-eyes-happy {
-    animation: slime-wake-show 900ms steps(1, end);
-  }
+.slime-wake .slime-hop {
+  @apply animate-slime-wake;
+}
+.slime-wake .slime-eyes-open {
+  animation: slime-wake-hide 900ms steps(1, end);
+}
+.slime-wake .slime-eyes-happy {
+  animation: slime-wake-show 900ms steps(1, end);
 }
 
 /* Happy eyes for the length of a gulp (components/home/Reveal.tsx#SlimeGulp
    re-keys the body, so this plays once per add). */
-@media (prefers-reduced-motion: no-preference) {
-  .slime-gulping .slime-eyes-open {
-    animation: slime-wake-hide 700ms steps(1, end);
-  }
-  .slime-gulping .slime-eyes-happy {
-    animation: slime-wake-show 700ms steps(1, end);
-  }
+.slime-gulping .slime-eyes-open {
+  animation: slime-wake-hide 700ms steps(1, end);
+}
+.slime-gulping .slime-eyes-happy {
+  animation: slime-wake-show 700ms steps(1, end);
 }
 
 /* Every hero animation (and any slime scrolled out of view) pauses offscreen. */
@@ -282,11 +272,9 @@
 }
 
 /* FAQ answers fade in when their <details> opens. */
-@media (prefers-reduced-motion: no-preference) {
-  .faq-item[open] > .faq-answer {
-    @apply animate-fade-in;
-    animation-duration: 150ms;
-  }
+.faq-item[open] > .faq-answer {
+  @apply animate-fade-in;
+  animation-duration: 150ms;
 }
 
 /* The share-link pill: one subtle shimmer pass every 6 s. */
@@ -317,8 +305,6 @@
   );
   transform: translateX(-130%) skewX(-18deg);
 }
-@media (prefers-reduced-motion: no-preference) {
-  .url-shimmer::after {
-    animation: url-shimmer 6s ease-in-out 1.5s infinite;
-  }
+.url-shimmer::after {
+  animation: url-shimmer 6s ease-in-out 1.5s infinite;
 }

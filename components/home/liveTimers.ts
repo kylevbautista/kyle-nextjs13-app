@@ -1,7 +1,6 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { trackLanding } from "./analytics";
-import { useReducedMotion } from "./useReducedMotion";
 
 /**
  * The "Pause live timers" preference (WCAG 2.2.2): per-second countdowns are
@@ -54,11 +53,9 @@ export function useLiveTimersPreference(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** Whether countdowns may tick every second: false when paused or under reduced motion. */
+/** Whether countdowns may tick every second, controlled by the landing's pause button. */
 export function useLiveSeconds(): boolean {
-  const on = useLiveTimersPreference();
-  const reduced = useReducedMotion();
-  return on && !reduced;
+  return useLiveTimersPreference();
 }
 
 export function setLiveSeconds(on: boolean): void {

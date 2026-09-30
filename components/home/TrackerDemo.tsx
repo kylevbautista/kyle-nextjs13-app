@@ -278,7 +278,7 @@ export default function TrackerDemo() {
                   <p className="line-clamp-2 text-sm font-semibold leading-5 text-white">{title}</p>
                   <span
                     key={data.listType}
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset motion-safe:animate-fade-in ${STATUS_BADGE_CLASS[data.listType]}`}
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset animate-fade-in ${STATUS_BADGE_CLASS[data.listType]}`}
                   >
                     {LIST_STATUS_LABELS[data.listType]}
                   </span>
@@ -312,7 +312,7 @@ export default function TrackerDemo() {
                   className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]"
                 >
                   <div
-                    className={`h-full rounded-full motion-safe:transition-[width,background-color] motion-safe:duration-300 ${
+                    className={`h-full rounded-full transition-[width,background-color] duration-300 ${
                       completed ? "bg-emerald-500" : "bg-blue-500"
                     }`}
                     style={{ width: `${Math.round((progress / EPISODES) * 100)}%` }}

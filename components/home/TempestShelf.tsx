@@ -9,7 +9,6 @@ import CountdownText from "./CountdownText";
 import LandingAddButton from "./LandingAddButton";
 import { useLanding } from "./LandingProvider";
 import { FOCUS_RING } from "./SageLine";
-import { useReducedMotion } from "./useReducedMotion";
 
 /** Gap between cards (gap-4), so a timeline segment reaches the next dot. */
 const GAP_PX = 16;
@@ -30,7 +29,6 @@ function lineColor(t: number) {
  */
 export default function TempestShelf({ entries, live }: { entries: TempestEntry[]; live: boolean }) {
   const { media } = useLanding();
-  const reduced = useReducedMotion();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
   const regionId = useId();
@@ -64,7 +62,7 @@ export default function TempestShelf({ entries, live }: { entries: TempestEntry[
     if (!scroller) return;
     const card = scroller.querySelector("li");
     const width = card ? card.getBoundingClientRect().width : 160;
-    scroller.scrollBy({ left: direction * 2 * (width + GAP_PX), behavior: reduced ? "auto" : "smooth" });
+    scroller.scrollBy({ left: direction * 2 * (width + GAP_PX), behavior: "smooth" });
   };
 
   const mask =

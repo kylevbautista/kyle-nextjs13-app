@@ -247,7 +247,7 @@ function SignInIntentDialog({
       aria-describedby={bodyId}
       onClose={handleClose}
       onClick={handleBackdropClick}
-      className="w-[min(92vw,400px)] max-w-none rounded-2xl border border-[#95ccff]/25 bg-[rgb(30,30,30)] p-0 text-white shadow-2xl shadow-black/60 backdrop:bg-black/60 motion-safe:open:animate-[grow_150ms_ease-out,fadeOut_150ms_ease-out]"
+      className="w-[min(92vw,400px)] max-w-none rounded-2xl border border-[#95ccff]/25 bg-[rgb(30,30,30)] p-0 text-white shadow-2xl shadow-black/60 backdrop:bg-black/60 open:animate-[grow_150ms_ease-out,fadeOut_150ms_ease-out]"
     >
       {intent && media && (
         <div className="flex flex-col gap-4 p-6">

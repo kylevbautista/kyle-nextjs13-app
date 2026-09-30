@@ -192,7 +192,7 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
                   tabIndex={0}
                   className="min-h-[296px] px-3 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#95ccff] sm:px-4"
                 >
-                  <div key={selected} className="motion-safe:animate-[fade-in_150ms_ease-out]">
+                  <div key={selected} className="animate-[fade-in_150ms_ease-out]">
                     {dayShows.length ? (
                       <>
                         <ol className="flex flex-col divide-y divide-[rgb(53,53,53)]">

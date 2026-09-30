@@ -20,7 +20,7 @@ export const incrementButtonId = (animeId: number) => `increment-entry-${animeId
 export { STATUS_BADGE_CLASS };
 
 const buttonBase =
-  "inline-flex h-8 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 md:min-h-8";
 
 /** Ticks once a second; isolated so only this line re-renders. */
 function NextEpisode({ entry }: { entry: MyListEntry }) {
@@ -85,10 +85,10 @@ export const ListCard = memo(function ListCard({
     entry.coverImage?.large ?? entry.coverImage?.extraLarge ?? entry.coverImage?.medium ?? null;
 
   return (
-    <li className="flex">
-      <article className="flex w-full overflow-hidden rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] text-white">
+    <li className="flex min-w-0">
+      <article className="flex min-w-0 w-full overflow-hidden rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] text-white">
         <div
-          className="relative min-h-[150px] w-[96px] shrink-0 bg-[rgb(38,38,38)]"
+          className="relative min-h-[150px] w-20 shrink-0 bg-[rgb(38,38,38)] md:w-[96px]"
           style={entry.coverImage?.color ? { backgroundColor: entry.coverImage.color } : undefined}
         >
           {cover ? (
@@ -96,7 +96,7 @@ export const ListCard = memo(function ListCard({
               src={cover}
               alt={`Cover art for ${title}`}
               fill
-              sizes="96px"
+              sizes="(min-width: 768px) 96px, 80px"
               className="object-cover"
             />
           ) : (
@@ -112,7 +112,7 @@ export const ListCard = memo(function ListCard({
               href={`https://anilist.co/anime/${entry.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="line-clamp-2 rounded-sm hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+              className="break-words rounded-sm hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] md:line-clamp-2"
             >
               {title}
               <span className="sr-only"> (opens AniList in a new tab)</span>
@@ -163,7 +163,7 @@ export const ListCard = memo(function ListCard({
           </div>
 
           {isOwner && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 id={incrementButtonId(entry.id)}
                 type="button"

@@ -10,7 +10,7 @@ import { signInPath } from "@/lib/routes";
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]";
 
-const PILL = `inline-flex h-[24px] min-w-[108px] shrink-0 items-center justify-center rounded-full px-3 text-xs font-bold ${FOCUS_RING}`;
+const PILL = `inline-flex h-11 min-w-[108px] shrink-0 items-center justify-center rounded-full px-3 text-xs font-bold md:h-[24px] ${FOCUS_RING}`;
 
 /** Full-width card button (the landing's cards); same states as the pill. */
 const BLOCK = `inline-flex h-9 w-full items-center justify-center rounded-lg px-2 text-xs font-bold ${FOCUS_RING}`;

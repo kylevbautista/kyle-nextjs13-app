@@ -70,7 +70,7 @@ export default function AiringGrid({
           <span className="text-xs text-[rgb(164,164,164)]">Sort by countdown or popularity</span>
           <span
             aria-hidden="true"
-            className="mt-1 text-lg text-[#95ccff] motion-safe:transition-transform motion-safe:group-hover:translate-x-1"
+            className="mt-1 text-lg text-[#95ccff] transition-transform group-hover:translate-x-1"
           >
             →
           </span>
@@ -111,7 +111,7 @@ export function EpisodeCard({
     <article
       aria-labelledby={titleId}
       style={{ "--card-glow": color ?? "rgba(93,174,241,.55)" } as CSSProperties}
-      className="flex w-full flex-col overflow-hidden rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[#95ccff]/40 focus-within:shadow-[0_10px_30px_-12px_var(--card-glow)] hover:border-[#95ccff]/40 hover:shadow-[0_10px_30px_-12px_var(--card-glow)] motion-safe:focus-within:-translate-y-0.5 motion-safe:hover:-translate-y-0.5"
+      className="flex w-full flex-col overflow-hidden rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[#95ccff]/40 focus-within:shadow-[0_10px_30px_-12px_var(--card-glow)] hover:border-[#95ccff]/40 hover:shadow-[0_10px_30px_-12px_var(--card-glow)] focus-within:-translate-y-0.5 hover:-translate-y-0.5"
     >
       <div
         className="relative aspect-[2/3] w-full bg-[rgb(38,38,38)]"

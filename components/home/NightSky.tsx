@@ -179,11 +179,11 @@ export default function NightSky({ variant }: { variant: "hero" | "finale" }) {
       <div className="absolute inset-x-0 top-0 h-[65%] overflow-hidden">
         <span className="absolute left-0 top-0 h-px w-px" style={{ boxShadow: DIM_STARS }} />
         <span
-          className="absolute left-0 top-0 h-[1.5px] w-[1.5px] motion-safe:animate-twinkle"
+          className="absolute left-0 top-0 h-[1.5px] w-[1.5px] animate-twinkle"
           style={{ boxShadow: BRIGHT_STARS_A }}
         />
         <span
-          className="absolute left-0 top-0 h-[1.5px] w-[1.5px] motion-safe:animate-twinkle motion-safe:[animation-delay:-3.5s]"
+          className="absolute left-0 top-0 h-[1.5px] w-[1.5px] animate-twinkle [animation-delay:-3.5s]"
           style={{ boxShadow: BRIGHT_STARS_B }}
         />
       </div>
@@ -205,7 +205,7 @@ export default function NightSky({ variant }: { variant: "hero" | "finale" }) {
       {MAGICULES.map((m, index) => (
         <span
           key={index}
-          className={`absolute rounded-full opacity-40 motion-safe:animate-magicule-rise ${
+          className={`absolute rounded-full opacity-40 animate-magicule-rise ${
             index >= 10 ? "hidden sm:block" : ""
           }`}
           style={
@@ -250,7 +250,7 @@ const CENTER: CSSProperties = { transformBox: "fill-box", transformOrigin: "cent
 /**
  * `full` (the hero, behind the slime) turns once every 90 s while its inner
  * ring counter-rotates over 120 s. `ring` (the FAQ header) is the outer ring
- * and ticks only, turning once every 40 s. Motion-safe; aria-hidden.
+ * and ticks only, turning once every 40 s. Aria-hidden.
  */
 export function MagicCircle({
   variant = "full",
@@ -265,8 +265,8 @@ export function MagicCircle({
       <g
         className={
           full
-            ? "motion-safe:animate-spin-slow"
-            : "motion-safe:animate-[spin-slow_40s_linear_infinite]"
+            ? "animate-spin-slow"
+            : "animate-[spin-slow_40s_linear_infinite]"
         }
         style={CENTER}
         fill="none"
@@ -284,7 +284,7 @@ export function MagicCircle({
                 <path d={d} strokeOpacity={0.4} strokeWidth={1.5} strokeLinecap="round" />
               </g>
             ))}
-            <g className="motion-safe:animate-spin-slower-reverse" style={CENTER}>
+            <g className="animate-spin-slower-reverse" style={CENTER}>
               <circle r="120" strokeOpacity={0.5} strokeWidth={1.25} strokeDasharray="2 7" />
             </g>
           </>

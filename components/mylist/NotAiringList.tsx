@@ -27,7 +27,7 @@ export default function NotAiringList({ entries }: { entries: ListEntry[] }) {
         const title = displayTitle(entry);
         const cover = entry.coverImage?.medium || entry.coverImage?.large;
         return (
-          <li key={entry.id} className="flex items-center gap-3 p-2">
+          <li key={entry.id} className="flex min-w-0 items-center gap-3 p-2">
             {cover ? (
               <Image
                 src={cover}
@@ -44,12 +44,12 @@ export default function NotAiringList({ entries }: { entries: ListEntry[] }) {
                 href={`https://anilist.co/anime/${entry.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block truncate rounded-sm text-white hover:text-[#95ccff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+                className="relative block break-words rounded-sm text-white hover:text-[#95ccff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] md:truncate"
               >
                 {title}
                 <span className="sr-only"> (AniList, opens in a new tab)</span>
               </a>
-              <p className="truncate text-xs text-[rgb(164,164,164)]">
+              <p className="break-words text-xs text-[rgb(164,164,164)] md:truncate">
                 {LIST_STATUS_LABELS[entry.userData.listType]} · {scheduleNote(entry)}
               </p>
             </div>

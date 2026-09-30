@@ -9,7 +9,7 @@ export function ListGrid({ children }: { children: React.ReactNode }) {
   return (
     <ul
       role="list"
-      className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-3"
+      className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-3"
     >
       {children}
     </ul>
@@ -22,16 +22,16 @@ export function ListCardSkeleton() {
   return (
     <li
       aria-hidden="true"
-      className="flex overflow-hidden rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)]"
+      className="flex min-w-0 overflow-hidden rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)]"
     >
-      <div className="min-h-[150px] w-[96px] shrink-0 animate-pulse bg-[rgb(38,38,38)]" />
-      <div className="flex flex-1 flex-col gap-3 p-3">
+      <div className="min-h-[150px] w-20 shrink-0 animate-pulse bg-[rgb(38,38,38)] md:w-[96px]" />
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-3">
         <div className={`h-3.5 w-4/5 ${bar}`} />
         <div className={`h-3 w-1/2 ${bar}`} />
         <div className={`mt-auto h-1 w-full ${bar}`} />
         <div className="flex gap-2">
-          <div className={`h-8 w-14 ${bar}`} />
-          <div className={`h-8 w-14 ${bar}`} />
+          <div className={`h-11 w-14 md:h-8 ${bar}`} />
+          <div className={`h-11 w-14 md:h-8 ${bar}`} />
         </div>
       </div>
     </li>

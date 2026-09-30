@@ -25,10 +25,10 @@ interface EditEntryDialogProps {
 }
 
 const fieldClass =
-  "w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(18,18,18)] px-3 py-2 text-white [color-scheme:dark] placeholder:text-[rgb(110,110,110)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 aria-[invalid=true]:border-rose-400";
+  "min-h-11 min-w-0 w-full max-w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(18,18,18)] px-3 py-2 text-base text-white [color-scheme:dark] placeholder:text-[rgb(110,110,110)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 aria-[invalid=true]:border-rose-400 md:min-h-0";
 
 const buttonClass =
-  "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] aria-disabled:cursor-not-allowed aria-disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] aria-disabled:cursor-not-allowed aria-disabled:opacity-60 md:min-h-10";
 
 const FIELD_ORDER: EditFormField[] = ["progress", "score", "startDate", "finishDate"];
 
@@ -193,7 +193,7 @@ export function EditEntryDialog({
         if (pressedOnBackdrop.current && isBackdropEvent(event)) requestClose();
         pressedOnBackdrop.current = false;
       }}
-      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-0 text-white shadow-2xl backdrop:bg-black/70"
+      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-0 text-white shadow-2xl backdrop:bg-black/70"
     >
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="flex items-start gap-3">
@@ -209,7 +209,7 @@ export function EditEntryDialog({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="text-lg font-semibold leading-snug">
+            <h2 id={titleId} className="break-words text-lg font-semibold leading-snug">
               {title}
             </h2>
             <p className="mt-1 text-sm text-[rgb(164,164,164)]">
@@ -222,13 +222,13 @@ export function EditEntryDialog({
             onClick={requestClose}
             aria-label="Close"
             aria-disabled={busy !== null || undefined}
-            className="-mr-1 -mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xl leading-none text-[rgb(164,164,164)] hover:bg-[rgb(53,53,53)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] aria-disabled:opacity-60"
+            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-xl leading-none text-[rgb(164,164,164)] hover:bg-[rgb(53,53,53)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] aria-disabled:opacity-60 md:h-9 md:w-9"
           >
             <span aria-hidden="true">×</span>
           </button>
         </div>
 
-        <form noValidate onSubmit={handleSave} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <form noValidate onSubmit={handleSave} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor={fieldId("status")} className="text-sm font-medium">
               Status
@@ -351,11 +351,11 @@ export function EditEntryDialog({
               aria-labelledby={`${id}-confirm`}
               className="flex flex-col gap-3 rounded-md border border-rose-500/40 bg-rose-500/10 p-3 sm:col-span-2"
             >
-              <p id={`${id}-confirm`} className="text-sm">
+              <p id={`${id}-confirm`} className="break-words text-sm">
                 Remove <strong>{title}</strong> from your list? Its progress, score and dates will
                 be lost.
               </p>
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="grid grid-cols-1 gap-2 min-[375px]:grid-cols-2 sm:flex sm:flex-wrap sm:justify-end">
                 <button
                   ref={keepButtonRef}
                   type="button"
@@ -376,17 +376,17 @@ export function EditEntryDialog({
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap-reverse items-center justify-between gap-3 sm:col-span-2">
+            <div className="flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap-reverse sm:items-center sm:justify-between">
               <button
                 ref={removeButtonRef}
                 type="button"
                 onClick={startConfirm}
                 aria-disabled={busy !== null || undefined}
-                className={`${buttonClass} -ml-2 px-2 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200`}
+                className={`${buttonClass} px-2 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 sm:-ml-2`}
               >
                 Remove from list
               </button>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex">
                 <button
                   type="button"
                   onClick={requestClose}

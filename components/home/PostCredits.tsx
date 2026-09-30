@@ -11,7 +11,7 @@ const WORDS = [
  * The owner's "I / am / atomic" easter egg, kept as a post-credits scene
  * below the final CTA. Animation comes entirely from Reveal (data-reveal)
  * and globals.css: the words slide in once, then a violet ring ripples out.
- * No-JS and reduced-motion visitors see everything, static.
+ * No-JS visitors see everything, static.
  */
 export default function PostCredits() {
   return (

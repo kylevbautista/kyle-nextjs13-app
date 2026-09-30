@@ -34,8 +34,8 @@ export const SAGE_FRAME =
  *
  * Screen readers hear "Great Sage notice: …"; the bracket glyphs are hidden.
  * `scan="load"` types the line in on page load; `scan="reveal"` does it the
- * first time an ancestor `[data-reveal]` enters view (see Reveal.tsx). Both
- * are motion-safe only. `caret` adds a blinking ▍ once the scan finishes.
+ * first time an ancestor `[data-reveal]` enters view (see Reveal.tsx).
+ * `caret` adds a blinking ▍ once the scan finishes.
  */
 export function SageLine({
   kind,
@@ -55,7 +55,7 @@ export function SageLine({
   className?: string;
 }) {
   const scanClass =
-    scan === "load" ? "motion-safe:animate-sage-scan" : scan === "reveal" ? "sage-scan-reveal" : "";
+    scan === "load" ? "animate-sage-scan" : scan === "reveal" ? "sage-scan-reveal" : "";
   return (
     <Tag className={`inline-flex max-w-full ${SIZE_CLASS[size]} ${SAGE_FRAME} ${scanClass} ${className}`}>
       <span className="min-w-0">
@@ -67,7 +67,7 @@ export function SageLine({
         {caret && (
           <span
             aria-hidden="true"
-            className="ml-0.5 text-[#95ccff] motion-safe:animate-caret motion-safe:[animation-delay:850ms]"
+            className="ml-0.5 text-[#95ccff] animate-caret [animation-delay:850ms]"
           >
             ▍
           </span>

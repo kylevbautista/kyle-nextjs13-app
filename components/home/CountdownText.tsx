@@ -24,7 +24,7 @@ const formatMinutes = (total: number) => (total < 60 ? "<1m" : formatCountdownMi
 /**
  * Every countdown on the landing. SSR and hydration render the stable air
  * time ("EP 5 · Wed 9:30 AM PT"); the live value ticks on the shared useNow()
- * clock afterwards, per second or per minute (paused timers, reduced motion).
+ * clock afterwards, per second or per minute (paused timers).
  *
  * - chip:    "EP 5 · 2h 14m 03s" / "Premiere · 3d 4h 12m 09s" (card chips)
  * - row:     "EP 13 in 2h 24m 10s" / "Premiere in …" (hero card)
@@ -91,14 +91,14 @@ export default function CountdownText({
         <span
           aria-hidden="true"
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-            state === "airing" ? "bg-emerald-400" : "bg-amber-400 motion-safe:animate-pulse"
+            state === "airing" ? "bg-emerald-400" : "bg-amber-400 animate-pulse"
           }`}
         />
       )}
       {mode === "compact" && left === null ? (
         <span
           aria-hidden="true"
-          className="js-only inline-block h-2.5 w-16 rounded-full bg-[rgb(53,53,53)] motion-safe:animate-pulse"
+          className="js-only inline-block h-2.5 w-16 rounded-full bg-[rgb(53,53,53)] animate-pulse"
         />
       ) : (
         <span aria-hidden="true">{text}</span>
