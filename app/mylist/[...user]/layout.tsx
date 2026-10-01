@@ -28,7 +28,8 @@ export default async function AiringScheduleLayout({
   await requireListOwner(user, airingSchedulePath);
 
   return (
-    <main id="airing-schedule" className="min-w-0 w-full px-3 pb-8 pt-2 [contain:inline-size] sm:px-4">
+    // Full width: the page draws its own night-sky banner and content column.
+    <main id="airing-schedule" className="min-w-0 w-full overflow-x-clip pb-8 [contain:inline-size]">
       {children}
     </main>
   );

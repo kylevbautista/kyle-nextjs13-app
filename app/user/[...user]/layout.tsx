@@ -16,7 +16,8 @@ export default async function MyListLayout({
   await requireListOwner(user, myListPath);
 
   return (
-    <div id="my-list" className="mx-auto min-w-0 w-full max-w-screen-2xl px-4 pb-8 md:px-6">
+    // Full width: the page draws its own night-sky banner and content column.
+    <div id="my-list" className="min-w-0 w-full overflow-x-clip">
       {children}
     </div>
   );

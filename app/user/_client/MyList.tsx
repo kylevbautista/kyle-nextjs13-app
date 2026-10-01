@@ -1,15 +1,38 @@
 "use client";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { SageTag, sageText } from "@/components/home/SageLine";
+import EvolutionCard from "@/components/theme/EvolutionCard";
+import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
+import PageBanner from "@/components/theme/PageBanner";
+import SagePanel from "@/components/theme/SagePanel";
+import { useCopyListLink } from "@/components/theme/ShareLink";
+import { Stat, StatGrid } from "@/components/theme/StatGrid";
+import {
+  APP_CONTAINER,
+  FIELD,
+  GHOST_BUTTON,
+  GHOST_BUTTON_PANEL,
+  LABEL_CLASS,
+  PANEL,
+  PRIMARY_BUTTON,
+  QUIET_BUTTON,
+  SECTION_TITLE_CLASS,
+  SHELF,
+  SHELF_OFF,
+  SHELF_ON,
+  FOCUS_RING_PANEL,
+} from "@/components/theme/tokens";
 import { SEASONS, SEASON_LABELS, isSeasonName } from "@/lib/season";
-import { WEEKDAYS } from "@/lib/anime/airing";
+import { WEEKDAYS, nextAiring } from "@/lib/anime/airing";
+import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
 import { LIST_STATUSES, LIST_STATUS_LABELS, displayTitle } from "@/lib/anime/types";
 import type { ListEntry, UserAnimeData } from "@/lib/anime/types";
-import { myListPath, searchPath } from "@/lib/routes";
+import { evolutionTier, showsLabel } from "@/lib/landing";
+import { airingSchedulePath, searchPath } from "@/lib/routes";
 import { errorMessage, saveUserData } from "./api";
 import { EditEntryDialog } from "./EditEntryDialog";
 import { ListCard, editButtonId, incrementButtonId } from "./ListCard";
@@ -36,7 +59,6 @@ import type { ListFilters, MyListEntry, SortKey, StatusTab } from "./listFilters
 export interface ListOwner {
   id: string;
   name: string | null;
-  image: string | null;
 }
 
 interface MyListProps {
@@ -56,12 +78,30 @@ const TAB_LABELS: Record<StatusTab, string> = { all: "All", ...LIST_STATUS_LABEL
  */
 const REFRESH_DELAY_MS = 2_000;
 
-const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(18,18,18)]";
-const controlClass =
-  "min-h-11 min-w-0 w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-3 py-2 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:min-h-0 md:text-sm";
-const primaryLink = `inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-500 md:min-h-10 ${focusRing}`;
-const secondaryButton = `inline-flex min-h-11 items-center justify-center rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] px-3 text-sm font-medium text-white hover:bg-[rgb(53,53,53)] md:min-h-9 ${focusRing}`;
+/** Shows on the schedule: an upcoming episode, not completed or dropped. */
+const isAiringForList = (entry: MyListEntry) =>
+  entry.userData.listType !== "completed" &&
+  entry.userData.listType !== "dropped" &&
+  nextAiring(entry) !== null;
+
+/** The banner's status readout. Real list data only. */
+function listStats(items: MyListEntry[]) {
+  let episodes = 0;
+  let scoreSum = 0;
+  let scored = 0;
+  for (const entry of items) {
+    episodes += entry.userData.episodeProgressNumber;
+    if (entry.userData.score !== null) {
+      scoreSum += entry.userData.score;
+      scored += 1;
+    }
+  }
+  return {
+    episodes,
+    meanScore: scored ? (Math.round((scoreSum / scored) * 10) / 10).toFixed(1) : null,
+    airing: items.filter(isAiringForList).length,
+  };
+}
 
 function FilterSelect({
   id,
@@ -77,15 +117,15 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-medium text-[rgb(164,164,164)]">
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <label htmlFor={id} className={LABEL_CLASS}>
         {label}
       </label>
       <select
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={controlClass}
+        className={FIELD}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -97,30 +137,11 @@ function FilterSelect({
   );
 }
 
-function OwnerAvatar({ owner, name }: { owner: ListOwner; name: string }) {
-  if (owner.image) {
-    return (
-      <Image
-        src={owner.image}
-        alt={`${name}'s avatar`}
-        width={56}
-        height={56}
-        unoptimized
-        referrerPolicy="no-referrer"
-        className="h-14 w-14 shrink-0 rounded-full border border-[rgb(53,53,53)] object-cover"
-      />
-    );
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold"
-    >
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
+/**
+ * My List, in the landing's Tempest theme (skill 02 · Predator): a night-sky
+ * banner with the list's stats and its evolving slime, the demo's shelves,
+ * a filter console, and the demo's tracker card for every show.
+ */
 export function MyList({ entries, isOwner, owner }: MyListProps) {
   const router = useRouter();
   const [items, setItems] = useState(entries);
@@ -130,6 +151,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(() => new Set());
+  const copyLink = useCopyListLink(owner.id);
 
   /** userData written by this page, updated synchronously (state renders later). */
   const latestUserData = useRef(new Map<number, UserAnimeData>());
@@ -217,7 +239,9 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
           }
         }
         if (saved.listType === "completed" && previous.listType !== "completed") {
-          toast.success(`Finished ${displayTitle(entry)}! Moved to Completed.`);
+          toast.success(
+            sageText("Notice", `Final episode reached. ${displayTitle(entry)} moved to Completed.`)
+          );
         }
         scheduleRefresh();
       } catch (err) {
@@ -276,12 +300,15 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
     [items, deferredFilters]
   );
   const counts = useMemo(() => countByStatus(filtered), [filtered]);
+  const totals = useMemo(() => countByStatus(items), [items]);
+  const stats = useMemo(() => listStats(items), [items]);
   const sections = useMemo(() => {
     const sorted = sortEntries(filtered, sort);
     if (tab === "all") return groupByStatus(sorted);
     const inTab = sorted.filter((entry) => entry.userData.listType === tab);
     return inTab.length ? [{ status: tab, entries: inTab }] : [];
   }, [filtered, sort, tab]);
+  const hasCountdowns = useMemo(() => items.some((entry) => nextAiring(entry) !== null), [items]);
 
   const filtersActive = hasActiveFilters(filters);
   const panelFilterCount = [filters.year, filters.season, filters.weekday, filters.release].filter(
@@ -290,73 +317,99 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   const editingEntry =
     editingId === null ? null : items.find((entry) => entry.id === editingId) ?? null;
   const name = owner.name?.trim() || "Anonymous";
+  const listName = isOwner ? "your list" : `${name}'s list`;
 
-  async function copyLink() {
-    const url = `${window.location.origin}${myListPath(owner.id)}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied! Anyone with the link can view your list.");
-    } catch {
-      toast.error(`Couldn't copy automatically. Your list's link is ${url}`);
-    }
-  }
+  const sage = !items.length
+    ? isOwner
+      ? { kind: "Notice" as const, text: "Your list is empty. Recommend: predation." }
+      : { kind: "Report" as const, text: `${name} hasn't stored any shows yet.` }
+    : {
+        kind: "Report" as const,
+        text: isOwner
+          ? `Stomach contents: ${showsLabel(items.length)}. ${stats.airing} still airing.`
+          : `Analysis complete: ${showsLabel(items.length)} on ${name}'s list, ${stats.airing} still airing.`,
+      };
 
-  const header = (
-    <header className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-md border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] p-4 md:flex md:flex-wrap md:gap-4">
-      <OwnerAvatar owner={owner} name={name} />
-      <div className="min-w-0 flex-1">
-        <h1
-          id={HEADING_ID}
-          tabIndex={-1}
-          className="break-words text-xl font-bold focus:outline-none md:truncate md:text-2xl"
-        >
-          {name}&apos;s list
-        </h1>
-        <p className="text-sm text-[rgb(164,164,164)]">
-          {items.length} {items.length === 1 ? "show" : "shows"}
-          {isOwner && " · anyone with the link can view it, only you can edit it"}
-        </p>
+  const banner = (
+    <PageBanner
+      eyebrow="Skill 02 · Predator"
+      sage={sage}
+      title={`${name}'s list`}
+      titleId={HEADING_ID}
+      sub={
+        isOwner
+          ? "Tap +1 after each episode. Reach the finale and the show files itself under Completed. Anyone with the link can look; only you can edit."
+          : `What ${name} is watching, planning and has finished. Only ${name} can edit it.`
+      }
+      aside={
+        <EvolutionCard
+          layout="banner"
+          headingLevel="h2"
+          count={items.length}
+          tier={evolutionTier(true, items.length)}
+          listName={listName}
+          gulpKey={totals.completed}
+        />
+      }
+    >
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Link href={airingSchedulePath(owner.id)} prefetch={false} className={GHOST_BUTTON}>
+          {isOwner ? "My Airing Schedule" : `${name}'s Airing Schedule`}
+          <span aria-hidden="true">→</span>
+        </Link>
+        {isOwner && (
+          <button type="button" onClick={() => copyLink()} className={GHOST_BUTTON}>
+            Copy link
+          </button>
+        )}
       </div>
-      {isOwner && (
-        <button
-          type="button"
-          onClick={copyLink}
-          className={`${secondaryButton} col-span-2 md:shrink-0`}
-        >
-          Copy link
-        </button>
+      {items.length > 0 && (
+        <StatGrid className="mt-6 max-w-2xl grid-cols-2 sm:grid-cols-4">
+          <Stat label="Shows" value={items.length} />
+          <Stat label="Watching" value={totals.watching} />
+          <Stat label="Episodes seen" value={stats.episodes} />
+          <Stat label="Mean score" value={stats.meanScore ?? "—"} />
+        </StatGrid>
       )}
-    </header>
+    </PageBanner>
   );
 
   if (items.length === 0) {
     return (
-      <main className="flex min-w-0 flex-col gap-6 py-4 text-white">
-        {header}
-        <div className="rounded-md border border-dashed border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-6 py-12 text-center">
+      <main className="min-w-0 pb-8 text-white">
+        {banner}
+        <div className={APP_CONTAINER}>
           {isOwner ? (
-            <>
-              <p className="text-lg font-semibold">Your list is empty… for now.</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-[rgb(164,164,164)]">
-                Find something to watch and add it with the list button on any anime card.
-                It&apos;ll show up here with a countdown to its next episode.
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link href="/anime" className={primaryLink}>
+            <SagePanel
+              kind="Notice"
+              title="Every legend starts as a slime."
+              actions={
+                <>
+                  <Link href="/anime" className={PRIMARY_BUTTON}>
+                    Browse this season
+                  </Link>
+                  <Link href={searchPath()} prefetch={false} className={GHOST_BUTTON}>
+                    Search anime
+                  </Link>
+                </>
+              }
+            >
+              Find something to watch and tap + Add to list on any anime card. It&apos;ll show up
+              here with a countdown to its next episode.
+            </SagePanel>
+          ) : (
+            <SagePanel
+              kind="Report"
+              mood="worried"
+              title="Nothing here yet"
+              actions={
+                <Link href="/anime" className={GHOST_BUTTON}>
                   Browse this season
                 </Link>
-                <Link href={searchPath()} className={`${secondaryButton} px-4 md:min-h-10`}>
-                  Search anime
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-semibold">Nothing here yet</p>
-              <p className="mt-2 text-sm text-[rgb(164,164,164)]">
-                {name} hasn&apos;t added any anime to their list.
-              </p>
-            </>
+              }
+            >
+              {name} hasn&apos;t added any anime to their list.
+            </SagePanel>
           )}
         </div>
       </main>
@@ -364,38 +417,31 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   }
 
   return (
-    <main className="flex min-w-0 flex-col gap-6 py-4 text-white">
-      {header}
+    <main className="min-w-0 pb-8 text-white">
+      {banner}
 
-      <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <aside className="flex min-w-0 flex-col gap-4 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:w-56 md:shrink-0 md:gap-5 md:overflow-y-auto md:pb-2">
-          <nav aria-label="List status" className="min-w-0">
-            <h2 className="mb-2 hidden text-xs font-semibold uppercase tracking-wide text-[rgb(164,164,164)] md:block">
-              Lists
-            </h2>
-            <ul className="-mx-1 flex max-w-[calc(100%+0.5rem)] gap-2 overflow-x-auto px-1 py-1 md:max-w-none md:flex-col md:overflow-visible">
+      <div className={`${APP_CONTAINER} flex flex-col gap-8`}>
+        <section aria-label="Shelves and filters" className={`${PANEL} p-3 sm:p-4`}>
+          <nav aria-label="List status">
+            <ul className="flex flex-wrap gap-1.5">
               {TABS.map((value) => {
                 const selected = tab === value;
                 return (
-                  <li key={value} className="shrink-0">
+                  <li key={value}>
                     <button
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setTab(value)}
-                      className={`flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm md:min-h-0 ${focusRing} ${
-                        selected
-                          ? "bg-blue-600 font-semibold text-white"
-                          : "bg-[rgb(30,30,30)] text-[rgb(220,220,220)] hover:bg-[rgb(53,53,53)] md:bg-transparent"
-                      }`}
+                      className={`${SHELF} ${selected ? SHELF_ON : SHELF_OFF} ${FOCUS_RING_PANEL}`}
                     >
+                      {value !== "all" && (
+                        <span
+                          aria-hidden="true"
+                          className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_CLASS[value]}`}
+                        />
+                      )}
                       {TAB_LABELS[value]}
-                      <span
-                        className={`rounded-full px-2 text-xs tabular-nums ${
-                          selected ? "bg-black/25" : "bg-[rgb(53,53,53)]"
-                        }`}
-                      >
-                        {counts[value]}
-                      </span>
+                      <span className="font-semibold tabular-nums">{counts[value]}</span>
                     </button>
                   </li>
                 );
@@ -403,94 +449,9 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
             </ul>
           </nav>
 
-          <section aria-labelledby="list-filters-heading" className="flex flex-col gap-3">
-            <h2
-              id="list-filters-heading"
-              className="text-xs font-semibold uppercase tracking-wide text-[rgb(164,164,164)]"
-            >
-              <span className="hidden md:inline">Filters</span>
-              <button
-                type="button"
-                aria-expanded={filtersOpen}
-                aria-controls="list-filters"
-                onClick={() => setFiltersOpen((open) => !open)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-md px-2 uppercase md:hidden ${focusRing}`}
-              >
-                Filters
-                {panelFilterCount > 0 && (
-                  <span className="rounded-full bg-blue-600 px-2 text-[11px] normal-case text-white">
-                    {panelFilterCount} active
-                  </span>
-                )}
-                <span aria-hidden="true">{filtersOpen ? "▴" : "▾"}</span>
-              </button>
-            </h2>
-            <div
-              id="list-filters"
-              className={`${filtersOpen ? "grid" : "hidden"} min-w-0 grid-cols-1 gap-3 min-[375px]:grid-cols-2 md:flex md:flex-col`}
-            >
-              <FilterSelect
-                id="filter-year"
-                label="Year"
-                value={filters.year === null ? "" : String(filters.year)}
-                onChange={(value) => updateFilters({ year: value ? Number(value) : null })}
-                options={[
-                  { value: "", label: "All years" },
-                  ...years.map((year) => ({ value: String(year), label: String(year) })),
-                ]}
-              />
-              <FilterSelect
-                id="filter-season"
-                label="Season"
-                value={filters.season ?? ""}
-                onChange={(value) => updateFilters({ season: isSeasonName(value) ? value : null })}
-                options={[
-                  { value: "", label: "All seasons" },
-                  ...SEASONS.map((season) => ({ value: season, label: SEASON_LABELS[season] })),
-                ]}
-              />
-              <FilterSelect
-                id="filter-weekday"
-                label="Airing day (PT)"
-                value={filters.weekday ?? ""}
-                onChange={(value) => updateFilters({ weekday: isWeekday(value) ? value : null })}
-                options={[
-                  { value: "", label: "Any day" },
-                  ...WEEKDAYS.map((day) => ({ value: day, label: WEEKDAY_LABELS[day] })),
-                ]}
-              />
-              <FilterSelect
-                id="filter-release"
-                label="Release status"
-                value={filters.release ?? ""}
-                onChange={(value) =>
-                  updateFilters({ release: isReleaseStatus(value) ? value : null })
-                }
-                options={[
-                  { value: "", label: "Any status" },
-                  ...RELEASE_STATUSES.map((status) => ({
-                    value: status,
-                    label: RELEASE_STATUS_LABELS[status],
-                  })),
-                ]}
-              />
-              {filtersActive && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className={`${secondaryButton} min-[375px]:col-span-2`}
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          </section>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <label htmlFor="list-search" className="text-xs font-medium text-[rgb(164,164,164)]">
+          <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-[rgb(53,53,53)] pt-3">
+            <div className="flex min-w-0 basis-full flex-col gap-1.5 sm:basis-0 sm:flex-1">
+              <label htmlFor="list-search" className={LABEL_CLASS}>
                 Search this list
               </label>
               <input
@@ -500,11 +461,11 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 onChange={(event) => updateFilters({ query: event.target.value })}
                 placeholder="Title in English, romaji or Japanese"
                 autoComplete="off"
-                className={`${controlClass} placeholder:text-[rgb(110,110,110)]`}
+                className={`${FIELD} font-mono`}
               />
             </div>
-            <div className="flex min-w-0 flex-col gap-1 sm:w-48 sm:shrink-0">
-              <label htmlFor="list-sort" className="text-xs font-medium text-[rgb(164,164,164)]">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:w-48 sm:flex-none">
+              <label htmlFor="list-sort" className={LABEL_CLASS}>
                 Sort by
               </label>
               <select
@@ -513,7 +474,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 onChange={(event) => {
                   if (isSortKey(event.target.value)) setSort(event.target.value);
                 }}
-                className={controlClass}
+                className={FIELD}
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -522,58 +483,147 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 ))}
               </select>
             </div>
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              aria-controls="list-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={`${GHOST_BUTTON_PANEL} shrink-0 md:h-10 lg:hidden`}
+            >
+              Filters
+              {panelFilterCount > 0 && (
+                <span className="rounded-full bg-blue-600 px-2 text-[11px] text-white">
+                  {panelFilterCount}
+                  <span className="sr-only"> active</span>
+                </span>
+              )}
+              <span aria-hidden="true">{filtersOpen ? "▴" : "▾"}</span>
+            </button>
           </div>
 
-          <p aria-live="polite" className="text-sm text-[rgb(164,164,164)]">
-            {filtersActive ? `${filtered.length} of ${items.length} shows match your filters.` : ""}
-          </p>
+          <div
+            id="list-filters"
+            className={`${filtersOpen ? "grid" : "hidden"} mt-3 min-w-0 grid-cols-1 gap-3 min-[375px]:grid-cols-2 md:grid-cols-4 lg:grid`}
+          >
+            <FilterSelect
+              id="filter-year"
+              label="Year"
+              value={filters.year === null ? "" : String(filters.year)}
+              onChange={(value) => updateFilters({ year: value ? Number(value) : null })}
+              options={[
+                { value: "", label: "All years" },
+                ...years.map((year) => ({ value: String(year), label: String(year) })),
+              ]}
+            />
+            <FilterSelect
+              id="filter-season"
+              label="Season"
+              value={filters.season ?? ""}
+              onChange={(value) => updateFilters({ season: isSeasonName(value) ? value : null })}
+              options={[
+                { value: "", label: "All seasons" },
+                ...SEASONS.map((season) => ({ value: season, label: SEASON_LABELS[season] })),
+              ]}
+            />
+            <FilterSelect
+              id="filter-weekday"
+              label="Airing day (PT)"
+              value={filters.weekday ?? ""}
+              onChange={(value) => updateFilters({ weekday: isWeekday(value) ? value : null })}
+              options={[
+                { value: "", label: "Any day" },
+                ...WEEKDAYS.map((day) => ({ value: day, label: WEEKDAY_LABELS[day] })),
+              ]}
+            />
+            <FilterSelect
+              id="filter-release"
+              label="Release status"
+              value={filters.release ?? ""}
+              onChange={(value) => updateFilters({ release: isReleaseStatus(value) ? value : null })}
+              options={[
+                { value: "", label: "Any status" },
+                ...RELEASE_STATUSES.map((status) => ({
+                  value: status,
+                  label: RELEASE_STATUS_LABELS[status],
+                })),
+              ]}
+            />
+          </div>
 
-          {sections.length === 0 ? (
-            <div className="rounded-md border border-dashed border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-6 py-10 text-center">
-              {filtersActive ? (
+          <div className="mt-2 flex min-h-11 flex-wrap items-center justify-between gap-x-4">
+            <p aria-live="polite" className="text-sm text-[#cfe8ff]">
+              {filtersActive && (
                 <>
-                  <p className="font-semibold">No shows match these filters.</p>
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className={`${secondaryButton} mt-4`}
-                  >
-                    Clear filters
-                  </button>
+                  <SageTag kind="Analyze" />
+                  {filtered.length} of {showsLabel(items.length)} match.
                 </>
-              ) : (
-                <p className="font-semibold">Nothing in {TAB_LABELS[tab]} yet.</p>
               )}
+            </p>
+            <div className="-mr-2 flex flex-wrap items-center">
+              {filtersActive && (
+                <button type="button" onClick={clearFilters} className={QUIET_BUTTON}>
+                  Clear filters
+                </button>
+              )}
+              {hasCountdowns && <LiveTimersToggle />}
             </div>
+          </div>
+        </section>
+
+        {sections.length === 0 ? (
+          filtersActive ? (
+            <SagePanel
+              kind="Report"
+              mood="worried"
+              actions={
+                <button type="button" onClick={clearFilters} className={GHOST_BUTTON}>
+                  Clear filters
+                </button>
+              }
+            >
+              No shows match these filters.
+            </SagePanel>
           ) : (
-            sections.map((section) => (
-              <section key={section.status} aria-labelledby={`section-${section.status}`}>
-                <h2
-                  id={`section-${section.status}`}
-                  className="mb-3 flex flex-wrap items-baseline gap-2 border-b border-[rgb(53,53,53)] pb-1 text-lg font-semibold"
-                >
-                  {LIST_STATUS_LABELS[section.status]}
-                  <span className="text-sm font-normal text-[rgb(164,164,164)]">
-                    {section.entries.length}
-                  </span>
-                </h2>
-                <ListGrid>
-                  {section.entries.map((entry) => (
-                    <ListCard
-                      key={entry.id}
-                      entry={entry}
-                      isOwner={isOwner}
-                      showStatus={tab === "all"}
-                      pending={pendingIds.has(entry.id)}
-                      onIncrement={incrementProgress}
-                      onEdit={openEditor}
-                    />
-                  ))}
-                </ListGrid>
-              </section>
-            ))
-          )}
-        </div>
+            <SagePanel kind="Report" mood="sage">
+              Nothing in {TAB_LABELS[tab]} yet.
+            </SagePanel>
+          )
+        ) : (
+          sections.map((section) => (
+            <section
+              key={section.status}
+              aria-labelledby={`section-${section.status}`}
+              className="flex min-w-0 flex-col gap-4"
+            >
+              <h2 id={`section-${section.status}`} className={SECTION_TITLE_CLASS}>
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[section.status]}`}
+                />
+                {LIST_STATUS_LABELS[section.status]}
+                <span className="font-mono text-sm font-normal tabular-nums text-[rgb(164,164,164)]">
+                  {section.entries.length}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="h-px min-w-8 flex-1 bg-gradient-to-r from-[#95ccff]/30 to-transparent"
+                />
+              </h2>
+              <ListGrid>
+                {section.entries.map((entry) => (
+                  <ListCard
+                    key={entry.id}
+                    entry={entry}
+                    isOwner={isOwner}
+                    pending={pendingIds.has(entry.id)}
+                    onIncrement={incrementProgress}
+                    onEdit={openEditor}
+                  />
+                ))}
+              </ListGrid>
+            </section>
+          ))
+        )}
       </div>
 
       {isOwner && editingEntry && (

@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import EvolutionCard from "@/components/theme/EvolutionCard";
 import { useMyList } from "@/components/utils/useMyList";
 import {
   LIST_STATUS_LABELS,
@@ -25,9 +26,7 @@ import {
   TIER_LABELS,
   TIER_THRESHOLDS,
   evolutionTier,
-  nextTier,
   parseAddIntent,
-  showsLabel,
   type EvolutionTier,
 } from "@/lib/landing";
 import { airingSchedulePath, myListPath, signInPath } from "@/lib/routes";
@@ -35,8 +34,8 @@ import { EpisodeCard } from "./AiringGrid";
 import { trackLanding, trackOnce } from "./analytics";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
 import { markQuest, useQuestFlags } from "./questStore";
-import { SageLine, type SageKind } from "./SageLine";
-import { SageTag, SessionCta } from "./SessionCta";
+import { SageLine, SageTag, type SageKind } from "./SageLine";
+import { SessionCta } from "./SessionCta";
 import Slime from "./Slime";
 import { useLandingSession, type LandingSession } from "./useLandingSession";
 
@@ -635,49 +634,6 @@ function ClearedPanel({ userId }: { userId: string }) {
           {season?.browseLabel ?? "Browse this season"}
         </Link>
       </div>
-    </div>
-  );
-}
-
-function EvolutionCard({ count, tier }: { count: number | null; tier: EvolutionTier }) {
-  const next = nextTier(tier);
-  const from = tier === "lord" ? TIER_THRESHOLDS.lord : tier === "demon" ? TIER_THRESHOLDS.demon : 0;
-  const shows = count ?? 0;
-  const ratio = next ? Math.min(1, Math.max(0, (shows - from) / (next.at - from))) : 1;
-
-  return (
-    <div className="flex flex-col items-center gap-3 self-start rounded-2xl border border-[#95ccff]/25 bg-[#0a1428]/80 p-5 text-center">
-      <h3 className="self-start font-mono text-xs uppercase tracking-[0.2em] text-[#95ccff]">
-        Evolution
-      </h3>
-      <Slime size={120} tier={tier} gulpKey={count ?? undefined} />
-      <p className="text-sm text-[rgb(200,206,218)]">
-        Current form: <strong className="text-white">{TIER_LABELS[tier]}</strong>
-        {count !== null && (
-          <>
-            <span aria-hidden="true"> · </span>
-            <span className="sr-only">. </span>
-            {showsLabel(count)} on your list
-          </>
-        )}
-      </p>
-      {next ? (
-        <>
-          <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500"
-              style={{ width: `${ratio * 100}%` }}
-            />
-          </div>
-          {count !== null && (
-            <p className="text-sm text-[rgb(164,164,164)]">
-              {Math.max(0, next.at - shows)} more to {TIER_LABELS[next.tier]}
-            </p>
-          )}
-        </>
-      ) : (
-        <p className="text-sm text-[rgb(164,164,164)]">Final form reached. For now.</p>
-      )}
     </div>
   );
 }

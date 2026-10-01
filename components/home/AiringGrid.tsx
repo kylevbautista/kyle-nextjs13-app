@@ -9,7 +9,6 @@ import { trackLanding, type LandingCta, type LandingLocation } from "./analytics
 import CountdownText from "./CountdownText";
 import LandingAddButton from "./LandingAddButton";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
-import { setLiveSeconds, useLiveTimersPreference } from "./liveTimers";
 import { FOCUS_RING } from "./SageLine";
 import Slime from "./Slime";
 
@@ -162,28 +161,6 @@ export function EpisodeCard({
         </div>
       </div>
     </article>
-  );
-}
-
-/** 'Pause live timers' / 'Resume live timers' (WCAG 2.2.2). */
-export function LiveTimersToggle({ className = "" }: { className?: string }) {
-  const on = useLiveTimersPreference();
-  return (
-    <button
-      type="button"
-      aria-pressed={!on}
-      onClick={() => setLiveSeconds(!on)}
-      className={`inline-flex h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-[rgb(200,206,218)] transition-colors hover:bg-white/5 hover:text-white ${FOCUS_RING} ${className}`}
-    >
-      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-[#95ccff]" fill="currentColor">
-        {on ? (
-          <path d="M4 3h2.5v10H4zM9.5 3H12v10H9.5z" />
-        ) : (
-          <path d="M5 3l8 5-8 5z" />
-        )}
-      </svg>
-      {on ? "Pause live timers" : "Resume live timers"}
-    </button>
   );
 }
 

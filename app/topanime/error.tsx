@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useTransition } from "react";
+import Link from "next/link";
+import SagePanel from "@/components/theme/SagePanel";
+import { GHOST_BUTTON, PRIMARY_BUTTON } from "@/components/theme/tokens";
+import { searchPath } from "@/lib/routes";
+import TopAnimeBanner from "./TopAnimeBanner";
 import TopAnimeShell from "./TopAnimeShell";
 
 export default function TopAnimeError({
@@ -18,26 +23,39 @@ export default function TopAnimeError({
   }, [error]);
 
   return (
-    <TopAnimeShell>
-      <div
-        role="alert"
-        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] p-6 text-center"
-      >
-        <p className="text-lg font-semibold">The ranking wandered off.</p>
-        <p className="text-sm text-[rgb(164,164,164)]">
-          We couldn&apos;t reach MyAnimeList (via Jikan). It may be busy or briefly
-          down. Give it a few seconds and try again.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            if (!pending) startTransition(() => retry());
-          }}
-          aria-disabled={pending}
-          className="mt-1 rounded-lg bg-blue-600 px-5 py-2 font-medium text-white transition-colors hover:bg-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(38,38,38)] aria-disabled:cursor-wait aria-disabled:opacity-70"
+    <TopAnimeShell
+      banner={
+        <TopAnimeBanner sage={{ kind: "Warning", text: "Couldn't reach MyAnimeList's ranking (via Jikan)." }} />
+      }
+    >
+      <div role="alert" className="lg:col-span-2">
+        <SagePanel
+          kind="Warning"
+          mood="worried"
+          title="The ranking wandered off"
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!pending) startTransition(() => retry());
+                }}
+                aria-disabled={pending || undefined}
+                className={PRIMARY_BUTTON}
+              >
+                {pending ? "Retrying…" : "Retry"}
+              </button>
+              <Link href="/anime" className={GHOST_BUTTON}>
+                Browse this season
+              </Link>
+              <Link href={searchPath()} prefetch={false} className={GHOST_BUTTON}>
+                Search anime
+              </Link>
+            </>
+          }
         >
-          {pending ? "Retrying…" : "Retry"}
-        </button>
+          MyAnimeList (via Jikan) may be busy or briefly down. Wait a few seconds, then retry.
+        </SagePanel>
       </div>
     </TopAnimeShell>
   );
