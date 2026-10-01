@@ -1,160 +1,65 @@
 "use client";
-
-import Image from "next/image";
-import Link from "next/link";
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   dedupeByMalId,
   getTopAnimeJinkan,
   type TopAnimeItem,
   type TopAnimePage,
 } from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
-import { searchPath } from "@/lib/routes";
+import { SageTag } from "@/components/home/SageLine";
+import Slime from "@/components/home/Slime";
+import { TrophyIcon } from "@/components/theme/icons";
+import {
+  CONSOLE_PANEL,
+  FOCUS_RING,
+  PRIMARY_BUTTON,
+  QUIET_BUTTON,
+  SECTION_TITLE_CLASS,
+} from "@/components/theme/tokens";
+import {
+  consoleLine,
+  loadedAnnouncement,
+  malRankingUrl,
+  octagramBlurb,
+  rangeSpoken,
+  rangeText,
+  rankRange,
+  splitOctagram,
+  titleLinkId,
+} from "./ranking";
+import { initialRankingState, saveRankingSnapshot } from "./rankingStore";
+import { RowSkeleton, TopAnimeRow } from "./TopAnimeRow";
 
-const EAGER_POSTERS = 3;
+/** Posters loaded right away (the rest wait until they're near the viewport). */
+const EAGER_POSTERS = 4;
 
-const malUrl = (malId: number) => `https://myanimelist.net/anime/${malId}`;
-
-/** 1_234_567 → "1.2M". Hand-rolled so server and browser output always match. */
-const compactNumber = (n: number) => {
-  const oneDecimal = (value: number) => value.toFixed(1).replace(/\.0$/, "");
-  if (n >= 999_950) return `${oneDecimal(n / 1_000_000)}M`;
-  if (n >= 1_000) return `${oneDecimal(n / 1_000)}K`;
-  return String(n);
-};
-
-const detailsLine = (anime: TopAnimeItem) =>
-  [
-    anime.type,
-    anime.episodes !== null
-      ? `${anime.episodes} ${anime.episodes === 1 ? "ep" : "eps"}`
-      : null,
-    anime.year !== null ? String(anime.year) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2";
-
-function StarIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      aria-hidden="true"
-      className="h-[1em] w-[1em] shrink-0 text-yellow-400"
-    >
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-    </svg>
-  );
-}
-
-function TopAnimeRow({ anime, eager }: { anime: TopAnimeItem; eager: boolean }) {
-  const name = anime.titleEnglish ?? anime.title;
-  const href = malUrl(anime.malId);
-  const details = detailsLine(anime);
-  const showDefaultTitle =
-    anime.titleEnglish !== null && anime.titleEnglish !== anime.title;
-
-  return (
-    <li className="flex animate-grow items-center gap-3 rounded-2xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-2 motion-reduce:animate-none sm:gap-4 sm:p-3 laptop2:p-4">
-      <div className="min-w-[2.75rem] shrink-0 text-center text-xl font-bold tabular-nums text-[#95ccff] sm:min-w-[4rem] sm:text-3xl laptop2:min-w-[6rem] laptop2:text-5xl">
-        {anime.rank !== null ? (
-          <>
-            <span className="sr-only">Rank </span>
-            {anime.rank}
-          </>
-        ) : (
-          <>
-            <span className="sr-only">Unranked</span>
-            <span aria-hidden="true">–</span>
-          </>
-        )}
-      </div>
-
-      {/* Same destination as the title link, so it's hidden from the tab order and screen readers. */}
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        tabIndex={-1}
-        aria-hidden="true"
-        className="relative aspect-[225/318] w-16 shrink-0 overflow-hidden rounded-lg border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] sm:w-20 laptop2:w-24"
-      >
-        {anime.imageUrl ? (
-          <Image
-            src={anime.imageUrl}
-            alt={`${name} poster`}
-            fill
-            sizes="(min-width: 1028px) 96px, (min-width: 640px) 80px, 64px"
-            preload={eager}
-            className="object-cover"
-          />
-        ) : (
-          <span className="flex h-full items-center justify-center p-1 text-center text-[10px] text-[rgb(164,164,164)]">
-            No image
-          </span>
-        )}
-      </a>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h2 className="break-words text-base font-semibold leading-snug sm:text-lg laptop2:text-xl">
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`rounded hover:text-[#95ccff] hover:underline focus-visible:ring-offset-[rgb(30,30,30)] ${focusRing}`}
-            >
-              {name}
-              <span className="sr-only"> (opens MyAnimeList in a new tab)</span>
-            </a>
-          </h2>
-          {showDefaultTitle && (
-            <p className="line-clamp-2 break-words text-xs text-[rgb(164,164,164)] sm:text-sm">
-              {anime.title}
-            </p>
-          )}
-          {details && (
-            <p className="mt-1 text-xs text-[rgb(164,164,164)] sm:text-sm">{details}</p>
-          )}
-          {anime.members !== null && (
-            <p className="text-xs text-[rgb(164,164,164)]">
-              {compactNumber(anime.members)} members
-            </p>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-2">
-          <p className="flex items-center gap-1 font-bold tabular-nums sm:text-xl laptop2:text-2xl">
-            <StarIcon />
-            <span className="sr-only">Score </span>
-            {anime.score !== null ? anime.score.toFixed(2) : "N/A"}
-          </p>
-          {/* MAL ids can't be added to the list directly; the AniList search finds the same show. */}
-          <Link
-            href={searchPath(anime.title)}
-            prefetch={false}
-            className={`rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus-visible:ring-offset-[rgb(30,30,30)] ${focusRing}`}
-          >
-            Track
-            <span className="sr-only"> {name}: find it on AniList to add to your list</span>
-          </Link>
-        </div>
-      </div>
-    </li>
-  );
-}
-
+/**
+ * The ranking: the Octagram (ranks 1–8), then everything after, and a Great
+ * Sage console that loads the next page. Page 1 comes from the server; later
+ * pages come from Jikan in the browser, one at a time (in-flight guard,
+ * dedupe, inline Retry). Loaded pages survive a Back from "Track"
+ * (rankingStore). Root element places itself in TopAnimeShell's grid.
+ */
 export default function TopAnimeList({ initialPage }: { initialPage: TopAnimePage }) {
-  const [items, setItems] = useState(initialPage.items);
-  const [hasNextPage, setHasNextPage] = useState(initialPage.hasNextPage);
+  const [initial] = useState(() => initialRankingState(initialPage));
+  const { key } = initial;
+  const [items, setItems] = useState(initial.items);
+  const [lastPage, setLastPage] = useState(initial.lastPage);
+  const [hasNextPage, setHasNextPage] = useState(initial.hasNextPage);
+  // Rows present at mount (server-rendered or restored) never animate.
+  const [animateFrom] = useState(initial.items.length);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lastPageRef = useRef(initialPage.currentPage);
+  const [announcement, setAnnouncement] = useState("");
   const inFlightRef = useRef(false);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const consoleRef = useRef<HTMLDivElement>(null);
   const errorId = useId();
+
+  const { octagram, rest } = useMemo(() => splitOctagram(items), [items]);
+  const indexOf = useMemo(() => new Map(items.map((item, index) => [item.malId, index])), [items]);
+  const restRange = useMemo(() => rankRange(rest), [rest]);
 
   const loadMore = async () => {
     // Guards double clicks (and clicks while aria-disabled) from loading one page twice.
@@ -162,15 +67,31 @@ export default function TopAnimeList({ initialPage }: { initialPage: TopAnimePag
     inFlightRef.current = true;
     setLoading(true);
     setError(null);
+    setAnnouncement("Loading more of the ranking…");
     try {
-      const nextPage = lastPageRef.current + 1;
+      const nextPage = lastPage + 1;
       const result = await getTopAnimeJinkan({ page: nextPage, isClient: true });
-      if (result.ok) {
-        lastPageRef.current = nextPage;
-        setItems((prev) => dedupeByMalId(prev, result.page.items));
-        setHasNextPage(result.page.hasNextPage);
-      } else {
+      if (!result.ok) {
         setError(result.error);
+        setAnnouncement(""); // the role=alert message speaks instead
+        return;
+      }
+      const merged = dedupeByMalId(items, result.page.items);
+      const added = merged.slice(items.length);
+      const end = !result.page.hasNextPage;
+      const hadFocus = document.activeElement === moreRef.current;
+      flushSync(() => {
+        setItems(merged);
+        setLastPage(nextPage);
+        setHasNextPage(result.page.hasNextPage);
+        setAnnouncement(loadedAnnouncement(added, merged.length, end));
+      });
+      saveRankingSnapshot({ key, items: merged, lastPage: nextPage, hasNextPage: result.page.hasNextPage });
+      if (hadFocus) {
+        // Keyboard users continue from the first new show; at the end, from the console.
+        const first = added[0] ? document.getElementById(titleLinkId(added[0].malId)) : null;
+        if (first) first.focus();
+        else if (!moreRef.current) consoleRef.current?.focus();
       }
     } finally {
       setLoading(false);
@@ -178,50 +99,142 @@ export default function TopAnimeList({ initialPage }: { initialPage: TopAnimePag
     }
   };
 
+  const backToTop = () => {
+    const title = document.getElementById("top-anime-title");
+    title?.scrollIntoView();
+    title?.focus({ preventScroll: true });
+  };
+
+  const renderRow = (item: TopAnimeItem) => {
+    const index = indexOf.get(item.malId) ?? 0;
+    return (
+      <TopAnimeRow
+        key={item.malId}
+        item={item}
+        eager={index < EAGER_POSTERS}
+        appended={index >= animateFrom}
+      />
+    );
+  };
+
+  const mood = error ? "worried" : loading ? "sage" : !hasNextPage ? "happy" : "idle";
+
   return (
-    <div className="w-full">
-      <ol aria-label="Top anime ranking" className="flex flex-col gap-3">
-        {items.map((anime, index) => (
-          <TopAnimeRow key={anime.malId} anime={anime} eager={index < EAGER_POSTERS} />
-        ))}
-      </ol>
-
-      <p role="status" className="sr-only">
-        {loading ? "Loading more anime…" : `Showing ${items.length} anime`}
-      </p>
-
-      {hasNextPage ? (
-        <div className="mt-6 flex flex-col items-center gap-3">
-          {error && (
-            <p
-              id={errorId}
-              role="alert"
-              className="max-w-md rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-center text-sm text-red-200"
-            >
-              {error}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={loadMore}
-            aria-disabled={loading}
-            aria-describedby={error ? errorId : undefined}
-            className={`inline-flex min-w-[10rem] items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-blue-500 focus-visible:ring-offset-[rgb(18,18,18)] aria-disabled:cursor-wait aria-disabled:opacity-70 ${focusRing}`}
-          >
-            {loading && (
-              <span
-                aria-hidden="true"
-                className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
-              />
-            )}
-            {loading ? "Loading…" : error ? "Retry" : "Show more"}
-          </button>
-        </div>
-      ) : (
-        <p className="mt-6 text-center text-sm text-[rgb(164,164,164)]">
-          That&apos;s the whole ranking. Impressive scrolling!
-        </p>
+    <div className="flex min-w-0 flex-col gap-10 lg:col-start-1 lg:row-start-1">
+      {octagram.length > 0 && (
+        <section aria-labelledby="octagram-title" className="relative isolate flex min-w-0 flex-col gap-4">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-6 -z-10 h-64 bg-[radial-gradient(closest-side,rgba(245,196,81,.08),transparent)]"
+          />
+          <h2 id="octagram-title" className={SECTION_TITLE_CLASS}>
+            <TrophyIcon className="h-5 w-5 shrink-0" />
+            The Octagram
+            <span aria-hidden="true" className="font-mono text-sm font-normal tabular-nums text-[rgb(164,164,164)]">
+              #1–#8
+            </span>
+            <span className="sr-only">, ranks 1 to 8</span>
+            <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-gradient-to-r from-gold/40 to-transparent" />
+          </h2>
+          <p className="max-w-3xl text-sm leading-6 text-[rgb(200,206,218)] sm:text-base">{octagramBlurb(octagram)}</p>
+          <ol role="list" className="flex list-none flex-col gap-3">
+            {octagram.map(renderRow)}
+          </ol>
+        </section>
       )}
+
+      <section aria-labelledby="ranking-title" className="flex min-w-0 flex-col gap-4">
+        <h2 id="ranking-title" className={SECTION_TITLE_CLASS}>
+          <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#95ccff]" />
+          The ranking
+          {restRange && (
+            <>
+              <span aria-hidden="true" className="font-mono text-sm font-normal tabular-nums text-[rgb(164,164,164)]">
+                {rangeText(restRange)}
+              </span>
+              <span className="sr-only">, {rangeSpoken(restRange)}</span>
+            </>
+          )}
+          <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-gradient-to-r from-[#95ccff]/30 to-transparent" />
+        </h2>
+
+        {rest.length > 0 && (
+          <ol role="list" className="flex list-none flex-col gap-3">
+            {rest.map(renderRow)}
+          </ol>
+        )}
+
+        {loading && (
+          <div aria-hidden="true" className="flex flex-col gap-3">
+            <RowSkeleton />
+            <RowSkeleton />
+          </div>
+        )}
+
+        <div
+          ref={consoleRef}
+          tabIndex={-1}
+          className={`${CONSOLE_PANEL} mt-2 flex flex-col items-center gap-4 p-5 text-center sm:flex-row sm:gap-5 sm:p-6 sm:text-left ${FOCUS_RING}`}
+        >
+          <Slime size={56} mood={mood} className="shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <p className="font-mono text-[13px] leading-5 text-[#cfe8ff] sm:text-sm">
+              <SageTag kind={loading ? "Analyze" : "Report"} />
+              {consoleLine({ items, loading, lastPage, hasNextPage })}
+            </p>
+            {error && (
+              <p
+                id={errorId}
+                role="alert"
+                className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-left text-sm text-amber-100"
+              >
+                <SageTag kind="Warning" />
+                {error}
+              </p>
+            )}
+          </div>
+          {hasNextPage && (
+            <>
+              <button
+                ref={moreRef}
+                type="button"
+                onClick={loadMore}
+                aria-disabled={loading || undefined}
+                aria-describedby={error ? errorId : undefined}
+                className={`js-only ${PRIMARY_BUTTON} w-full sm:w-auto sm:min-w-[10rem]`}
+              >
+                {loading && (
+                  <span
+                    aria-hidden="true"
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  />
+                )}
+                {loading ? "Loading…" : error ? "Retry" : "Show more"}
+              </button>
+              <noscript>
+                <a
+                  href={malRankingUrl(items.length)}
+                  className={`inline-flex min-h-11 items-center text-sm text-[#95ccff] underline-offset-2 hover:underline ${FOCUS_RING}`}
+                >
+                  Continue the ranking on MyAnimeList<span aria-hidden="true">&nbsp;↗</span>
+                </a>
+              </noscript>
+            </>
+          )}
+        </div>
+
+        {/* A button, not a "#" link: a native fragment entry has no router state, so a
+            later Back (e.g. from Track) would change the URL without changing the page. */}
+        {items.length > initialPage.items.length && (
+          <button type="button" onClick={backToTop} className={`${QUIET_BUTTON} self-center`}>
+            Back to the top <span aria-hidden="true">↑</span>
+          </button>
+        )}
+
+        <p role="status" className="sr-only">
+          {announcement}
+        </p>
+      </section>
     </div>
   );
 }

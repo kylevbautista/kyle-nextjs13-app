@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import CountdownText from "@/components/home/CountdownText";
 import { FOCUS_RING_PANEL } from "@/components/theme/tokens";
 import { useNow } from "@/components/utils/useNow";
@@ -12,7 +13,9 @@ const ROWS = 3;
 /**
  * The landing hero's "Next episodes" card (components/home/HeroNextUp.tsx),
  * fed by a list: its 3 soonest episodes, ticking live. A card from 640px and
- * a one-row ticker below that, both linking to the week panel. Rows that
+ * a one-row ticker below that, both linking to the week panel. The jumps are
+ * next/link, not plain "#" links: a native fragment entry has no router
+ * state, so a later Back would change the URL without changing the page. Rows that
  * aired more than 30 minutes ago drop out once the clock is live.
  *
  * `entries` must be sorted soonest first and all have a next episode.
@@ -57,18 +60,18 @@ export default function NextEpisodes({ entries }: { entries: ListEntry[] }) {
           </p>
         )}
         <footer className="flex h-11 shrink-0 items-center border-t border-[rgb(53,53,53)] px-2">
-          <a
+          <Link
             href="#schedule-panel"
             className={`flex h-9 items-center rounded-md px-2 text-sm font-medium text-[#95ccff] hover:bg-white/5 hover:text-white ${FOCUS_RING_PANEL}`}
           >
             The whole week <span aria-hidden="true">&nbsp;↓</span>
-          </a>
+          </Link>
         </footer>
       </section>
 
       {/* Below 640px: a one-row ticker. */}
       {first && firstNext && (
-        <a
+        <Link
           href="#schedule-panel"
           aria-label={`Next up: ${displayTitle(first)}, ${
             firstNext.episode ? `episode ${firstNext.episode}` : "next episode"
@@ -84,7 +87,7 @@ export default function NextEpisodes({ entries }: { entries: ListEntry[] }) {
           <span className="shrink-0 text-[13px] font-semibold text-[#95ccff]">
             <CountdownText airingAt={firstNext.airingAt} episode={firstNext.episode} mode="row" seconds={false} />
           </span>
-        </a>
+        </Link>
       )}
     </>
   );

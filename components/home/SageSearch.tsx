@@ -1,6 +1,7 @@
 "use client";
 import { useId } from "react";
 import Link from "next/link";
+import { TrophyIcon } from "@/components/theme/icons";
 import { searchPath } from "@/lib/routes";
 import { trackLanding } from "./analytics";
 import { CHAPTER_SUB_CLASS, CHAPTER_TITLE_CLASS, EYEBROW_CLASS, SageLine } from "./SageLine";
@@ -107,13 +108,7 @@ export default function SageSearch() {
           <div aria-hidden="true" className="my-7 h-px bg-gradient-to-r from-transparent via-[#95ccff]/30 to-transparent" />
 
           <div className="flex flex-wrap items-center gap-4">
-            <svg aria-hidden="true" viewBox="0 0 40 40" className="h-10 w-10 shrink-0" fill="none" stroke="#f5c451" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 8h12v6a6 6 0 0 1-12 0z" />
-              <path d="M14 10H10.5a3.5 3.5 0 0 0 3.8 5M26 10h3.5a3.5 3.5 0 0 1-3.8 5" />
-              <path d="M20 20v5M15.5 29h9M17 25h6l.8 4h-7.6z" />
-              <path d="M8.5 32c-3-3.5-4-8.5-2.5-13M31.5 32c3-3.5 4-8.5 2.5-13" />
-              <path d="M6 27.5c1.8.2 3.2 1.2 3.9 2.8M5.3 22.5c1.8.5 3 1.7 3.4 3.4M34 27.5c-1.8.2-3.2 1.2-3.9 2.8M34.7 22.5c-1.8.5-3 1.7-3.4 3.4" />
-            </svg>
+            <TrophyIcon className="h-10 w-10 shrink-0" />
             <div className="min-w-0 flex-1 basis-56">
               <p className="font-mono text-xs text-[#95ccff]">
                 <span className="sr-only">Great Sage report: </span>

@@ -8,7 +8,8 @@ import { APP_CONTAINER, EYEBROW_CLASS, PAGE_TITLE_CLASS } from "./tokens";
  * down to a banner. Eyebrow ("Skill 02 · Predator"), a Great Sage line that
  * types in on load, the moonlit h1, a subhead, then `children` (actions,
  * stats) under the text and `aside` (an Evolution card, a Next-episodes
- * card) on the right from 1024px.
+ * card) on the right from 1024px. Below 1024px the aside stacks under the
+ * text; pass `asideClassName="hidden lg:block"` for a desktop-only aside.
  *
  * Hook-free, so server and client components can both render it. The h1
  * takes `titleId` and is focusable (tabIndex -1) so a page can move focus to
@@ -22,6 +23,7 @@ export default function PageBanner({
   sub,
   children,
   aside,
+  asideClassName = "",
 }: {
   eyebrow: string;
   sage: { kind: SageKind; text: ReactNode };
@@ -30,6 +32,8 @@ export default function PageBanner({
   sub?: ReactNode;
   children?: ReactNode;
   aside?: ReactNode;
+  /** Extra classes for the aside's wrapper, e.g. "hidden lg:block". */
+  asideClassName?: string;
 }) {
   return (
     // -mt-2 cancels the nav's bottom margin so the sky meets the nav bar.
@@ -46,14 +50,14 @@ export default function PageBanner({
           <h1
             id={titleId}
             tabIndex={-1}
-            className={`mt-5 break-words focus:outline-none ${PAGE_TITLE_CLASS}`}
+            className={`mt-5 scroll-mt-20 break-words focus:outline-none ${PAGE_TITLE_CLASS}`}
           >
             {title}
           </h1>
           {sub && <p className="mt-3 max-w-2xl text-base leading-7 text-[#c9d6e6] sm:text-lg">{sub}</p>}
           {children}
         </div>
-        {aside && <div className="min-w-0 lg:w-[22rem]">{aside}</div>}
+        {aside && <div className={`min-w-0 lg:w-[22rem] ${asideClassName}`}>{aside}</div>}
       </div>
     </header>
   );

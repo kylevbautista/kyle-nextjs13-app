@@ -10,6 +10,7 @@ import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
 import PageBanner from "@/components/theme/PageBanner";
 import SagePanel from "@/components/theme/SagePanel";
 import { useCopyListLink } from "@/components/theme/ShareLink";
+import { Stat, StatGrid } from "@/components/theme/StatGrid";
 import {
   APP_CONTAINER,
   FIELD,
@@ -132,15 +133,6 @@ function FilterSelect({
           </option>
         ))}
       </select>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-[#0a1428]/90 px-4 py-3">
-      <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#95ccff]">{label}</dt>
-      <dd className="mt-1 text-2xl font-black tabular-nums text-white">{value}</dd>
     </div>
   );
 }
@@ -372,12 +364,12 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
         )}
       </div>
       {items.length > 0 && (
-        <dl className="mt-6 grid max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-[#95ccff]/25 bg-[#95ccff]/15 sm:grid-cols-4">
+        <StatGrid className="mt-6 max-w-2xl grid-cols-2 sm:grid-cols-4">
           <Stat label="Shows" value={items.length} />
           <Stat label="Watching" value={totals.watching} />
           <Stat label="Episodes seen" value={stats.episodes} />
           <Stat label="Mean score" value={stats.meanScore ?? "—"} />
-        </dl>
+        </StatGrid>
       )}
     </PageBanner>
   );

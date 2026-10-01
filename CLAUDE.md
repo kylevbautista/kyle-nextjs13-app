@@ -84,7 +84,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/anime`, `/anime/<year>` | `proxy.ts` (fallback: `app/anime/page.tsx`, force-dynamic) | 307 | – | → current season, computed **per request** |
 | `/anime/<year>/<season>` | `app/anime/layout.tsx`, `app/anime/[...anime]/{page,Boundary,error,loading}.tsx`, `components/animev3/*` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4) | – | Season grid (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
 | `/search?q=&page=` | `app/search/*` | dynamic | – | AniList title search, 30/page (§5.4) |
-| `/topanime` | `app/topanime/*` | **ISR 3600s** | – | MAL ranking via Jikan; "Show more" appends; "Track" → `/search?q=` |
+| `/topanime` | `app/topanime/{page,TopAnimeShell,TopAnimeBanner,GlanceStats,CrownConsole,AboutRanking,TopAnimeList,TopAnimeRow,ranking,rankingStore,error}.ts(x)` | **ISR 3600s**; no `loading.tsx` (§9.15) | – | MAL ranking via Jikan: the Octagram (ranks 1–8) + the ranking; "Show more" appends; Back restores loaded pages; "Track" → `/search?q=` |
 | `/auth` | `app/auth/page.tsx` | dynamic | – | Account panel, or → `/auth/signin` when signed out |
 | `/auth/signin` | `app/auth/signin/page.tsx`, `components/auth/signIn/PageBase.tsx` | static shell | – | Custom NextAuth sign-in page (Google). Honors same-origin `?callbackUrl`, explains `?error=` |
 | `/user` | `app/user/page.tsx` | dynamic | – | → `/user/<your id>` or sign-in |
@@ -126,7 +126,7 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Tracker rules | Auto-complete at the last episode, dates auto-filled, score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
 | Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows; countdown rows with list status/progress (visitors get + Add); share strip (owner); "Not airing right now" | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" until `useNow()` hydrates | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
-| Top Anime | Real MAL rank, poster, title, score, type · eps · year, members, Track | Slim `TopAnimeItem`s; in-flight guard + dedupe; inline retry | `app/topanime/*`, `components/animev3/utils/jinkanData/getTopAnimeJinkan.ts` |
+| Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. Jikan can repeat or skip a rank (it refreshes shows separately; MAL itself has one show per rank), so nothing on the page calls a repeat a tie | Page 1 server-rendered (throws on failure); later pages from the browser one at a time (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `getTopAnimeJinkan.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 7 live countdown cards with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers | `components/home/TrackerDemo.tsx` |
@@ -318,6 +318,7 @@ drops duplicates, re-sanitizes, and bounds dates.
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode), under `app/anime/layout.tsx` | |
 | Local state | My List (`MyList.tsx`), Top Anime list, season `PageBase` | |
+| Module memory | `app/topanime/rankingStore.ts` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) |
 | Shared clock | `useNow()` | `useSyncExternalStore`; one interval for the page |
 | Mongo | `listRefreshedAt` | Refresh lock/throttle |
 | sessionStorage | `kv:add-intent` | Landing sign-in intent `{id, status?, at, media}`; auto-add only within 15 min, consumed once |
@@ -359,7 +360,8 @@ components/
   animev3/ListToggle.tsx      the shared add/remove toggle (every card)
   theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
     tokens.ts                   class tokens (focus rings, containers, type, panels, cards, buttons, fields, shelves)
-    PageBanner                  night-sky app-page header (eyebrow, SageLine, h1, actions, aside)
+    PageBanner                  night-sky app-page header (eyebrow, SageLine, h1, actions, aside; asideClassName)
+    StatGrid, icons             the stat dl (My List, Top Anime); TrophyIcon, CrownIcon, StarIcon
     EvolutionCard, SagePanel    the evolving slime card; themed empty/error states
     ShareLink, LiveTimersToggle share strip + useCopyListLink; the timers pause button
   home/                       the landing (§5.7):
@@ -423,7 +425,8 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
     `useLandingSession()` and renders a same-size placeholder while it loads. Don't add a
     `loading.tsx` to `app/(home)`: the page is async, so the static HTML would ship the fallback and
     hide the whole landing in a `<div hidden>` until JavaScript swaps it in (no-JS visitors and the
-    H1's LCP both suffer).
+    H1's LCP both suffer). `/topanime` is the same (static ISR, async page): no `loading.tsx` there
+    either.
 16. Tailwind scans `app/`, `components/` and `lib/` (`tailwind.config.js` `content`). Class maps
     shared from elsewhere (e.g. `lib/anime/statusBadge.ts`) are silently dropped from the CSS unless
     their folder is listed there.
@@ -432,7 +435,11 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
     `motion-reduce:`. Keep offscreen pausing and the explicit "Pause live timers" control.
 18. **Redesigns use the Tempest theme** (`tempest-theme` skill). Landing demos must match the
     real pages they advertise: `TrackerDemo` ↔ My List's card, `ScheduleDemo` ↔ the Airing
-    Schedule's week panel, `HeroNextUp` ↔ `NextEpisodes`. Change both sides together.
+    Schedule's week panel, `HeroNextUp` ↔ `NextEpisodes`, and SageSearch's Top Anime doorway ↔
+    `/topanime`'s banner sub (the same promise: highest-ranked shows, each with a Track
+    shortcut). Change both sides together. In-page jump links use next/link or a button, never a
+    plain `<a href="#…">`: a native fragment entry has no router state, so a later Back changes the
+    URL but not the page.
 
 ---
 
@@ -453,8 +460,8 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
   an uptime monitor.
 - `next build` fails if AniList or Jikan stays down past the prerender retries. This is deliberate:
   pages throw rather than cache an empty page. Redeploy once the API is back.
-- Top Anime: going Back from a "Track" search reloads only the first ranking page; "Show more"
-  pages aren't restored.
+- Season pages' `app/anime/[...anime]/loading.tsx` ships its skeleton plus the real grid in a
+  `<div hidden>` in the ISR HTML (the §9.15 problem); `/topanime` dropped its `loading.tsx` for this.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
