@@ -44,9 +44,8 @@ export default async function UserListPage({ params }: UserListPageProps) {
       isOwner={lookup.isOwner}
       owner={{
         id: lookup.userId,
-        // Visitors see the first name only and no profile photo.
+        // Visitors see the first name only (and nobody sees a profile photo here).
         name: lookup.isOwner ? (lookup.user.name ?? null) : publicOwnerName(lookup.user.name),
-        image: lookup.isOwner ? (lookup.user.image ?? null) : null,
       }}
     />
   );

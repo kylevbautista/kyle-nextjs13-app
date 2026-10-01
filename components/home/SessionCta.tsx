@@ -6,7 +6,7 @@ import GoogleIcon from "@/components/auth/GoogleIcon";
 import { showsLabel } from "@/lib/landing";
 import { airingSchedulePath, myListPath, signInPath } from "@/lib/routes";
 import { trackLanding, type LandingCta, type LandingLocation } from "./analytics";
-import type { SageKind } from "./SageLine";
+import { SageTag } from "./SageLine";
 import { useLandingSession } from "./useLandingSession";
 
 /**
@@ -52,18 +52,6 @@ function GoogleChip() {
     >
       <GoogleIcon className="h-4 w-4" />
     </span>
-  );
-}
-
-/** Great Sage tag for inline text: read as "Great Sage notice:", shown as 《Notice》. */
-export function SageTag({ kind }: { kind: SageKind }) {
-  return (
-    <>
-      <span className="sr-only">{`Great Sage ${kind.toLowerCase()}: `}</span>
-      <span aria-hidden="true" className="font-mono text-[#95ccff]">
-        {`《${kind}》`}
-      </span>{" "}
-    </>
   );
 }
 

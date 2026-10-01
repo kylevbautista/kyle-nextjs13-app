@@ -3,6 +3,7 @@ import { useId, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEv
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { DAY_LABELS, SCHEDULE_DAYS, weekdayAt } from "@/components/mylist/schedule";
+import { DAY_TINTS } from "@/components/theme/tokens";
 import { nextAiring, type Weekday } from "@/lib/anime/airing";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { defaultScheduleDay, formatWeekdayTime, groupByWeekday } from "@/lib/landing";
@@ -23,8 +24,6 @@ import { SessionCta } from "./SessionCta";
 import { useLandingSession } from "./useLandingSession";
 
 const ROWS = 4;
-/** Faint weekday tints along the panel's top edge (static decor). */
-const DAY_TINTS = ["#95ccff", "#a5b4fc", "#c4b5fd", "#f0abfc", "#fda4af", "#fcd34d", "#86efac"];
 
 /**
  * A per-minute clock for "which day is today" (null during SSR and

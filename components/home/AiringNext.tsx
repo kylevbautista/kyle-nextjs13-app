@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LandingSeasonMeta } from "@/lib/landing";
-import AiringGrid, { LiveTimersToggle, ReportPanel } from "./AiringGrid";
+import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
+import AiringGrid, { ReportPanel } from "./AiringGrid";
 import {
   CHAPTER_CLASS,
   CHAPTER_SUB_CLASS,

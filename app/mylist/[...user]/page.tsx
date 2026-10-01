@@ -37,6 +37,8 @@ export default async function AiringSchedulePage({ params }: AiringSchedulePageP
   const lookup = await requireListOwner(user, airingSchedulePath);
 
   const entries = await loadListEntries(lookup.user);
+  // "Today" for the first render (a dynamic page, so this is per request).
+  const renderedAt = new Date().getTime();
 
   return (
     <AiringSchedule
@@ -44,6 +46,7 @@ export default async function AiringSchedulePage({ params }: AiringSchedulePageP
       initialEntries={entries}
       isOwner={lookup.isOwner}
       ownerName={ownerDisplayName(lookup.user, lookup.isOwner)}
+      renderedAt={renderedAt}
     />
   );
 }

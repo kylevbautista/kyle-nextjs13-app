@@ -12,6 +12,8 @@ tracker demo and a post-sign-in Quest Log. Production: https://kylevb.com (Verce
   **Rate limit ≈ 30 req/min** (read `x-ratelimit-remaining`). [Jikan v4](https://api.jikan.moe/v4):
   MyAnimeList "Top Anime" only (~3 req/s, 60/min).
 - **Checks:** `npm run check` (typecheck + lint + unit tests). There is no CI build.
+- **Design:** every page redesign uses the landing's "Tempest" theme. Load the `tempest-theme`
+  skill (`.claude/skills/tempest-theme/SKILL.md`) first; shared pieces live in `components/theme/`.
 
 ---
 
@@ -120,16 +122,16 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Live countdown | "EP13: 1d 7h 14m 52s", "Airing now", or a status ("Finished · 12 eps") | One shared 1 s clock (`useNow`, null during SSR, so no hydration mismatch) | `components/utils/useNow.ts`, `lib/anime/airing.ts` |
 | List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card; landing options: add status/label, `block` size, sign-in intent) on `useMyList()`: SWR key `[/api/anime-list/ids, userId]` (a 401 is an error, never an empty list), optimistic with rollback, toasts; `count` = list size incl. in-flight changes, `confirmedCount` = server-confirmed | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
 | Search | Any anime incl. older seasons, movies, ONAs | Server `searchAnime()`; result links don't prefetch (AniList budget) | `app/search/*`, `server/lib/anilist.ts` |
-| My List | Header + copy link; tabs All/Watching/Plan to Watch/Completed/Paused/Dropped with counts; filters (text, year, season, airing day PT, release status); sort (next episode, title, my score, progress, recently added) | One client root with local state; owner-only +1 / Edit dialog (status, progress, score, start/finish dates, remove); PATCH → server-normalized `userData`; background `router.refresh()` 2 s after edits | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)` |
+| My List | Night-sky banner (Skill 02 · Predator): stats (shows, watching, episodes seen, mean score), copy link, the owner's Evolution slime (gulps when a show completes); shelves All/Watching/Plan to Watch/Completed/Paused/Dropped with counts; filters (text, year, season, airing day PT, release status); sort (next episode, title, my score, progress, recently added); the landing tracker demo's card | One client root with local state; owner-only +1 / Edit dialog (status pills, progress, score, start/finish dates, remove); PATCH → server-normalized `userData`; background `router.refresh()` 2 s after edits. No profile photo | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)`, `components/theme/*` |
 | Tracker rules | Auto-complete at the last episode, dates auto-filled, score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
-| Airing Schedule | Day tabs Mon…Sun (today highlighted), shows grouped by weekday, "Not airing right now" section | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule | `components/mylist/{AiringSchedule,NotAiringList,schedule}.ts(x)` |
+| Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows; countdown rows with list status/progress (visitors get + Add); share strip (owner); "Not airing right now" | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" until `useNow()` hydrates | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
 | Top Anime | Real MAL rank, poster, title, score, type · eps · year, members, Track | Slim `TopAnimeItem`s; in-flight guard + dedupe; inline retry | `app/topanime/*`, `components/animev3/utils/jinkanData/getTopAnimeJinkan.ts` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 7 live countdown cards with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers | `components/home/TrackerDemo.tsx` |
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
-| Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user; status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
+| Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Friendly error/404 pages with retry | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime). Retry must refetch the server render: Next 16.3's `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
 
 ---
@@ -345,16 +347,21 @@ server/                     server-only
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
   lib/landing.ts              loadLandingData (≤ 2 AniList requests; throws only at runtime when the season fails), fetchLandingExtras
 app/
-  layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster, Analytics}
+  layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster (themed), Analytics}
   error.tsx, global-error.tsx, not-found.tsx
   (home)/  anime/  search/  topanime/  auth/  user/  mylist/   see §3
   api/anime-list/             route handlers (see §3)
 components/
   animev3/                    season browser: PageBase, AnimeInfoGrid (shared card), AnimeInfoSkeleton,
                               layoutSelector/ (header + sort context), utils/ (getAniListData, useLazyLoad, jinkanData/)
-  mylist/                     Airing Schedule UI + schedule.ts (grouping)
+  mylist/                     Airing Schedule UI (week panel, NextEpisodes card) + schedule.ts (grouping)
   common/                     NavBar, AnimeBar (nav links), NavSearch, LogInBox (account menu), Grid
   animev3/ListToggle.tsx      the shared add/remove toggle (every card)
+  theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
+    tokens.ts                   class tokens (focus rings, containers, type, panels, cards, buttons, fields, shelves)
+    PageBanner                  night-sky app-page header (eyebrow, SageLine, h1, actions, aside)
+    EvolutionCard, SagePanel    the evolving slime card; themed empty/error states
+    ShareLink, LiveTimersToggle share strip + useCopyListLink; the timers pause button
   home/                       the landing (§5.7):
     LandingProvider             media by id, useLanding, useVisibleAiring, the sign-in intent <dialog>
     useLandingSession           loading | signedOut | signedIn {userId, firstName, count, tier}
@@ -420,9 +427,12 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 16. Tailwind scans `app/`, `components/` and `lib/` (`tailwind.config.js` `content`). Class maps
     shared from elsewhere (e.g. `lib/anime/statusBadge.ts`) are silently dropped from the CSS unless
     their folder is listed there.
-17. **Landing motion intentionally ignores the OS reduced-motion preference.** Use ordinary
-    animation/transition utilities in `components/home`, not `motion-safe:` or `motion-reduce:`.
-    Keep offscreen pausing and the explicit "Pause live timers" control.
+17. **Motion intentionally ignores the OS reduced-motion preference** (landing and every
+    Tempest-themed page). Use ordinary animation/transition utilities, not `motion-safe:` or
+    `motion-reduce:`. Keep offscreen pausing and the explicit "Pause live timers" control.
+18. **Redesigns use the Tempest theme** (`tempest-theme` skill). Landing demos must match the
+    real pages they advertise: `TrackerDemo` ↔ My List's card, `ScheduleDemo` ↔ the Airing
+    Schedule's week panel, `HeroNextUp` ↔ `NextEpisodes`. Change both sides together.
 
 ---
 

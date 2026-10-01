@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import { PauseParentWhenOffscreen } from "./Reveal";
 
 /**
- * The Jura forest at night: layered, server-rendered decor for the hero and
- * the #quests bookend. Everything is CSS gradients, box-shadows and inline
+ * The Jura forest at night: layered, server-rendered decor for the hero, the
+ * #quests bookend and app-page banners (`page`, components/theme/PageBanner). Everything is CSS gradients, box-shadows and inline
  * SVG (no raster, no filter: blur), aria-hidden and pointer-events: none.
  *
  * Star and magicule positions are generated ONCE at module scope from a
@@ -132,13 +132,21 @@ function Ridge({ name, variant }: { name: RidgeName; variant: string }) {
   );
 }
 
-function Forest({ variant }: { variant: "hero" | "finale" }) {
+type SkyVariant = "hero" | "finale" | "page";
+
+const FOREST_BAND: Record<SkyVariant, string> = {
+  hero: "h-[90px] sm:h-[140px]",
+  finale: "h-[64px] sm:h-[96px]",
+  page: "h-[44px] sm:h-[64px]",
+};
+
+function Forest({ variant }: { variant: SkyVariant }) {
   const hero = variant === "hero";
   return (
     // The finale's band is lower so it stays under the Quest Log's last card,
-    // and only the hero's layers parallax (the timeline is the page scroll's
-    // first 100vh, which the finale never sees).
-    <div className={`absolute inset-x-0 bottom-0 ${hero ? "h-[90px] sm:h-[140px]" : "h-[64px] sm:h-[96px]"}`}>
+    // a page banner's lower still, and only the hero's layers parallax (the
+    // timeline is the page scroll's first 100vh, which the others never see).
+    <div className={`absolute inset-x-0 bottom-0 ${FOREST_BAND[variant]}`}>
       <div className={`${hero ? "forest-far " : ""}absolute inset-0`}>
         <Ridge name="far" variant={variant} />
       </div>
@@ -159,13 +167,20 @@ function Forest({ variant }: { variant: "hero" | "finale" }) {
 
 /* ------------------------------------------------------------------------- */
 
-const SKY: Record<"hero" | "finale", string> = {
+const SKY: Record<SkyVariant, string> = {
   hero: "linear-gradient(180deg,#050915 0%,#0a1428 45%,#0e1d33 70%,rgb(18,18,18) 100%)",
   finale:
     "linear-gradient(180deg,rgb(18,18,18) 0%,#0a1428 16%,#050915 50%,#0e1d33 82%,rgb(18,18,18) 100%)",
+  page: "linear-gradient(180deg,#050915 0%,#0a1428 50%,#0e1d33 78%,rgb(18,18,18) 100%)",
 };
 
-export default function NightSky({ variant }: { variant: "hero" | "finale" }) {
+/**
+ * `hero`: the landing's first screen (moon, pointer glow, parallax forest).
+ * `finale`: the #quests bookend. `page`: an app page's banner, a shorter band
+ * with the same stars, aurora and magicules. Everything but the hero pauses
+ * itself offscreen (the hero pauses via HeroSlime's observer).
+ */
+export default function NightSky({ variant }: { variant: SkyVariant }) {
   const hero = variant === "hero";
   return (
     <div

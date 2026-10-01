@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SAGE_FRAME } from "@/components/theme/tokens";
 
 /** The Great Sage's system-message kinds, rendered as 《Kind》. */
 export type SageKind = "Notice" | "Question" | "Answer" | "Report" | "Warning" | "Analyze";
@@ -9,25 +10,15 @@ const SIZE_CLASS = {
   lg: "gap-2 px-4 py-3 text-sm sm:text-base",
 } as const;
 
-/** Content chapters: the shared section box (hero, Tempest and #quests are full-bleed). */
-// contain:inline-size: a section's content never widens the page (the body is a
-// grid with an auto column, so any min-content overflow would scroll sideways).
-export const CHAPTER_CLASS =
-  "relative isolate mx-auto max-w-6xl scroll-mt-20 px-4 py-20 [contain:inline-size] sm:px-6 sm:py-28";
-/** "Skill 01 · Magic Sense" */
-export const EYEBROW_CLASS = "font-mono text-xs font-semibold uppercase tracking-[0.2em] text-[#95ccff]";
-/** Chapter h2. */
-export const CHAPTER_TITLE_CLASS =
-  "text-3xl font-black leading-[1.1] tracking-tight text-white sm:text-4xl laptop:text-[2.75rem]";
-/** Chapter subhead. */
-export const CHAPTER_SUB_CLASS = "text-base leading-7 text-[#c9d6e6] sm:text-lg";
-/** The page-wide focus ring (on the page background). */
-export const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(18,18,18)]";
-
-/** Shared console styling (also used by bubbles and panels that mimic it). */
-export const SAGE_FRAME =
-  "rounded-md border border-[#95ccff]/30 bg-[#0a1528]/70 font-mono text-[#cfe8ff] shadow-[0_0_24px_-8px_rgba(149,204,255,.5)]";
+// The chapter tokens live in the theme kit; re-exported for the landing's imports.
+export {
+  CHAPTER_CLASS,
+  CHAPTER_SUB_CLASS,
+  CHAPTER_TITLE_CLASS,
+  EYEBROW_CLASS,
+  FOCUS_RING,
+  SAGE_FRAME,
+} from "@/components/theme/tokens";
 
 /**
  * A Great Sage system line: 《Notice》 Reincarnation complete.
@@ -84,6 +75,18 @@ export function Skill({ children }: { children: ReactNode }) {
       <span aria-hidden="true">〈</span>
       {children}
       <span aria-hidden="true">〉</span>
+    </>
+  );
+}
+
+/** Great Sage tag for inline text: read as "Great Sage notice:", shown as 《Notice》. */
+export function SageTag({ kind }: { kind: SageKind }) {
+  return (
+    <>
+      <span className="sr-only">{`Great Sage ${kind.toLowerCase()}: `}</span>
+      <span aria-hidden="true" className="font-mono text-[#95ccff]">
+        {`《${kind}》`}
+      </span>{" "}
     </>
   );
 }

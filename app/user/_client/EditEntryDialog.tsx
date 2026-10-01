@@ -4,6 +4,14 @@ import type { FormEvent, MouseEvent } from "react";
 import { flushSync } from "react-dom";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import { SageTag } from "@/components/home/SageLine";
+import {
+  FIELD,
+  FOCUS_RING_PANEL,
+  GHOST_BUTTON_PANEL,
+  LABEL_CLASS,
+  PRIMARY_BUTTON_PANEL,
+} from "@/components/theme/tokens";
 import { useMyList } from "@/components/utils/useMyList";
 import { LIST_STATUSES, LIST_STATUS_LABELS, displayTitle, isListStatus } from "@/lib/anime/types";
 import type { UserAnimeData } from "@/lib/anime/types";
@@ -24,11 +32,9 @@ interface EditEntryDialogProps {
   fallbackFocusId: string;
 }
 
-const fieldClass =
-  "min-h-11 min-w-0 w-full max-w-full rounded-md border border-[rgb(53,53,53)] bg-[rgb(18,18,18)] px-3 py-2 text-base text-white [color-scheme:dark] placeholder:text-[rgb(110,110,110)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 aria-[invalid=true]:border-rose-400 md:min-h-0";
+const fieldClass = `${FIELD} max-w-full`;
 
-const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] aria-disabled:cursor-not-allowed aria-disabled:opacity-60 md:min-h-10";
+const ROSE_BUTTON = `inline-flex h-11 items-center justify-center whitespace-nowrap rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${FOCUS_RING_PANEL}`;
 
 const FIELD_ORDER: EditFormField[] = ["progress", "score", "startDate", "finishDate"];
 
@@ -57,7 +63,8 @@ export function EditEntryDialog({
 }: EditEntryDialogProps) {
   const { remove, signedIn, sessionStatus } = useMyList();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const statusRef = useRef<HTMLSelectElement>(null);
+  /** The checked status radio (focused when the dialog opens). */
+  const statusRef = useRef<HTMLInputElement>(null);
   const removeButtonRef = useRef<HTMLButtonElement>(null);
   const keepButtonRef = useRef<HTMLButtonElement>(null);
   const pressedOnBackdrop = useRef(false);
@@ -193,12 +200,15 @@ export function EditEntryDialog({
         if (pressedOnBackdrop.current && isBackdropEvent(event)) requestClose();
         pressedOnBackdrop.current = false;
       }}
-      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-0 text-white shadow-2xl backdrop:bg-black/70"
+      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-[#95ccff]/25 bg-[rgb(30,30,30)] p-0 text-white shadow-2xl shadow-black/60 backdrop:bg-black/60 open:animate-[grow_150ms_ease-out,fadeOut_150ms_ease-out]"
     >
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="flex items-start gap-3">
           {cover && (
-            <div className="relative h-[72px] w-[48px] shrink-0 overflow-hidden rounded bg-[rgb(38,38,38)]">
+            <div
+              className="relative h-[68px] w-12 shrink-0 overflow-hidden rounded-md bg-[rgb(53,53,53)]"
+              style={entry.coverImage?.color ? { backgroundColor: entry.coverImage.color } : undefined}
+            >
               <Image
                 src={cover}
                 alt={`Cover art for ${title}`}
@@ -209,7 +219,11 @@ export function EditEntryDialog({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="break-words text-lg font-semibold leading-snug">
+            <p className="font-mono text-xs text-[#cfe8ff]">
+              <SageTag kind="Analyze" />
+              Edit entry
+            </p>
+            <h2 id={titleId} className="mt-1 break-words text-xl font-bold leading-snug">
               {title}
             </h2>
             <p className="mt-1 text-sm text-[rgb(164,164,164)]">
@@ -222,36 +236,39 @@ export function EditEntryDialog({
             onClick={requestClose}
             aria-label="Close"
             aria-disabled={busy !== null || undefined}
-            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-xl leading-none text-[rgb(164,164,164)] hover:bg-[rgb(53,53,53)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] aria-disabled:opacity-60 md:h-9 md:w-9"
+            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl leading-none text-[rgb(164,164,164)] hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] aria-disabled:opacity-60 md:h-9 md:w-9"
           >
             <span aria-hidden="true">×</span>
           </button>
         </div>
 
         <form noValidate onSubmit={handleSave} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor={fieldId("status")} className="text-sm font-medium">
-              Status
-            </label>
-            <select
-              ref={statusRef}
-              id={fieldId("status")}
-              value={values.status}
-              onChange={(event) => {
-                if (isListStatus(event.target.value)) update({ status: event.target.value });
-              }}
-              className={fieldClass}
-            >
+          <fieldset className="min-w-0 sm:col-span-2">
+            <legend className={`mb-2 ${LABEL_CLASS}`}>Status</legend>
+            <div className="flex flex-wrap gap-1.5">
               {LIST_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {LIST_STATUS_LABELS[status]}
-                </option>
+                <label key={status} className="relative cursor-pointer">
+                  <input
+                    ref={values.status === status ? statusRef : undefined}
+                    type="radio"
+                    name={fieldId("status")}
+                    value={status}
+                    checked={values.status === status}
+                    onChange={(event) => {
+                      if (isListStatus(event.target.value)) update({ status: event.target.value });
+                    }}
+                    className="peer sr-only"
+                  />
+                  <span className="inline-flex h-11 items-center rounded-full border border-[rgb(53,53,53)] px-3 text-xs font-medium text-[rgb(200,206,218)] transition-colors hover:bg-white/5 peer-checked:border-blue-500 peer-checked:bg-blue-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#95ccff] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[rgb(30,30,30)] md:h-9">
+                    {LIST_STATUS_LABELS[status]}
+                  </span>
+                </label>
               ))}
-            </select>
-          </div>
+            </div>
+          </fieldset>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={fieldId("progress")} className="text-sm font-medium">
+            <label htmlFor={fieldId("progress")} className={LABEL_CLASS}>
               Episode progress
             </label>
             <div className="flex items-center gap-2">
@@ -276,8 +293,8 @@ export function EditEntryDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={fieldId("score")} className="text-sm font-medium">
-              Score <span className="font-normal text-[rgb(164,164,164)]">(0–10)</span>
+            <label htmlFor={fieldId("score")} className={LABEL_CLASS}>
+              Score <span className="font-normal normal-case tracking-normal">(0–10)</span>
             </label>
             <input
               {...fieldProps("score")}
@@ -298,10 +315,8 @@ export function EditEntryDialog({
             )}
           </div>
 
-          <div className="hidden sm:block" aria-hidden="true" />
-
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={fieldId("startDate")} className="text-sm font-medium">
+            <label htmlFor={fieldId("startDate")} className={LABEL_CLASS}>
               Start date
             </label>
             <input
@@ -319,7 +334,7 @@ export function EditEntryDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={fieldId("finishDate")} className="text-sm font-medium">
+            <label htmlFor={fieldId("finishDate")} className={LABEL_CLASS}>
               Finish date
             </label>
             <input
@@ -339,8 +354,9 @@ export function EditEntryDialog({
           {formError && (
             <p
               role="alert"
-              className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-200 sm:col-span-2"
+              className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 sm:col-span-2"
             >
+              <SageTag kind="Report" />
               {formError}
             </p>
           )}
@@ -349,9 +365,12 @@ export function EditEntryDialog({
             <div
               role="group"
               aria-labelledby={`${id}-confirm`}
-              className="flex flex-col gap-3 rounded-md border border-rose-500/40 bg-rose-500/10 p-3 sm:col-span-2"
+              className="flex flex-col gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 sm:col-span-2"
             >
               <p id={`${id}-confirm`} className="break-words text-sm">
+                <span aria-hidden="true" className="font-mono text-rose-300">
+                  《Warning》{" "}
+                </span>
                 Remove <strong>{title}</strong> from your list? Its progress, score and dates will
                 be lost.
               </p>
@@ -361,7 +380,7 @@ export function EditEntryDialog({
                   type="button"
                   onClick={cancelConfirm}
                   aria-disabled={busy !== null || undefined}
-                  className={`${buttonClass} border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] hover:bg-[rgb(53,53,53)]`}
+                  className={GHOST_BUTTON_PANEL}
                 >
                   Keep it
                 </button>
@@ -369,7 +388,7 @@ export function EditEntryDialog({
                   type="button"
                   onClick={handleRemove}
                   aria-disabled={busy !== null || undefined}
-                  className={`${buttonClass} bg-rose-600 hover:bg-rose-500`}
+                  className={ROSE_BUTTON}
                 >
                   {busy === "remove" ? "Removing…" : "Yes, remove"}
                 </button>
@@ -382,7 +401,7 @@ export function EditEntryDialog({
                 type="button"
                 onClick={startConfirm}
                 aria-disabled={busy !== null || undefined}
-                className={`${buttonClass} px-2 text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 sm:-ml-2`}
+                className={`inline-flex h-11 items-center justify-center rounded-xl px-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 sm:-ml-2 ${FOCUS_RING_PANEL}`}
               >
                 Remove from list
               </button>
@@ -391,14 +410,14 @@ export function EditEntryDialog({
                   type="button"
                   onClick={requestClose}
                   aria-disabled={busy !== null || undefined}
-                  className={`${buttonClass} border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] hover:bg-[rgb(53,53,53)]`}
+                  className={GHOST_BUTTON_PANEL}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   aria-disabled={busy !== null || undefined}
-                  className={`${buttonClass} bg-blue-600 hover:bg-blue-500`}
+                  className={PRIMARY_BUTTON_PANEL}
                 >
                   {busy === "save" ? "Saving…" : "Save"}
                 </button>
