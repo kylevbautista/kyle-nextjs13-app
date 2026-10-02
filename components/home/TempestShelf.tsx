@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import AniListCover from "@/components/theme/AniListCover";
 import { nextAiring } from "@/lib/anime/airing";
 import type { TempestEntry } from "@/lib/landing";
 import { searchPath } from "@/lib/routes";
@@ -210,16 +210,11 @@ function ShelfCard({
         className="relative aspect-[2/3] w-full bg-[rgb(38,38,38)]"
         style={entry.color ? { backgroundColor: entry.color } : undefined}
       >
-        {entry.coverUrl && (
-          <Image
-            src={entry.coverUrl}
-            alt=""
-            fill
-            loading="lazy"
-            sizes="(min-width:640px) 170px, 150px"
-            className="object-cover"
-          />
-        )}
+        <AniListCover
+          urls={[entry.coverUrl, entry.coverUrlXL]}
+          sizes="(min-width: 640px) 170px, 150px"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <h3 id={titleId} className="line-clamp-2 text-sm font-semibold leading-5 text-white">

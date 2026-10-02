@@ -2,9 +2,11 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { SageTag, sageText } from "@/components/home/SageLine";
+import { SageTag } from "@/components/home/SageLine";
+import { consoleToast } from "@/components/theme/consoleToast";
+import { revealInRow } from "@/components/theme/revealInRow";
 import EvolutionCard from "@/components/theme/EvolutionCard";
 import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
 import PageBanner from "@/components/theme/PageBanner";
@@ -27,8 +29,9 @@ import {
   FOCUS_RING_PANEL,
 } from "@/components/theme/tokens";
 import { SEASONS, SEASON_LABELS, isSeasonName } from "@/lib/season";
-import { WEEKDAYS, nextAiring } from "@/lib/anime/airing";
+import { WEEKDAYS, nextAiring, unloggedAired } from "@/lib/anime/airing";
 import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
+import { plusOneMessage } from "@/lib/anime/trackerConsole";
 import { LIST_STATUSES, LIST_STATUS_LABELS, displayTitle } from "@/lib/anime/types";
 import type { ListEntry, UserAnimeData } from "@/lib/anime/types";
 import { evolutionTier, showsLabel } from "@/lib/landing";
@@ -44,13 +47,17 @@ import {
   SORT_OPTIONS,
   WEEKDAY_LABELS,
   countByStatus,
+  formatRuntime,
   groupByStatus,
   hasActiveFilters,
   isReleaseStatus,
   isSortKey,
   isWeekday,
+  listViewQuery,
   matchesFilters,
+  parseListView,
   sortEntries,
+  watchedRuntime,
   yearOptions,
 } from "./listFilters";
 import { toMyListEntry } from "./listFilters";
@@ -65,6 +72,8 @@ interface MyListProps {
   entries: MyListEntry[];
   isOwner: boolean;
   owner: ListOwner;
+  /** Server render time: the reference for "N new" (banner, sort, chips) until the clock hydrates. */
+  renderedAt: number;
 }
 
 const HEADING_ID = "my-list-heading";
@@ -78,11 +87,8 @@ const TAB_LABELS: Record<StatusTab, string> = { all: "All", ...LIST_STATUS_LABEL
  */
 const REFRESH_DELAY_MS = 2_000;
 
-/** Shows on the schedule: an upcoming episode, not completed or dropped. */
-const isAiringForList = (entry: MyListEntry) =>
-  entry.userData.listType !== "completed" &&
-  entry.userData.listType !== "dropped" &&
-  nextAiring(entry) !== null;
+/** Four narrow cells: every label reserves two lines so the numbers line up when one wraps. */
+const STAT_LABEL = "min-h-[2.5em]";
 
 /** The banner's status readout. Real list data only. */
 function listStats(items: MyListEntry[]) {
@@ -99,7 +105,8 @@ function listStats(items: MyListEntry[]) {
   return {
     episodes,
     meanScore: scored ? (Math.round((scoreSum / scored) * 10) / 10).toFixed(1) : null,
-    airing: items.filter(isAiringForList).length,
+    /** Literally "still airing": AniList says the show is releasing, whatever its list status. */
+    releasing: items.filter((entry) => entry.status === "RELEASING").length,
   };
 }
 
@@ -137,21 +144,83 @@ function FilterSelect({
   );
 }
 
+function SortSelect({
+  id,
+  value,
+  onChange,
+  className = "",
+}: {
+  id: string;
+  value: SortKey;
+  onChange: (sort: SortKey) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`min-w-0 flex-col gap-1.5 ${className}`}>
+      <label htmlFor={id} className={LABEL_CLASS}>
+        Sort by
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => {
+          if (isSortKey(event.target.value)) onChange(event.target.value);
+        }}
+        className={FIELD}
+      >
+        {SORT_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** "2 active" on the filters toggle. */
+function CountBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span className={`items-center rounded-full bg-blue-600 px-2 text-[11px] text-white ${className}`}>
+      {count}
+      <span className="sr-only"> active</span>
+    </span>
+  );
+}
+
 /**
  * My List, in the landing's Tempest theme (skill 02 · Predator): a night-sky
  * banner with the list's stats and its evolving slime, the demo's shelves,
  * a filter console, and the demo's tracker card for every show.
  */
-export function MyList({ entries, isOwner, owner }: MyListProps) {
+export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   const router = useRouter();
   const [items, setItems] = useState(entries);
-  const [tab, setTab] = useState<StatusTab>("all");
-  const [filters, setFilters] = useState<ListFilters>(EMPTY_FILTERS);
-  const [sort, setSort] = useState<SortKey>("next");
+  // The view lives in the URL (?shelf=&sort=&q=…), so Back and a reload come
+  // back to it. Read once here; written below with replaceState.
+  const searchParams = useSearchParams();
+  const [initialView] = useState(() => parseListView(searchParams));
+  const [tab, setTab] = useState<StatusTab>(initialView.tab);
+  const [filters, setFilters] = useState<ListFilters>(initialView.filters);
+  const [sort, setSort] = useState<SortKey>(initialView.sort);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(() => new Set());
+  /**
+   * The one spoken channel for tracker results (each +1 and each save): the
+   * console toast mirrors it visually but is silent, so nothing is said twice.
+   */
+  const [announcement, setAnnouncement] = useState({ text: "", count: 0 });
+  /** Re-announces identical lines too (two identical saves in a row). */
+  const announce = useCallback(
+    (text: string) => setAnnouncement((current) => ({ text, count: current.count + 1 })),
+    []
+  );
   const copyLink = useCopyListLink(owner.id);
+  /** The selected shelf chip: kept in view in the phone's sideways row (e.g. restored from the URL). */
+  const selectedShelfRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => revealInRow(selectedShelfRef.current), [tab]);
 
   /** userData written by this page, updated synchronously (state renders later). */
   const latestUserData = useRef(new Map<number, UserAnimeData>());
@@ -228,20 +297,49 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
           episodeProgressNumber: optimistic.episodeProgressNumber,
         });
         // Only apply if nothing else (the edit dialog, a removal) changed it meanwhile.
+        const completed = saved.listType === "completed" && previous.listType !== "completed";
+        const nowMs = Date.now();
+        const message = plusOneMessage({
+          prev: previous,
+          next: saved,
+          episodes: entry.episodes,
+          title: displayTitle(entry),
+          unlogged: {
+            before: unloggedAired({ ...entry, userData: previous }, nowMs),
+            after: unloggedAired({ ...entry, userData: saved }, nowMs),
+          },
+        });
         if (latestUserData.current.get(animeId) === optimistic) {
+          // Auto-complete moves the card to the Completed section (or off this shelf).
+          // Keyboard users keep their place in the section they were working through:
+          // the next card's +1, else the section heading. Mouse and touch users are
+          // left alone (no focus jump, no scroll).
           const buttonId = incrementButtonId(animeId);
-          const hadFocus = document.activeElement?.id === buttonId;
-          // Auto-complete can move the card to another section (a remount) or out of
-          // the current tab; keep keyboard focus from falling back to <body>.
+          const active = document.activeElement;
+          const keyboard =
+            active instanceof HTMLElement && active.id === buttonId && active.matches(":focus-visible");
+          const section = active?.closest("section")?.getAttribute("aria-labelledby") ?? null;
+          const item = active?.closest("li");
+          const neighbor = (item?.nextElementSibling ?? item?.previousElementSibling)?.querySelector<HTMLElement>(
+            "[id^='increment-entry-']"
+          )?.id;
           flushSync(() => setUserData(animeId, saved));
-          if (hadFocus && document.activeElement?.id !== buttonId) {
-            (document.getElementById(buttonId) ?? document.getElementById(HEADING_ID))?.focus();
+          if (keyboard) {
+            const moved = document.getElementById(buttonId);
+            const movedSection = moved?.closest("section")?.getAttribute("aria-labelledby");
+            // Stay in the section being worked through; when it emptied out, follow
+            // the card (All view) or return to the selected shelf, never the page top.
+            const target =
+              (movedSection === section ? moved : null) ??
+              (neighbor ? document.getElementById(neighbor) : null) ??
+              (section ? document.getElementById(section) : null) ??
+              moved ??
+              document.querySelector<HTMLElement>('[aria-label="List status"] [aria-pressed="true"]') ??
+              document.getElementById(HEADING_ID);
+            if (target && target !== document.activeElement) target.focus();
           }
-        }
-        if (saved.listType === "completed" && previous.listType !== "completed") {
-          toast.success(
-            sageText("Notice", `Final episode reached. ${displayTitle(entry)} moved to Completed.`)
-          );
+          consoleToast(message, { celebrate: completed });
+          announce(message.spoken);
         }
         scheduleRefresh();
       } catch (err) {
@@ -256,19 +354,20 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
         });
       }
     },
-    [scheduleRefresh, setUserData]
+    [announce, scheduleRefresh, setUserData]
   );
 
   const openEditor = useCallback((entry: MyListEntry) => setEditingId(entry.id), []);
   const closeEditor = useCallback(() => setEditingId(null), []);
 
   const handleSaved = useCallback(
-    (animeId: number, userData: UserAnimeData) => {
+    (animeId: number, userData: UserAnimeData, spoken: string) => {
       setUserData(animeId, userData);
+      announce(spoken);
       setEditingId((current) => (current === animeId ? null : current));
       scheduleRefresh();
     },
-    [scheduleRefresh, setUserData]
+    [announce, scheduleRefresh, setUserData]
   );
 
   const handleRemoved = useCallback(
@@ -284,10 +383,22 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
 
   const updateFilters = (patch: Partial<ListFilters>) =>
     setFilters((current) => ({ ...current, ...patch }));
-  const clearFilters = () => setFilters(EMPTY_FILTERS);
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    // The Clear button unmounts itself; give keyboard focus a sensible home.
+    document.getElementById("list-search")?.focus();
+  };
 
   // Typing in the search box stays responsive on long lists.
   const deferredFilters = useDeferredValue(filters);
+
+  // Write the view back to the URL: replaceState (no history entry per keystroke),
+  // which Next 16 syncs into its router. Defaults are left out of the query.
+  useEffect(() => {
+    const { pathname, search, hash } = window.location;
+    const query = listViewQuery({ tab, sort, filters: deferredFilters });
+    if (query !== search) window.history.replaceState(null, "", `${pathname}${query}${hash}`);
+  }, [tab, sort, deferredFilters]);
   const years = useMemo(() => {
     const options = yearOptions(items);
     const selected = filters.year;
@@ -302,15 +413,35 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
   const counts = useMemo(() => countByStatus(filtered), [filtered]);
   const totals = useMemo(() => countByStatus(items), [items]);
   const stats = useMemo(() => listStats(items), [items]);
+  // At the server's render time, so the banner's typed-in line matches the chips'
+  // first render on the server and after hydration.
+  const withNewEpisodes = useMemo(
+    () => items.filter((entry) => (unloggedAired(entry, renderedAt) ?? 0) > 0).length,
+    [items, renderedAt]
+  );
+  const runtime = useMemo(() => watchedRuntime(items), [items]);
   const sections = useMemo(() => {
-    const sorted = sortEntries(filtered, sort);
+    const sorted = sortEntries(filtered, sort, renderedAt);
     if (tab === "all") return groupByStatus(sorted);
     const inTab = sorted.filter((entry) => entry.userData.listType === tab);
     return inTab.length ? [{ status: tab, entries: inTab }] : [];
-  }, [filtered, sort, tab]);
+  }, [filtered, sort, tab, renderedAt]);
   const hasCountdowns = useMemo(() => items.some((entry) => nextAiring(entry) !== null), [items]);
 
   const filtersActive = hasActiveFilters(filters);
+  // The readout and the "no match" panel describe what's on screen, which uses
+  // the deferred filters (typing stays responsive on long lists).
+  const shownActive = hasActiveFilters(deferredFilters);
+  const shownCount = sections.reduce((sum, section) => sum + section.entries.length, 0);
+  const scopeTotal = tab === "all" ? items.length : totals[tab];
+  const readout = shownActive
+    ? `${shownCount} of ${showsLabel(scopeTotal)}${tab !== "all" ? ` in ${TAB_LABELS[tab]}` : ""} match.`
+    : "";
+  // Spoken only when the filters or shelf change, not when a +1 or save moves a
+  // card (that result is already announced). Adjusted during render, no effect.
+  const readoutKey = `${tab}${listViewQuery({ tab: "all", sort: "next", filters: deferredFilters })}`;
+  const [spokenReadout, setSpokenReadout] = useState({ key: readoutKey, text: "" });
+  if (spokenReadout.key !== readoutKey) setSpokenReadout({ key: readoutKey, text: readout });
   const panelFilterCount = [filters.year, filters.season, filters.weekday, filters.release].filter(
     (value) => value !== null
   ).length;
@@ -326,8 +457,10 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
     : {
         kind: "Report" as const,
         text: isOwner
-          ? `Stomach contents: ${showsLabel(items.length)}. ${stats.airing} still airing.`
-          : `Analysis complete: ${showsLabel(items.length)} on ${name}'s list, ${stats.airing} still airing.`,
+          ? `Stomach contents: ${showsLabel(items.length)}. ${stats.releasing} still airing${
+              withNewEpisodes ? `, ${withNewEpisodes} with new episodes` : ""
+            }.`
+          : `Analysis complete: ${showsLabel(items.length)} on ${name}'s list, ${stats.releasing} still airing.`,
       };
 
   const banner = (
@@ -337,9 +470,17 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
       title={`${name}'s list`}
       titleId={HEADING_ID}
       sub={
-        isOwner
-          ? "Tap +1 after each episode. Reach the finale and the show files itself under Completed. Anyone with the link can look; only you can edit."
-          : `What ${name} is watching, planning and has finished. Only ${name} can edit it.`
+        isOwner ? (
+          <>
+            {/* Phones keep only the visibility sentence, so the list starts sooner. */}
+            <span className="hidden sm:inline">
+              Tap +1 after each episode. Reach the finale and the show files itself under Completed.{" "}
+            </span>
+            Anyone with the link can look; only you can edit.
+          </>
+        ) : (
+          `What ${name} is watching, planning and has finished. Only ${name} can edit it.`
+        )
       }
       aside={
         <EvolutionCard
@@ -364,11 +505,33 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
         )}
       </div>
       {items.length > 0 && (
-        <StatGrid className="mt-6 max-w-2xl grid-cols-2 sm:grid-cols-4">
-          <Stat label="Shows" value={items.length} />
-          <Stat label="Watching" value={totals.watching} />
-          <Stat label="Episodes seen" value={stats.episodes} />
-          <Stat label="Mean score" value={stats.meanScore ?? "—"} />
+        <StatGrid className="mt-6 max-w-2xl grid-cols-4">
+          <Stat label="Shows" value={items.length} labelClassName={STAT_LABEL} />
+          <Stat label="Watching" value={totals.watching} labelClassName={STAT_LABEL} />
+          <Stat
+            label="Episodes seen"
+            labelClassName={STAT_LABEL}
+            value={stats.episodes}
+            // From 640px: a phone keeps its 4-across row short.
+            noteClassName="max-sm:hidden"
+            note={
+              runtime.minutes > 0 ? (
+                <>
+                  <span aria-hidden="true">≈ {formatRuntime(runtime.minutes)} of runtime</span>
+                  <span className="sr-only">
+                    About {formatRuntime(runtime.minutes)} of runtime, estimated from AniList&apos;s typical
+                    episode length
+                  </span>
+                </>
+              ) : undefined
+            }
+            noteTitle={`AniList's typical episode length × episodes watched${
+              runtime.skipped
+                ? `; ${runtime.skipped} ${runtime.skipped === 1 ? "show" : "shows"} without a length left out`
+                : ""
+            }`}
+          />
+          <Stat label="Mean score" value={stats.meanScore ?? "—"} labelClassName={STAT_LABEL} />
         </StatGrid>
       )}
     </PageBanner>
@@ -395,7 +558,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
               }
             >
               Find something to watch and tap + Add to list on any anime card. It&apos;ll show up
-              here with a countdown to its next episode.
+              here, with a countdown whenever an episode is scheduled.
             </SagePanel>
           ) : (
             <SagePanel
@@ -422,16 +585,22 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
 
       <div className={`${APP_CONTAINER} flex flex-col gap-8`}>
         <section aria-label="Shelves and filters" className={`${PANEL} p-3 sm:p-4`}>
-          <nav aria-label="List status">
-            <ul className="flex flex-wrap gap-1.5">
+          {/* Phones: one row that scrolls sideways (with a fade), instead of three wrapped rows. */}
+          <div role="group" aria-label="List status" className="min-w-0">
+            <ul className="flex gap-1.5 py-1 max-sm:-mx-1 max-sm:overflow-x-auto max-sm:scroll-pr-10 max-sm:px-1 max-sm:pr-8 max-sm:[mask-image:linear-gradient(to_right,#000_85%,transparent)] max-sm:[scrollbar-width:none] sm:flex-wrap">
               {TABS.map((value) => {
                 const selected = tab === value;
                 return (
-                  <li key={value}>
+                  <li key={value} className="shrink-0">
                     <button
                       type="button"
                       aria-pressed={selected}
-                      onClick={() => setTab(value)}
+                      ref={selected ? selectedShelfRef : undefined}
+                      onClick={(event) => {
+                        setTab(value);
+                        revealInRow(event.currentTarget);
+                      }}
+                      onFocus={(event) => revealInRow(event.currentTarget)}
                       className={`${SHELF} ${selected ? SHELF_ON : SHELF_OFF} ${FOCUS_RING_PANEL}`}
                     >
                       {value !== "all" && (
@@ -447,10 +616,13 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 );
               })}
             </ul>
-          </nav>
+          </div>
 
-          <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-[rgb(53,53,53)] pt-3">
-            <div className="flex min-w-0 basis-full flex-col gap-1.5 sm:basis-0 sm:flex-1">
+          {/* Phones: Search beside "Sort & filter" (Sort lives in the panel). From 640px:
+              Search, Sort and Filters in one row; from 1024px the filters are always shown.
+              The two Sort selects share state; only one is ever displayed. */}
+          <div className="mt-2 flex items-end gap-3 border-t border-[rgb(53,53,53)] pt-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <label htmlFor="list-search" className={LABEL_CLASS}>
                 Search this list
               </label>
@@ -459,30 +631,12 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                 type="search"
                 value={filters.query}
                 onChange={(event) => updateFilters({ query: event.target.value })}
-                placeholder="Title in English, romaji or Japanese"
+                placeholder="Any title"
                 autoComplete="off"
                 className={`${FIELD} font-mono`}
               />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:w-48 sm:flex-none">
-              <label htmlFor="list-sort" className={LABEL_CLASS}>
-                Sort by
-              </label>
-              <select
-                id="list-sort"
-                value={sort}
-                onChange={(event) => {
-                  if (isSortKey(event.target.value)) setSort(event.target.value);
-                }}
-                className={FIELD}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SortSelect id="list-sort" value={sort} onChange={setSort} className="hidden w-48 shrink-0 sm:flex" />
             <button
               type="button"
               aria-expanded={filtersOpen}
@@ -490,13 +644,14 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
               onClick={() => setFiltersOpen((open) => !open)}
               className={`${GHOST_BUTTON_PANEL} shrink-0 md:h-10 lg:hidden`}
             >
-              Filters
-              {panelFilterCount > 0 && (
-                <span className="rounded-full bg-blue-600 px-2 text-[11px] text-white">
-                  {panelFilterCount}
-                  <span className="sr-only"> active</span>
-                </span>
-              )}
+              {/* Below 375px an icon, so the search field keeps its width. */}
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-4 w-4 shrink-0 min-[375px]:hidden">
+                <path d="M3 5h14M6 10h8M9 15h2" />
+              </svg>
+              <span className="max-[374px]:sr-only sm:hidden">Sort &amp; filter</span>
+              <span className="hidden sm:inline">Filters</span>
+              <CountBadge count={panelFilterCount + (sort !== "next" ? 1 : 0)} className="sm:hidden" />
+              <CountBadge count={panelFilterCount} className="hidden sm:inline-flex" />
               <span aria-hidden="true">{filtersOpen ? "▴" : "▾"}</span>
             </button>
           </div>
@@ -505,6 +660,12 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
             id="list-filters"
             className={`${filtersOpen ? "grid" : "hidden"} mt-3 min-w-0 grid-cols-1 gap-3 min-[375px]:grid-cols-2 md:grid-cols-4 lg:grid`}
           >
+            <SortSelect
+              id="list-sort-panel"
+              value={sort}
+              onChange={setSort}
+              className="flex min-[375px]:col-span-2 sm:hidden"
+            />
             <FilterSelect
               id="filter-year"
               label="Year"
@@ -551,13 +712,16 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
           </div>
 
           <div className="mt-2 flex min-h-11 flex-wrap items-center justify-between gap-x-4">
-            <p aria-live="polite" className="text-sm text-[#cfe8ff]">
-              {filtersActive && (
+            <p className="text-sm text-[#cfe8ff]">
+              {readout && (
                 <>
                   <SageTag kind="Analyze" />
-                  {filtered.length} of {showsLabel(items.length)} match.
+                  {readout}
                 </>
               )}
+            </p>
+            <p role="status" className="sr-only">
+              {spokenReadout.text}
             </p>
             <div className="-mr-2 flex flex-wrap items-center">
               {filtersActive && (
@@ -571,7 +735,7 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
         </section>
 
         {sections.length === 0 ? (
-          filtersActive ? (
+          shownActive ? (
             <SagePanel
               kind="Report"
               mood="worried"
@@ -595,7 +759,11 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
               aria-labelledby={`section-${section.status}`}
               className="flex min-w-0 flex-col gap-4"
             >
-              <h2 id={`section-${section.status}`} className={SECTION_TITLE_CLASS}>
+              <h2
+                id={`section-${section.status}`}
+                tabIndex={-1}
+                className={`${SECTION_TITLE_CLASS} scroll-mt-20 focus:outline-none`}
+              >
                 <span
                   aria-hidden="true"
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[section.status]}`}
@@ -615,6 +783,8 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
                     key={entry.id}
                     entry={entry}
                     isOwner={isOwner}
+                    ownerName={isOwner ? null : name}
+                    renderedAt={renderedAt}
                     pending={pendingIds.has(entry.id)}
                     onIncrement={incrementProgress}
                     onEdit={openEditor}
@@ -625,6 +795,12 @@ export function MyList({ entries, isOwner, owner }: MyListProps) {
           ))
         )}
       </div>
+
+      <p role="status" className="sr-only">
+        {announcement.text}
+        {/* A zero-width space on alternate lines: identical text still counts as a change. */}
+        {announcement.count % 2 ? "\u200B" : ""}
+      </p>
 
       {isOwner && editingEntry && (
         <EditEntryDialog

@@ -6,7 +6,7 @@
  * absolute `airingAt` timestamp, never from the stored relative
  * `timeUntilAiring` (which is stale as soon as it is saved).
  */
-import type { AnimeMedia } from "./types";
+import type { AnimeMedia, UserAnimeData } from "./types";
 
 export const DISPLAY_TIME_ZONE = "America/Los_Angeles";
 
@@ -21,7 +21,7 @@ export const WEEKDAYS = [
 ] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
 
-type AiringFields = Pick<
+export type AiringFields = Pick<
   AnimeMedia,
   "upComingAirDate" | "upcomingEpisode" | "firstEpisode" | "status" | "episodes" | "startDate"
 >;
@@ -126,4 +126,33 @@ export function compareByNextAiring(
   const ta = nextAiring(a)?.airingAt ?? Number.POSITIVE_INFINITY;
   const tb = nextAiring(b)?.airingAt ?? Number.POSITIVE_INFINITY;
   return ta === tb ? 0 : ta < tb ? -1 : 1;
+}
+
+/**
+ * Aired episodes not logged yet ("2 new") for a show being watched (Watching
+ * or Paused): the next scheduled episode's number minus one, plus that episode
+ * once its air time has passed (when `nowMs` is given), minus progress; for a
+ * finished show, its episode count minus progress (so the count doesn't vanish
+ * the moment the finale airs). 0 when caught up. Null when it can't be known
+ * or doesn't apply: another status, no numbered next episode on a show that
+ * hasn't finished, or more "aired" than the known episode count (AniList
+ * sometimes numbers a split cour continuously).
+ *
+ * Pass `nowMs = null` for a clock-free count (sorting, banner text) so server
+ * and client agree; the live chip passes useNow().
+ */
+export function unloggedAired(
+  media: Partial<AiringFields> & { userData: Pick<UserAnimeData, "listType" | "episodeProgressNumber"> },
+  nowMs: number | null
+): number | null {
+  const { listType, episodeProgressNumber } = media.userData;
+  if (listType !== "watching" && listType !== "paused") return null;
+  const next = nextAiring(media);
+  const total = media.episodes && media.episodes > 0 ? media.episodes : null;
+  let aired: number;
+  if (next?.episode) aired = next.episode - 1 + (nowMs !== null && nowMs >= next.airingAt * 1000 ? 1 : 0);
+  else if (!next && media.status === "FINISHED" && total !== null) aired = total;
+  else return null;
+  if (total !== null && aired > total) return null;
+  return Math.max(0, aired - episodeProgressNumber);
 }

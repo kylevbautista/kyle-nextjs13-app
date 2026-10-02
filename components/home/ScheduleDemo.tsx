@@ -1,17 +1,16 @@
 "use client";
-import { useId, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Image from "next/image";
-import toast from "react-hot-toast";
 import { DAY_LABELS, SCHEDULE_DAYS, weekdayAt } from "@/components/mylist/schedule";
+import ShareLink from "@/components/theme/ShareLink";
 import { DAY_TINTS } from "@/components/theme/tokens";
+import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { nextAiring, type Weekday } from "@/lib/anime/airing";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { defaultScheduleDay, formatWeekdayTime, groupByWeekday } from "@/lib/landing";
-import { myListPath } from "@/lib/routes";
 import { trackLanding } from "./analytics";
 import CountdownText from "./CountdownText";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
-import { markQuest } from "./questStore";
 import {
   CHAPTER_CLASS,
   CHAPTER_SUB_CLASS,
@@ -25,38 +24,6 @@ import { useLandingSession } from "./useLandingSession";
 
 const ROWS = 4;
 
-/**
- * A per-minute clock for "which day is today" (null during SSR and
- * hydration, like useNow). Only the countdown leaves tick every second, so
- * the tabs and rows don't re-render with them.
- */
-let minuteNow = 0;
-let minuteTimer: ReturnType<typeof setInterval> | undefined;
-const minuteListeners = new Set<() => void>();
-function subscribeMinute(listener: () => void) {
-  minuteListeners.add(listener);
-  if (!minuteTimer) {
-    minuteNow = Date.now();
-    minuteTimer = setInterval(() => {
-      minuteNow = Date.now();
-      minuteListeners.forEach((notify) => notify());
-    }, 60_000);
-  }
-  return () => {
-    minuteListeners.delete(listener);
-    if (!minuteListeners.size && minuteTimer) {
-      clearInterval(minuteTimer);
-      minuteTimer = undefined;
-    }
-  };
-}
-const getMinute = () => minuteNow || null;
-const getServerMinute = () => null;
-
-const subscribeHost = () => () => {};
-const getHost = () => window.location.host;
-const getServerHost = () => "kylevb.com";
-
 const plural = (count: number) => `${count} ${count === 1 ? "show" : "shows"}`;
 
 /**
@@ -68,7 +35,8 @@ const plural = (count: number) => `${count} ${count === 1 ? "show" : "shows"}`;
 export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
   const { generatedAt } = useLanding();
   const session = useLandingSession();
-  const now = useSyncExternalStore(subscribeMinute, getMinute, getServerMinute);
+  // Per minute: only the countdown leaves tick every second.
+  const now = useMinuteNow();
   const shows = useVisibleAiring(airingIds, airingIds.length);
   const groups = useMemo(() => groupByWeekday(shows), [shows]);
   const [choice, setChoice] = useState<Weekday | null>(null);
@@ -161,7 +129,7 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
                         tabIndex={isSelected ? 0 : -1}
                         onClick={() => setChoice(day)}
                         onKeyDown={(event) => handleKeyDown(event, index)}
-                        className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-inset ${
+                        className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-inset ${
                           isSelected
                             ? "bg-blue-600 text-white"
                             : "text-[rgb(200,206,218)] hover:bg-white/5"
@@ -226,7 +194,11 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
           )}
         </div>
 
-        <ShareStrip session={session} />
+        <ShareLink
+          userId={session.status === "signedIn" ? session.userId : null}
+          onCopy={() => trackLanding("cta_click", { cta: "copy_list_link", location: "schedule" })}
+          className="mt-8 lg:col-start-1 lg:row-start-2 lg:mt-0"
+        />
 
         <div className="mt-8 lg:col-start-1 lg:row-start-3 lg:mt-0">
           <SessionCta location="schedule" size="section" signedInAction="airing_schedule" />
@@ -242,7 +214,7 @@ function ScheduleRow({ media }: { media: AnimeMedia }) {
   const cover = media.coverImage.medium ?? media.coverImage.large;
   if (!next) return null;
   return (
-    <li className="flex h-16 items-center gap-3 px-1">
+    <li className="flex min-h-16 items-center gap-3 px-1 py-2">
       <div
         className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md bg-[rgb(53,53,53)]"
         style={media.coverImage.color ? { backgroundColor: media.coverImage.color } : undefined}
@@ -252,7 +224,7 @@ function ScheduleRow({ media }: { media: AnimeMedia }) {
         )}
       </div>
       <div className="flex w-0 min-w-0 flex-1 flex-col gap-0.5">
-        <p className="truncate text-sm font-semibold text-white" title={title}>
+        <p className="line-clamp-2 break-words text-sm font-semibold text-white" title={title}>
           {title}
         </p>
         <p className="truncate text-xs text-[rgb(164,164,164)]">
@@ -264,66 +236,5 @@ function ScheduleRow({ media }: { media: AnimeMedia }) {
         <CountdownText airingAt={next.airingAt} episode={next.episode} mode="compact" className="justify-end" />
       </span>
     </li>
-  );
-}
-
-function ShareStrip({ session }: { session: ReturnType<typeof useLandingSession> }) {
-  const host = useSyncExternalStore(subscribeHost, getHost, getServerHost);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const signedIn = session.status === "signedIn";
-
-  const handleCopy = async () => {
-    if (session.status !== "signedIn") return;
-    const url = new URL(myListPath(session.userId), window.location.origin).href;
-    trackLanding("cta_click", { cta: "copy_list_link", location: "schedule" });
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied");
-    } catch {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-      toast.error("Couldn't copy. Select the link and copy it.");
-    }
-    markQuest(session.userId, "share");
-  };
-
-  return (
-    <div className="mt-8 rounded-xl border border-dashed border-[#95ccff]/30 p-4 lg:col-start-1 lg:row-start-2 lg:mt-0">
-      <SageLine kind="Notice" size="sm">
-        Named monsters evolve. Named lists get shared.
-      </SageLine>
-      <p className="mt-3 text-sm leading-6 text-[rgb(200,206,218)]">
-        Your list lives at its own link. Send it to a friend: anyone with the link can look, only you
-        can edit.
-      </p>
-      <div className="mt-3 flex items-center gap-2">
-        <div className="url-shimmer min-w-0 flex-1 rounded-lg border border-[rgb(53,53,53)] bg-[rgb(18,18,18)]">
-          {signedIn ? (
-            <input
-              ref={inputRef}
-              readOnly
-              aria-label="Your list link"
-              value={`${host}${myListPath(session.userId)}`}
-              onFocus={(event) => event.currentTarget.select()}
-              className="h-11 w-full truncate bg-transparent px-3 font-mono text-sm text-[#cfe8ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
-            />
-          ) : (
-            <p className="flex h-11 items-center truncate px-3 font-mono text-sm text-[rgb(164,164,164)]">
-              kylevb.com/user/…
-            </p>
-          )}
-        </div>
-        {signedIn && (
-          <button
-            type="button"
-            onClick={handleCopy}
-            aria-label="Copy the link to your list"
-            className={`inline-flex h-11 shrink-0 items-center rounded-lg border border-[#95ccff]/40 bg-white/5 px-4 text-sm font-semibold text-[#e6f3ff] transition-colors hover:bg-white/10 ${FOCUS_RING}`}
-          >
-            Copy link
-          </button>
-        )}
-      </div>
-    </div>
   );
 }

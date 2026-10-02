@@ -20,7 +20,14 @@ const ROWS = 3;
  *
  * `entries` must be sorted soonest first and all have a next episode.
  */
-export default function NextEpisodes({ entries }: { entries: ListEntry[] }) {
+export default function NextEpisodes({
+  entries,
+  onShowWeek,
+}: {
+  entries: ListEntry[];
+  /** Opens the week panel's All tab (the links still jump to it without JS). */
+  onShowWeek?: () => void;
+}) {
   const now = useNow();
   const nowSeconds = now === null ? null : Math.floor(now / 1000);
   const rows = entries
@@ -62,6 +69,7 @@ export default function NextEpisodes({ entries }: { entries: ListEntry[] }) {
         <footer className="flex h-11 shrink-0 items-center border-t border-[rgb(53,53,53)] px-2">
           <Link
             href="#schedule-panel"
+            onClick={onShowWeek}
             className={`flex h-9 items-center rounded-md px-2 text-sm font-medium text-[#95ccff] hover:bg-white/5 hover:text-white ${FOCUS_RING_PANEL}`}
           >
             The whole week <span aria-hidden="true">&nbsp;↓</span>
@@ -73,6 +81,7 @@ export default function NextEpisodes({ entries }: { entries: ListEntry[] }) {
       {first && firstNext && (
         <Link
           href="#schedule-panel"
+          onClick={onShowWeek}
           aria-label={`Next up: ${displayTitle(first)}, ${
             firstNext.episode ? `episode ${firstNext.episode}` : "next episode"
           }, airs ${formatAirDate(firstNext.airingAt)}. See the whole week`}

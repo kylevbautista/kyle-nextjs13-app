@@ -1,11 +1,11 @@
 "use client";
 import { useSyncExternalStore } from "react";
-import { trackLanding } from "./analytics";
 
 /**
  * The "Pause live timers" preference (WCAG 2.2.2): per-second countdowns are
- * auto-updating content, so visitors can drop every countdown on the landing
- * to per-minute updates. Stored per browser in localStorage.
+ * auto-updating content, so visitors can drop every countdown on the site
+ * (CountdownText) to per-minute updates. Stored per browser in localStorage.
+ * No analytics here: the landing's toggle reports its own clicks.
  */
 
 const STORAGE_KEY = "kv:live-timers";
@@ -67,5 +67,4 @@ export function setLiveSeconds(on: boolean): void {
     // Keep the in-memory value for this page view.
   }
   notify();
-  trackLanding("live_timers", { on });
 }

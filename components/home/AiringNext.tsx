@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { LandingSeasonMeta } from "@/lib/landing";
-import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
-import AiringGrid, { ReportPanel } from "./AiringGrid";
+import AiringGrid, { LandingTimersToggle, ReportPanel } from "./AiringGrid";
 import {
   CHAPTER_CLASS,
   CHAPTER_SUB_CLASS,
@@ -71,7 +70,7 @@ export default function AiringNext({
             >
               Browse all of {season.label} <span aria-hidden="true">&nbsp;→</span>
             </Link>
-            <LiveTimersToggle className="-ml-3 laptop:ml-0" />
+            <LandingTimersToggle className="-ml-3 laptop:ml-0" />
           </div>
         )}
       </div>

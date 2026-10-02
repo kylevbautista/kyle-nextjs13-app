@@ -25,19 +25,23 @@ export default function Loading() {
               <div className="h-11 w-48 animate-pulse rounded-xl bg-white/10" />
               <div className="h-11 w-28 animate-pulse rounded-xl bg-white/10" />
             </div>
-            <div className="mt-2 h-[74px] w-full max-w-2xl animate-pulse rounded-xl bg-[#0a1428]/80" />
+            <div className="mt-2 h-[78px] w-full max-w-2xl animate-pulse rounded-xl bg-[#0a1428]/80 sm:h-[106px]" />
           </div>
           <div className="h-[96px] animate-pulse rounded-2xl bg-[#0a1428]/80 lg:h-[300px] lg:w-[20rem]" />
         </div>
       </div>
       <div className={`${APP_CONTAINER} flex flex-col gap-8`} aria-hidden="true">
         <div className={`${PANEL} flex flex-col gap-3 p-3 sm:p-4`}>
-          <div className="flex flex-wrap gap-1.5">
+          {/* One shelf row on phones (it scrolls there), wrapped from 640px. */}
+          <div className="flex gap-1.5 overflow-hidden py-1 sm:flex-wrap">
             {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="h-11 w-24 animate-pulse rounded-full bg-white/5 md:h-9" />
+              <div key={i} className="h-11 w-24 shrink-0 animate-pulse rounded-full bg-white/5 md:h-9" />
             ))}
           </div>
-          <div className="h-11 w-full animate-pulse rounded-xl bg-white/5 md:h-10" />
+          <div className="flex gap-3">
+            <div className="h-11 flex-1 animate-pulse rounded-xl bg-white/5 md:h-10" />
+            <div className="h-11 w-28 shrink-0 animate-pulse rounded-xl bg-white/5 md:h-10 lg:hidden" />
+          </div>
         </div>
         <div className="flex flex-col gap-4">
           <div className={`h-5 w-32 ${bar}`} />

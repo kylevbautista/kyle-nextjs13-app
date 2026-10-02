@@ -222,6 +222,9 @@ export type UserDataResult =
 /**
  * Validates a client-sent userData object and applies tracker rules:
  * - progress is clamped to the known episode count
+ * - logging progress without a status (a +1) on a Plan to Watch or Paused show
+ *   moves it to Watching, as AniList and MyAnimeList do; an explicit status
+ *   (the edit dialog always sends one) is never overridden
  * - watching/planning → completed when progress reaches the last episode
  * - completed → progress filled to the episode count
  * - startDate set when progress first moves off 0; finishDate set on completion
@@ -278,8 +281,18 @@ export function normalizeUserData(
   }
 
   const total = episodes && episodes > 0 ? episodes : null;
-  const statusChanged = listType !== previous.listType;
+  // Only an explicit status choice counts as a change (the implicit move below doesn't).
+  const statusChanged = input.listType !== undefined && listType !== previous.listType;
   if (total !== null && progress > total) progress = total;
+  // A +1 (progress, no status) starts a planned show or resumes a paused one. Runs
+  // before auto-complete, so a +1 to the finale still lands on Completed.
+  if (
+    input.listType === undefined &&
+    progress > previous.episodeProgressNumber &&
+    (listType === "planning" || listType === "paused")
+  ) {
+    listType = "watching";
+  }
   // Auto-complete only when progress *reaches* the last episode; an explicit
   // move back to Watching/Plan to Watch (e.g. a rewatch) is respected.
   if (

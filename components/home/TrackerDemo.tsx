@@ -1,12 +1,24 @@
 "use client";
 import { useId, useReducer, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
+import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
+import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
+import { revealInRow } from "@/components/theme/revealInRow";
+import { unloggedAired } from "@/lib/anime/airing";
 import { normalizeUserData } from "@/lib/anime/normalize";
-import { STATUS_BADGE_CLASS } from "@/lib/anime/statusBadge";
+import { STATUS_BADGE_CLASS, STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
+import {
+  PROMPT_MESSAGE,
+  plusOneMessage,
+  scoreMessage,
+  statusMessage,
+  type ConsoleMessage,
+} from "@/lib/anime/trackerConsole";
 import {
   LIST_STATUSES,
   LIST_STATUS_LABELS,
   displayTitle,
+  type AnimeMedia,
   type ListStatus,
   type UserAnimeData,
 } from "@/lib/anime/types";
@@ -20,7 +32,6 @@ import {
   EYEBROW_CLASS,
   SageLine,
   Skill,
-  type SageKind,
 } from "./SageLine";
 import { SessionCta, SessionStatusLine } from "./SessionCta";
 import Slime from "./Slime";
@@ -73,34 +84,28 @@ function reducer(state: DemoState, action: DemoAction): DemoState {
   };
 }
 
-/** The console line, derived from the last action and its result. */
-function consoleMessage(last: LastAction): { kind: SageKind; text: string } {
+/**
+ * The console line, derived from the last action and its result. The words
+ * come from lib/anime/trackerConsole.ts, which My List's console uses too.
+ */
+function consoleMessage(last: LastAction, live: AnimeMedia | null): ConsoleMessage {
+  // "Caught up" comes from the real show's schedule, never from made-up numbers.
+  const unlogged = (data: UserAnimeData) => (live ? unloggedAired({ ...live, userData: data }, null) : null);
   switch (last.kind) {
     case "start":
     case "reset":
-      return { kind: "Question", text: "Watched the next one? Tap +1." };
-    case "plus_one": {
-      if (last.next.listType === "completed" && last.prev.listType !== "completed") {
-        return {
-          kind: "Notice",
-          text: "Final episode reached. Moved to Completed. Finish date set to today.",
-        };
-      }
-      const progress = last.next.episodeProgressNumber;
-      return { kind: "Notice", text: `Episode ${progress} logged. ${EPISODES - progress} to go.` };
-    }
+      return PROMPT_MESSAGE;
+    case "plus_one":
+      return plusOneMessage({
+        prev: last.prev,
+        next: last.next,
+        episodes: EPISODES,
+        unlogged: { before: unlogged(last.prev), after: unlogged(last.next) },
+      });
     case "status":
-      if (last.prev.listType === "completed" && last.next.listType === "watching") {
-        return {
-          kind: "Answer",
-          text: `Status set to Watching. Rewatching? Progress stays at ${last.next.episodeProgressNumber}.`,
-        };
-      }
-      return { kind: "Answer", text: `Status set to ${LIST_STATUS_LABELS[last.next.listType]}.` };
+      return statusMessage(last.prev, last.next);
     case "score":
-      return last.next.score === null
-        ? { kind: "Notice", text: "Score cleared." }
-        : { kind: "Notice", text: `Score recorded: ${last.next.score} / 10.` };
+      return scoreMessage(last.next);
   }
 }
 
@@ -124,7 +129,8 @@ export default function TrackerDemo() {
   const { media } = useLanding();
   const live = media(DEMO_MEDIA_ID);
   const title = live ? displayTitle(live) : DEMO_FALLBACK.title;
-  const coverUrl = live ? (live.coverImage.medium ?? live.coverImage.large) : DEMO_FALLBACK.coverUrl;
+  // 72px wide: the ~230px file stays sharp up to 3× screens (the 100px one didn't at 2×).
+  const coverUrl = live ? (live.coverImage.large ?? live.coverImage.medium) : DEMO_FALLBACK.coverUrl;
   const color = (live ? live.coverImage.color : DEMO_FALLBACK.color) ?? DEMO_FALLBACK.color;
 
   const [state, dispatch] = useReducer(reducer, {
@@ -142,7 +148,7 @@ export default function TrackerDemo() {
   const progress = data.episodeProgressNumber;
   const atLast = progress >= EPISODES;
   const completed = data.listType === "completed";
-  const message = consoleMessage(state.last);
+  const message = consoleMessage(state.last, live ?? null);
 
   const apply = (kind: Kind, patch: Partial<UserAnimeData>) => {
     const result = normalizeUserData(patch, { episodes: EPISODES, previous: data, now: Date.now() });
@@ -166,10 +172,12 @@ export default function TrackerDemo() {
     plusRef.current?.focus();
   };
 
-  const shelves: [string, number, boolean][] = [
-    ["All", 1, false],
+  // The same shelves as My List: "All", then each status with its dot.
+  const shelves: [ListStatus | null, string, number, boolean][] = [
+    [null, "All", 1, false],
     ...LIST_STATUSES.map(
-      (status): [string, number, boolean] => [
+      (status): [ListStatus, string, number, boolean] => [
+        status,
         LIST_STATUS_LABELS[status],
         status === data.listType ? 1 : 0,
         status === data.listType,
@@ -226,15 +234,21 @@ export default function TrackerDemo() {
 
           <ul
             aria-label="Shelves"
-            className="flex flex-wrap gap-1.5 max-[359px]:flex-nowrap max-[359px]:overflow-x-auto max-[359px]:pb-1"
+            // My List's shelf row: one row that scrolls sideways (with a fade) on phones.
+            className="flex gap-1.5 py-1 max-sm:-mx-1 max-sm:overflow-x-auto max-sm:px-1 max-sm:pr-8 max-sm:[mask-image:linear-gradient(to_right,#000_85%,transparent)] max-sm:[scrollbar-width:none] sm:flex-wrap"
           >
-            {shelves.map(([label, count, current]) => (
+            {shelves.map(([status, label, count, current]) => (
               <li
                 key={label}
+                // Keeps the shelf the show just moved to in view in the phone's sideways row.
+                ref={current ? (node) => revealInRow(node) : undefined}
                 className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-[rgb(53,53,53)] px-2.5 text-xs ${
                   current ? "bg-blue-600/20 text-white ring-1 ring-blue-400/40" : "text-[rgb(164,164,164)]"
                 }`}
               >
+                {status && (
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT_CLASS[status]}`} />
+                )}
                 {label}
                 <span className="tabular-nums font-semibold">{count}</span>
               </li>
@@ -287,7 +301,7 @@ export default function TrackerDemo() {
                   ref={plusRef}
                   type="button"
                   onClick={handlePlusOne}
-                  aria-label={atLast ? undefined : `Log episode ${progress + 1} (demo)`}
+                  aria-label={atLast ? undefined : `+1: log episode ${progress + 1} (demo)`}
                   className={`inline-flex h-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] ${
                     atLast
                       ? "border border-[#95ccff]/40 bg-white/5 px-3 hover:bg-white/10"
@@ -298,10 +312,17 @@ export default function TrackerDemo() {
                 </button>
               </div>
 
+              {/* My List's countdown line, from the live show (none for the fallback). */}
+              {live && <NextEpisodeLine media={live} />}
+
               <div className="flex flex-col gap-1.5">
-                <p className="text-xs text-[rgb(164,164,164)]">
-                  Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {EPISODES}
-                </p>
+                <div className="flex min-h-5 items-center justify-between gap-2">
+                  <p className="text-xs text-[rgb(164,164,164)]">
+                    Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {EPISODES}
+                  </p>
+                  {/* My List's "N new" chip, from the live show's real schedule (none once it has finished airing). */}
+                  {live && <NewEpisodesChip media={{ ...live, userData: data }} />}
+                </div>
                 <div
                   role="progressbar"
                   aria-label="Episodes watched"
@@ -381,11 +402,11 @@ export default function TrackerDemo() {
               className="shrink-0"
             />
             <p role="status" aria-live="polite" className="min-w-0 font-mono text-xs leading-5 text-[#cfe8ff] sm:text-[13px]">
-              <span className="sr-only">{`Great Sage ${message.kind.toLowerCase()}: `}</span>
+              <span className="sr-only">{`Great Sage ${message.kind.toLowerCase()}: ${message.spoken}`}</span>
               <span aria-hidden="true" className="mr-1.5 text-[#95ccff]">
                 《{message.kind}》
               </span>
-              {message.text}
+              <span aria-hidden="true">{message.text}</span>
             </p>
           </div>
         </figure>

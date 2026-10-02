@@ -44,6 +44,9 @@ pure `ranking.ts` helpers with tests).
 8. **Say where the data really comes from.** Top Anime's numbers are MyAnimeList's as Jikan
    reports them: Jikan refreshes shows separately, so ranks can repeat or skip. Never present an
    upstream artifact as a fact about the source (no "tied" for a repeated Jikan rank).
+9. **Messages come from one place.** Tracker lines live in `lib/anime/trackerConsole.ts` (the
+   demo and My List both call it), with a `spoken` form where "/" would read badly. One speech
+   channel per page: a persistent sr-only `role="status"`; toasts are visual only.
 
 ## Palette
 
@@ -116,13 +119,18 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | What | Where | Notes |
 |---|---|---|
 | Class tokens | `components/theme/tokens.ts` | Focus rings, containers, type, `PANEL`, `CONSOLE_PANEL`, `CARD` (lift + cover-color glow via `--card-glow`), `EMPTY_PANEL`, buttons (`*_PANEL` variants on rgb-30 surfaces), `FIELD`, `SHELF`/`SHELF_ON`/`SHELF_OFF`, `HAIRLINE`, `DAY_TINTS` |
-| `PageBanner` | `components/theme/PageBanner.tsx` | The night-sky header for app pages: eyebrow, typed-in SageLine, h1 (`titleId`, focusable, `scroll-mt-20`), sub, `children` (actions, stats), `aside` (right column from 1024px). `asideClassName="hidden lg:block"` for a desktop-only aside (keeps the phone banner short) |
-| `StatGrid`, `Stat` | `components/theme/StatGrid.tsx` | The console stat readout (My List's stats, Top Anime's glance). Optional `note` names the show behind a fact |
+| `PageBanner` | `components/theme/PageBanner.tsx` | The night-sky header for app pages: eyebrow, typed-in SageLine, h1 (`titleId`, focusable, `scroll-mt-20`), sub, `children` (actions, stats), `aside` (right column from 1024px). `asideClassName="hidden lg:block"` for a desktop-only aside (keeps the phone banner short). `sageKey` re-types the Sage line when a live line changes (key it on the text, never the clock) |
+| `StatGrid`, `Stat` | `components/theme/StatGrid.tsx` | The console stat readout (My List's stats, Top Anime's glance). Optional `note` (with `noteClassName`, e.g. `hidden sm:block`). Four across on phones |
 | `TrophyIcon`, `CrownIcon`, `StarIcon` | `components/theme/icons.tsx` | Gold theme icons, aria-hidden. The crown is the Demon Lord slime's |
 | `EvolutionCard` | `components/theme/EvolutionCard.tsx` | `layout="banner"` (row on phones, slime on a magic circle from 1024px) or `"stack"` (Quest Log). `gulpKey` replays the gulp when it grows |
 | `SagePanel` | `components/theme/SagePanel.tsx` | Empty, error and no-match states: slime (mood) + title + `《Kind》` line + actions |
-| `ShareLink`, `useCopyListLink` | `components/theme/ShareLink.tsx` | Share strip / copy handler. Also clears the landing's Quest 3 |
-| `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns |
+| `ShareLink`, `useCopyListLink` | `components/theme/ShareLink.tsx` | Share strip / copy handler (the Airing Schedule and the landing's schedule chapter). `userId={null}` shows a placeholder link; `onCopy` reports the click. Also clears the landing's Quest 3 |
+| `AniListCover` | `components/theme/AniListCover.tsx` | **New AniList covers shown wider than ~100px.** A `srcset` of AniList's files (100/230/460px), so each screen gets the sharpest it needs, up to AniList's largest upload (some new shows only have 230px); `next/image` can't (images are unoptimized). Pass all the cover URLs and a real `sizes`. The season page's AnimeInfoGrid loads the 460px file directly |
+| `consoleToast` | `components/theme/consoleToast.tsx` | The Great Sage console as one toast that replaces the last (slime icon, 《Kind》 tag). Visual only: the page speaks the same line through its own sr-only `role="status"` |
+| `NewEpisodesChip` | `components/theme/NewEpisodesChip.tsx` | "2 new" (aired, not logged; Watching/Paused only). A 1 s clock leaf; nothing at 0 |
+| `NextEpisodeLine` | `components/theme/NextEpisodeLine.tsx` | A tracker card's live countdown, or the release status ("Finished airing · 12 eps"). ListCard and TrackerDemo both use it |
+| `useMinuteNow` | `components/utils/useMinuteNow.ts` | A per-minute clock for "today"-style labels; keep `useNow()` (1 s) for the countdown leaves only, or whole panels re-render every second |
+| `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component) |
 | `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky |
 | `SageLine`, `SageTag`, `sageText`, `Skill` | `components/home/SageLine.tsx` | `scan="load"` types the line in; `scan="reveal"` needs a `data-reveal` ancestor (landing only) |
 | `Slime` | `components/home/Slime.tsx` | `mood`: idle, happy, worried, sage. `tier`: slime, named, demon, lord. Always aria-hidden. Use `size` px, and CSS width for responsive sizes |

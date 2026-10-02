@@ -271,8 +271,7 @@ function SignedInQuestLog({ session, airingIds }: { session: SignedIn; airingIds
       return;
     }
     if (confirmedDone1 && !base.done1) trackOnce("quest_complete", { quest: 1 });
-    if (flags.schedule && !base.schedule) trackOnce("quest_complete", { quest: 2 });
-    if (flags.share && !base.share) trackOnce("quest_complete", { quest: 3 });
+    // Quests 2 and 3 report themselves in markQuest (they can be cleared on other pages).
     if (confirmedTier !== "slime" && TIER_RANK[confirmedTier] > TIER_RANK[base.tier]) {
       trackOnce("evolution", { tier: confirmedTier });
     }

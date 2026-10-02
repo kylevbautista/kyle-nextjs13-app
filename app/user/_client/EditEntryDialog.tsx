@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { SageTag } from "@/components/home/SageLine";
+import { consoleToast } from "@/components/theme/consoleToast";
 import {
   FIELD,
   FOCUS_RING_PANEL,
@@ -13,6 +14,7 @@ import {
   PRIMARY_BUTTON_PANEL,
 } from "@/components/theme/tokens";
 import { useMyList } from "@/components/utils/useMyList";
+import { editMessage } from "@/lib/anime/trackerConsole";
 import { LIST_STATUSES, LIST_STATUS_LABELS, displayTitle, isListStatus } from "@/lib/anime/types";
 import type { UserAnimeData } from "@/lib/anime/types";
 import { errorMessage, saveUserData } from "./api";
@@ -24,7 +26,8 @@ import type { MyListEntry } from "./listFilters";
 interface EditEntryDialogProps {
   entry: MyListEntry;
   onClose: () => void;
-  onSaved: (animeId: number, userData: UserAnimeData) => void;
+  /** `spoken` is the Great Sage line for what changed (the page's status line reads it). */
+  onSaved: (animeId: number, userData: UserAnimeData, spoken: string) => void;
   onRemoved: (animeId: number) => void;
   /** Element to focus when the dialog closes (the card's Edit button)… */
   returnFocusId: string;
@@ -71,6 +74,7 @@ export function EditEntryDialog({
 
   const id = useId();
   const titleId = `${id}-title`;
+  const formId = `${id}-form`;
   const fieldId = (field: EditFormField | "status") => `${id}-${field}`;
   const errorId = (field: EditFormField) => `${id}-${field}-error`;
 
@@ -134,9 +138,12 @@ export function EditEntryDialog({
     setBusy("save");
     try {
       const saved = await saveUserData(entry.id, result.userData);
-      toast.success(`Saved ${title}`);
+      // One Great Sage line for the most important change, against the values the
+      // dialog opened with (a +1 can land while it's open).
+      const message = editMessage({ prev: initial, sent: result.userData, next: saved, episodes: entry.episodes });
+      consoleToast(message, { celebrate: saved.listType === "completed" && initial.listType !== "completed" });
       setBusy(null);
-      onSaved(entry.id, saved);
+      onSaved(entry.id, saved, message.spoken);
     } catch (err) {
       const message = errorMessage(err);
       setFormError(message);
@@ -200,7 +207,7 @@ export function EditEntryDialog({
         if (pressedOnBackdrop.current && isBackdropEvent(event)) requestClose();
         pressedOnBackdrop.current = false;
       }}
-      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-[#95ccff]/25 bg-[rgb(30,30,30)] p-0 text-white shadow-2xl shadow-black/60 backdrop:bg-black/60 open:animate-[grow_150ms_ease-out,fadeOut_150ms_ease-out]"
+      className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg scroll-pb-24 overflow-y-auto overscroll-contain rounded-2xl border border-[#95ccff]/25 bg-[rgb(30,30,30)] p-0 text-white shadow-2xl shadow-black/60 backdrop:bg-black/60 open:animate-[grow_150ms_ease-out,fadeOut_150ms_ease-out]"
     >
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         <div className="flex items-start gap-3">
@@ -242,7 +249,12 @@ export function EditEntryDialog({
           </button>
         </div>
 
-        <form noValidate onSubmit={handleSave} className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+        <form
+          id={formId}
+          noValidate
+          onSubmit={handleSave}
+          className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
+        >
           <fieldset className="min-w-0 sm:col-span-2">
             <legend className={`mb-2 ${LABEL_CLASS}`}>Status</legend>
             <div className="flex flex-wrap gap-1.5">
@@ -395,36 +407,46 @@ export function EditEntryDialog({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col-reverse gap-3 sm:col-span-2 sm:flex-row sm:flex-wrap-reverse sm:items-center sm:justify-between">
+            // Remove sits with the fields, not in the bottom thumb zone next to Save.
+            <div className="sm:col-span-2">
               <button
                 ref={removeButtonRef}
                 type="button"
                 onClick={startConfirm}
                 aria-disabled={busy !== null || undefined}
-                className={`inline-flex h-11 items-center justify-center rounded-xl px-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 sm:-ml-2 ${FOCUS_RING_PANEL}`}
+                className={`-ml-2 inline-flex h-11 items-center justify-center rounded-xl px-2 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/10 hover:text-rose-200 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${FOCUS_RING_PANEL}`}
               >
                 Remove from list
               </button>
-              <div className="grid grid-cols-2 gap-2 sm:flex">
-                <button
-                  type="button"
-                  onClick={requestClose}
-                  aria-disabled={busy !== null || undefined}
-                  className={GHOST_BUTTON_PANEL}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  aria-disabled={busy !== null || undefined}
-                  className={PRIMARY_BUTTON_PANEL}
-                >
-                  {busy === "save" ? "Saving…" : "Save"}
-                </button>
-              </div>
             </div>
           )}
         </form>
+      </div>
+
+      {/* Sticky: Cancel and Save stay in reach however tall the form gets on a phone.
+          Hidden while removing, so "Yes, remove" never sits next to Save. */}
+      <div
+        // Classes, not the hidden attribute: Tailwind's display utilities override [hidden].
+        className={`sticky bottom-0 z-10 grid-cols-2 gap-2 border-t border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-4 py-3 sm:justify-end sm:px-6 ${
+          confirmingRemove ? "hidden" : "grid sm:flex"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={requestClose}
+          aria-disabled={busy !== null || undefined}
+          className={GHOST_BUTTON_PANEL}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form={formId}
+          aria-disabled={busy !== null || undefined}
+          className={PRIMARY_BUTTON_PANEL}
+        >
+          {busy === "save" ? "Saving…" : "Save"}
+        </button>
       </div>
     </dialog>
   );

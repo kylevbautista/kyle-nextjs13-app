@@ -1,12 +1,15 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
+import { trackOnce } from "./analytics";
 
 /**
  * Quest 2 (opened the Airing Schedule) and Quest 3 (copied the list link)
  * flags, per user and per device: localStorage "kv:quests:{userId}", with an
- * in-memory copy for when storage is blocked. Written only from click
- * handlers (markQuest); read with useSyncExternalStore, whose server snapshot
- * is "nothing done", so SSR and hydration always agree.
+ * in-memory copy for when storage is blocked. Written by markQuest: from the
+ * landing's quest buttons, from any list-link copy (useCopyListLink) and from
+ * the Airing Schedule's mount effect (opening your own schedule counts). Read
+ * with useSyncExternalStore, whose server snapshot is "nothing done", so SSR
+ * and hydration always agree.
  */
 
 export interface QuestFlags {
@@ -70,8 +73,14 @@ export function useQuestFlags(userId: string | null): QuestFlags {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** Marks a quest done for this user on this device. Call from event handlers. */
-export function markQuest(userId: string, quest: FlagQuest): void {
+/**
+ * Marks a quest done for this user on this device, wherever it happens, and
+ * reports `quest_complete` the first time. Never call during render.
+ * Returns true when the quest was newly completed.
+ */
+export function markQuest(userId: string, quest: FlagQuest): boolean {
+  const before = snapshot(userId);
+  const fresh = !before[quest];
   const next = { ...(memory.get(userId) ?? NONE), [quest]: true };
   memory.set(userId, next);
   try {
@@ -84,4 +93,6 @@ export function markQuest(userId: string, quest: FlagQuest): void {
     // Blocked storage: the in-memory flag still counts for this page view.
   }
   listeners.forEach((notify) => notify());
+  if (fresh) trackOnce("quest_complete", { quest: quest === "schedule" ? 2 : 3 });
+  return fresh;
 }

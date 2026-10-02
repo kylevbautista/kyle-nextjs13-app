@@ -157,6 +157,45 @@ describe("normalizeUserData", () => {
     expect(plan.ok && plan.value.listType).toBe("planning");
   });
 
+  it("moves a planned or paused show to Watching when a +1 logs progress", () => {
+    const planned = { ...previous, listType: "planning" as const };
+    const plusOne = normalizeUserData({ episodeProgressNumber: 1 }, { episodes: 12, previous: planned, now });
+    expect(plusOne.ok && plusOne.value).toMatchObject({ listType: "watching", episodeProgressNumber: 1 });
+
+    const paused = { ...previous, listType: "paused" as const, episodeProgressNumber: 5, startDate: now };
+    const resumed = normalizeUserData({ episodeProgressNumber: 6 }, { episodes: 12, previous: paused, now });
+    expect(resumed.ok && resumed.value.listType).toBe("watching");
+  });
+
+  it("still auto-completes a paused or planned show whose +1 reaches the finale", () => {
+    const paused = { ...previous, listType: "paused" as const, episodeProgressNumber: 11, startDate: now };
+    const finale = normalizeUserData({ episodeProgressNumber: 12 }, { episodes: 12, previous: paused, now });
+    expect(finale.ok && finale.value).toMatchObject({ listType: "completed", finishDate: calendarDayMs(now) });
+    const planned = { ...previous, listType: "planning" as const, episodeProgressNumber: 0 };
+    const oneShot = normalizeUserData({ episodeProgressNumber: 1 }, { episodes: 1, previous: planned, now });
+    expect(oneShot.ok && oneShot.value.listType).toBe("completed");
+  });
+
+  it("never overrides an explicit status (the edit dialog always sends one)", () => {
+    const planned = { ...previous, listType: "planning" as const };
+    const kept = normalizeUserData(
+      { listType: "planning", episodeProgressNumber: 3 },
+      { episodes: 12, previous: planned, now }
+    );
+    expect(kept.ok && kept.value.listType).toBe("planning");
+    const pausedKept = normalizeUserData(
+      { listType: "paused", episodeProgressNumber: 4 },
+      { episodes: 12, previous: { ...previous, listType: "paused" as const, episodeProgressNumber: 3 }, now }
+    );
+    expect(pausedKept.ok && pausedKept.value.listType).toBe("paused");
+    // Lowering progress isn't "logging" anything.
+    const lowered = normalizeUserData(
+      { episodeProgressNumber: 2 },
+      { episodes: 12, previous: { ...previous, listType: "paused" as const, episodeProgressNumber: 3 }, now }
+    );
+    expect(lowered.ok && lowered.value.listType).toBe("paused");
+  });
+
   it("auto-fills dates with the Pacific calendar day", () => {
     // 6 PM PDT on Sep 30 is already Oct 1 in UTC.
     const evening = Date.UTC(2026, 9, 1, 1, 0);
