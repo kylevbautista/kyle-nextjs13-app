@@ -1,3 +1,4 @@
+import { calendarDayMs } from "@/lib/anime/normalize";
 import {
   DISPLAY_TIME_ZONE,
   airingWeekday,
@@ -80,3 +81,84 @@ const weekdayFormat = new Intl.DateTimeFormat("en-US", {
 /** The weekday of `nowMs` in the display time zone (Pacific Time). */
 export const weekdayAt = (nowMs: number) =>
   weekdayFormat.format(new Date(nowMs)).toLowerCase() as Weekday;
+
+// ---------------------------------------------------------------------------
+// The banner's day-aware Great Sage line
+// ---------------------------------------------------------------------------
+
+/** Matches CountdownText's "Airing now" window (lib/landing.ts AIRED_GRACE_SECONDS). */
+const ON_AIR_SECONDS = 30 * 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const timeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: DISPLAY_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+});
+/** "7:30 AM" in Pacific Time (plain spaces, so server and browser match). */
+const formatTime = (unixSeconds: number) =>
+  timeFormat.format(new Date(unixSeconds * 1000)).replace(/[\u202F\u00A0]/g, " ");
+
+const clip = (text: string, max = 40) =>
+  Array.from(text).length > max ? `${Array.from(text).slice(0, max - 1).join("").trimEnd()}…` : text;
+
+const episodes = (n: number) => `${n} ${n === 1 ? "episode" : "episodes"}`;
+
+export interface ScheduleLine {
+  kind: "Notice" | "Report";
+  text: string;
+}
+
+/**
+ * The Airing Schedule's banner line for this moment (Pacific Time days):
+ * - something on air (within 30 min of its air time): "Now airing: X, EP 12."
+ * - more later today: "Today: 2 episodes left, the next at 7:30 AM PT."
+ * - none left today: "Nothing more airs today. Tomorrow: 3 episodes."
+ * - otherwise the standing line, `fallback`.
+ * `entries` are the schedule's shows (each with a next episode).
+ */
+export function scheduleLine(
+  entries: readonly ListEntry[],
+  nowMs: number,
+  fallback: string
+): ScheduleLine {
+  const nowSeconds = Math.floor(nowMs / 1000);
+  const today = calendarDayMs(nowMs);
+  const upcoming = entries
+    .map((entry) => ({ entry, next: nextAiring(entry) }))
+    .filter((item): item is { entry: ListEntry; next: NonNullable<ReturnType<typeof nextAiring>> } => item.next !== null)
+    .sort((a, b) => a.next.airingAt - b.next.airingAt);
+
+  const onAir = upcoming.find(
+    ({ next }) => nowSeconds >= next.airingAt && nowSeconds < next.airingAt + ON_AIR_SECONDS
+  );
+  if (onAir) {
+    const episode = onAir.next.episode ? `, EP ${onAir.next.episode}` : "";
+    return { kind: "Notice", text: `Now airing: ${clip(displayTitle(onAir.entry))}${episode}.` };
+  }
+
+  const later = upcoming.filter(({ next }) => next.airingAt > nowSeconds && calendarDayMs(next.airingAt * 1000) === today);
+  if (later.length) {
+    return {
+      kind: "Report",
+      text: `Today: ${episodes(later.length)} left, the next at ${formatTime(later[0].next.airingAt)} PT.`,
+    };
+  }
+
+  const tomorrow = upcoming.filter(({ next }) => calendarDayMs(next.airingAt * 1000) === today + DAY_MS);
+  if (tomorrow.length) {
+    return { kind: "Report", text: `Nothing more airs today. Tomorrow: ${episodes(tomorrow.length)}.` };
+  }
+  return { kind: "Notice", text: fallback };
+}
+
+/** The week panel's tab from ?day= ("all", "mon"…"sun"), or null for the default day. */
+export function parseDayParam(value: string | null): Weekday | "all" | null {
+  if (value === "all") return "all";
+  const day = SCHEDULE_DAYS.find((d) => DAY_LABELS[d].short.toLowerCase() === value);
+  return day ?? null;
+}
+
+/** ?day= for a tab ("" for the default day). */
+export const dayParam = (tab: Weekday | "all" | null) =>
+  tab === null ? "" : `?day=${tab === "all" ? "all" : DAY_LABELS[tab].short.toLowerCase()}`;

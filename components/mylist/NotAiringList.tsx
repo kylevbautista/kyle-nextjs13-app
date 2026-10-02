@@ -50,15 +50,14 @@ export default function NotAiringList({ entries }: { entries: ListEntry[] }) {
                 href={`https://anilist.co/anime/${entry.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={title}
-                className="block truncate rounded-sm text-sm font-semibold text-white hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+                className="line-clamp-2 break-words rounded-sm text-sm font-semibold text-white hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
               >
-                {title}
+                <span title={title}>{title}</span>
                 <span className="sr-only"> (AniList, opens in a new tab)</span>
               </a>
-              <p className="flex min-w-0 items-center gap-1.5 text-xs text-[rgb(164,164,164)]">
-                <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[status]}`} />
-                <span className="truncate">
+              <p className="flex min-w-0 items-start gap-1.5 text-xs text-[rgb(164,164,164)]">
+                <span aria-hidden="true" className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[status]}`} />
+                <span className="min-w-0 break-words">
                   {LIST_STATUS_LABELS[status]} · {scheduleNote(entry)}
                 </span>
               </p>

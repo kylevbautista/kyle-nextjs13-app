@@ -36,10 +36,14 @@ export default async function UserListPage({ params }: UserListPageProps) {
   const lookup = await requireListOwner(user, myListPath);
 
   const entries = (await loadListEntries(lookup.user)).map(toMyListEntry);
+  // The reference time for "N new" in the banner, sort and chips (a dynamic page:
+  // per request; server component, so not Date.now(), see app/anime/layout.tsx).
+  const renderedAt = new Date().getTime();
 
   return (
     <MyList
       key={lookup.userId}
+      renderedAt={renderedAt}
       entries={entries}
       isOwner={lookup.isOwner}
       owner={{

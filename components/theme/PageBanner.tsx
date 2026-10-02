@@ -24,6 +24,7 @@ export default function PageBanner({
   children,
   aside,
   asideClassName = "",
+  sageKey,
 }: {
   eyebrow: string;
   sage: { kind: SageKind; text: ReactNode };
@@ -34,6 +35,8 @@ export default function PageBanner({
   aside?: ReactNode;
   /** Extra classes for the aside's wrapper, e.g. "hidden lg:block". */
   asideClassName?: string;
+  /** Changing it re-types the Sage line (a page whose line follows live events). */
+  sageKey?: string;
 }) {
   return (
     // -mt-2 cancels the nav's bottom margin so the sky meets the nav bar.
@@ -44,7 +47,7 @@ export default function PageBanner({
       >
         <div className="min-w-0">
           <p className={EYEBROW_CLASS}>{eyebrow}</p>
-          <SageLine kind={sage.kind} scan="load" className="mt-4">
+          <SageLine key={sageKey} kind={sage.kind} scan="load" className="mt-4">
             {sage.text}
           </SageLine>
           <h1

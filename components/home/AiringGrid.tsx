@@ -1,7 +1,8 @@
 "use client";
 import { useId, type CSSProperties } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import AniListCover from "@/components/theme/AniListCover";
+import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
 import { nextAiring } from "@/lib/anime/airing";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { formatLabel, seasonLabel as toSeasonLabel } from "@/lib/landing";
@@ -100,7 +101,6 @@ export function EpisodeCard({
   const next = nextAiring(media);
   const premiere = next?.episode === 1;
   const color = media.coverImage.color;
-  const cover = media.coverImage.large ?? media.coverImage.medium ?? media.coverImage.extraLarge;
   const from = continuing && !premiere ? toSeasonLabel(media.season, media.seasonYear) : null;
   const studio = media.studios?.nodes?.find((node) => node.name)?.name ?? "Studio TBA";
   const meta = [formatLabel(media.format), studio].filter(Boolean).join(" · ");
@@ -116,16 +116,16 @@ export function EpisodeCard({
         className="relative aspect-[2/3] w-full bg-[rgb(38,38,38)]"
         style={color ? { backgroundColor: color } : undefined}
       >
-        {cover && (
-          <Image
-            src={cover}
-            alt=""
-            fill
-            loading="lazy"
-            sizes={compact ? "(min-width:640px) 22vw, 45vw" : "(min-width:1024px) 170px, (min-width:640px) 22vw, 45vw"}
-            className="object-cover"
-          />
-        )}
+        {/* All three AniList sizes: the browser picks a sharp one for this screen. */}
+        <AniListCover
+          urls={[media.coverImage.medium, media.coverImage.large, media.coverImage.extraLarge]}
+          sizes={
+            compact
+              ? "(min-width: 1024px) 130px, (min-width: 640px) 22vw, 45vw"
+              : "(min-width: 1152px) 262px, (min-width: 640px) 23vw, 46vw"
+          }
+          className="absolute inset-0 h-full w-full object-cover"
+        />
         {next && (
           // Narrow cards wrap the chip onto two lines, where a pill would read as a
           // blob: rounded-lg until the cards are wide enough for one line. The
@@ -162,6 +162,11 @@ export function EpisodeCard({
       </div>
     </article>
   );
+}
+
+/** The landing's "Pause live timers" (a client leaf, so it can report its clicks). */
+export function LandingTimersToggle({ className = "" }: { className?: string }) {
+  return <LiveTimersToggle className={className} onToggle={(on) => trackLanding("live_timers", { on })} />;
 }
 
 /**

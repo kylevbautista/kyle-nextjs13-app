@@ -1,4 +1,5 @@
 import { MagicCircle } from "@/components/home/NightSky";
+import { PauseParentWhenOffscreen } from "@/components/home/Reveal";
 import Slime from "@/components/home/Slime";
 import {
   TIER_LABELS,
@@ -44,11 +45,12 @@ export default function EvolutionCard({
 
   const facts = (
     <>
-      <p className="text-sm text-[rgb(200,206,218)]">
+      <p className="text-balance text-sm text-[rgb(200,206,218)]">
         Current form: <strong className="text-white">{TIER_LABELS[tier]}</strong>
         {count !== null && (
           <>
-            <span aria-hidden="true"> · </span>
+            {/* No-break space: the "·" stays with the form name instead of starting a line. */}
+            <span aria-hidden="true">{"\u00A0· "}</span>
             <span className="sr-only">. </span>
             {showsLabel(count)} on {listName}
           </>
@@ -89,6 +91,8 @@ export default function EvolutionCard({
   return (
     <div className="flex items-center gap-4 rounded-2xl border border-[#95ccff]/25 bg-[#0a1428]/80 p-4 shadow-[0_24px_60px_-24px_rgba(93,174,241,.45)] lg:flex-col lg:gap-3 lg:p-5 lg:text-center">
       <div className="relative flex shrink-0 items-end justify-center lg:h-[160px] lg:w-full">
+        {/* The magic circle spins: pause the stage offscreen (Slime pauses itself). */}
+        <PauseParentWhenOffscreen />
         {/* Moonlit aura and the magic circle (1024px+): gradients and SVG, never a blur. */}
         <span
           aria-hidden="true"

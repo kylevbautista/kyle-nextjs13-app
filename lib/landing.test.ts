@@ -192,6 +192,7 @@ const tempestMedia = (
   startDate: { year, month, day },
   bannerImage: banner,
   coverImage: {
+    extraLarge: `https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx${id}.jpg`,
     large: `https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx${id}.jpg`,
     medium: `https://s4.anilist.co/file/anilistcdn/media/anime/cover/small/bx${id}.jpg`,
     color: "#5daef1",
@@ -306,6 +307,7 @@ describe("Tempest entries", () => {
       seasonLabel: "Fall 2027",
       episodes: null,
       coverUrl: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx217330.jpg",
+      coverUrlXL: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx217330.jpg",
     });
   });
 

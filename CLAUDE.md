@@ -118,18 +118,18 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Continuing series | Shows that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; header toggle (default on) | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1) | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx` |
 | Sort | By Countdown (default) / By Popularity | `HeaderContext.sort` (layout-level, survives season nav); countdown uses absolute `airingAt` (`compareByNextAiring`), stable so ties keep popularity order | `layoutSelector/*`, `lib/anime/airing.ts` |
 | Season header | "Summer 2026 Anime", months, prev/next, "Current season →" | `useSelectedLayoutSegments()` reads the child route; prev/next are `<Link>`s, hidden outside the valid year window | `layoutSelector/HeaderSelector*.tsx`, `lib/season.ts` |
-| Anime card | Title, genres, cover, countdown, score, studio, premiere (PT), source, eps × min, synopsis, links | `AnimeInfoGrid({ info })`, shared by season, search and schedule pages | `components/animev3/AnimeInfoGrid.tsx` |
+| Anime card | Title, genres, cover, countdown, score, studio, premiere (PT), source, eps × min, synopsis, links | `AnimeInfoGrid({ info })`, shared by the season and search pages (My List, the Airing Schedule and Top Anime have their own Tempest cards and rows) | `components/animev3/AnimeInfoGrid.tsx` |
 | Live countdown | "EP13: 1d 7h 14m 52s", "Airing now", or a status ("Finished · 12 eps") | One shared 1 s clock (`useNow`, null during SSR, so no hydration mismatch) | `components/utils/useNow.ts`, `lib/anime/airing.ts` |
 | List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card; landing options: add status/label, `block` size, sign-in intent) on `useMyList()`: SWR key `[/api/anime-list/ids, userId]` (a 401 is an error, never an empty list), optimistic with rollback, toasts; `count` = list size incl. in-flight changes, `confirmedCount` = server-confirmed | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
 | Search | Any anime incl. older seasons, movies, ONAs | Server `searchAnime()`; result links don't prefetch (AniList budget) | `app/search/*`, `server/lib/anilist.ts` |
-| My List | Night-sky banner (Skill 02 · Predator): stats (shows, watching, episodes seen, mean score), copy link, the owner's Evolution slime (gulps when a show completes); shelves All/Watching/Plan to Watch/Completed/Paused/Dropped with counts; filters (text, year, season, airing day PT, release status); sort (next episode, title, my score, progress, recently added); the landing tracker demo's card | One client root with local state; owner-only +1 / Edit dialog (status pills, progress, score, start/finish dates, remove); PATCH → server-normalized `userData`; background `router.refresh()` 2 s after edits. No profile photo | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)`, `components/theme/*` |
-| Tracker rules | Auto-complete at the last episode, dates auto-filled, score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
-| Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows; countdown rows with list status/progress (visitors get + Add); share strip (owner); "Not airing right now" | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" until `useNow()` hydrates | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
+| My List | Night-sky banner (Skill 02 · Predator): "N still airing, M with new episodes", stats (shows, watching, episodes seen with "≈ N days of runtime" from 640px, mean score), copy link, the owner's Evolution slime (gulps when a show completes); shelves All/Watching/Plan to Watch/Completed/Paused/Dropped with counts (one scrolling row on phones); search + "Sort & filter" (phones) / sort + filters (text, year, season, airing day PT, release status); sort (next episode, new episodes, title, my score, progress, recently added); the landing tracker demo's card with an "N new" chip (aired, not logged; Watching/Paused); a Great Sage console toast for every +1 and save | One client root with local state; the view lives in the URL (`?shelf=&sort=&q=&year=&season=&day=&release=`, read with `useSearchParams`, written with `replaceState`); owner-only +1 / Edit dialog (status pills, progress, score, start/finish dates, remove; sticky Cancel/Save); PATCH → server-normalized `userData`; tracker lines from `lib/anime/trackerConsole.ts` (toast visual only, spoken through one sr-only status); background `router.refresh()` 2 s after edits. No profile photo | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)`, `components/theme/*` |
+| Tracker rules | +1 on Plan to Watch/Paused moves the show to Watching; auto-complete at the last episode; dates auto-filled; score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
+| Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows ("The whole week" on the Next-episodes card opens All); countdown rows with list status/progress and the "N new" chip (visitors see whose, and get + Add); a day-aware Great Sage line ("Now airing…", "Today: 2 episodes left, the next at 7:30 AM PT."); share strip and "Not airing right now" in a side column for the owner, below the panel for visitors | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" and the banner line until the per-minute clock (`useMinuteNow`) hydrates; the selected tab lives in `?day=` | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
 | Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. Jikan can repeat or skip a rank (it refreshes shows separately; MAL itself has one show per rank), so nothing on the page calls a repeat a tie | Page 1 server-rendered (throws on failure); later pages from the browser one at a time (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `getTopAnimeJinkan.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 7 live countdown cards with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
-| Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers | `components/home/TrackerDemo.tsx` |
+| Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the "N new" chip and countdown line use the real show's schedule | `components/home/TrackerDemo.tsx` |
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Friendly error/404 pages with retry | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime). Retry must refetch the server render: Next 16.3's `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
@@ -292,9 +292,12 @@ UserAnimeData
 { listType: "watching"|"planning"|"completed"|"paused"|"dropped", episodeProgressNumber: number,
   startDate: ms|null, finishDate: ms|null,   // calendar days: UTC midnight of the date (auto-filled = today in PT)
   score: 0–10 (one decimal)|null }
-// Rules (normalizeUserData): progress clamps to a known episode count; reaching the last episode
-// auto-completes watching/planning shows, unless the user just changed status (rewatch);
-// completing fills progress; start/finish dates auto-fill once.
+// Rules (normalizeUserData): progress clamps to a known episode count; a +1 (progress with no
+// status in the request) on a planning/paused show moves it to watching; reaching the last episode
+// auto-completes watching/planning shows, unless the request explicitly changed status (rewatch);
+// completing fills progress; start/finish dates auto-fill once. The edit dialog always sends a
+// status, so the +1 move never applies to its saves; auto-complete still does when the status it
+// sends is unchanged.
 ```
 `accounts`, `sessions` and `verification_tokens` belong to NextAuth. There are no custom indexes
 (lookups are by `_id`). Reads go through `normalizeEntry()`, which fills defaults for legacy entries,
@@ -323,6 +326,7 @@ drops duplicates, re-sanitizes, and bounds dates.
 | Mongo | `listRefreshedAt` | Refresh lock/throttle |
 | sessionStorage | `kv:add-intent` | Landing sign-in intent `{id, status?, at, media}`; auto-add only within 15 min, consumed once |
 | localStorage | `kv:quests:<userId>` (Quest 2/3 flags), `kv:live-timers` (pause live timers) | Per device; read via `useSyncExternalStore`, every access in try/catch |
+| URL query | `/user/<id>?shelf=&sort=&q=&year=&season=&day=&release=`, `/mylist/<id>?day=` | The list/schedule view; defaults omitted; `replaceState` only (no history entry per keystroke) |
 
 ---
 
@@ -339,7 +343,8 @@ lib/                        pure, shared by server + client (unit-tested)
   anime/normalize.ts          normalizeMedia/Entry/UserData — whitelist, coercion, tracker rules
   anime/sanitize.ts           sanitizeDescription (allow-list <br><i><b><em><strong>, balanced), descriptionToText
   anime/airing.ts             nextAiring, countdown formatting, premiereLabel, airingWeekday (PT), compareByNextAiring
-  anime/statusBadge.ts        STATUS_BADGE_CLASS (list-status badge colors)
+  anime/statusBadge.ts        STATUS_BADGE_CLASS / STATUS_DOT_CLASS (list-status colors)
+  anime/trackerConsole.ts     the Great Sage tracker lines (+1, status, score, edit diff), shared by TrackerDemo and My List
 server/                     server-only
   auth/index.ts               authOptions (Google + optional GitHub/Twitter, lazy MongoDBAdapter, session.objectId)
   lib/mongodb.ts              the only MongoClient (cached on globalThis, retries, failed connects not cached)
@@ -363,7 +368,13 @@ components/
     PageBanner                  night-sky app-page header (eyebrow, SageLine, h1, actions, aside; asideClassName)
     StatGrid, icons             the stat dl (My List, Top Anime); TrophyIcon, CrownIcon, StarIcon
     EvolutionCard, SagePanel    the evolving slime card; themed empty/error states
-    ShareLink, LiveTimersToggle share strip + useCopyListLink; the timers pause button
+    ShareLink, LiveTimersToggle share strip (owner, or a signed-out placeholder) + useCopyListLink; the timers pause button
+    NextEpisodeLine             a tracker card's countdown / release-status line (ListCard and TrackerDemo)
+    NewEpisodesChip             "2 new": aired episodes not logged (lib/anime/airing.ts#unloggedAired)
+    consoleToast                the Great Sage console as one replacing toast (visual only; pages speak the line)
+    AniListCover                an AniList cover as a srcset of AniList's files (100/230/460px): each screen gets the sharpest
+                                one it needs, up to AniList's largest upload (next/image can't, being unoptimized). Used by
+                                the landing's wide cards; AnimeInfoGrid loads the 460px file directly
   home/                       the landing (§5.7):
     LandingProvider             media by id, useLanding, useVisibleAiring, the sign-in intent <dialog>
     useLandingSession           loading | signedOut | signedIn {userId, firstName, count, tier}
@@ -376,7 +387,7 @@ components/
     analytics.ts                typed Vercel Analytics events (trackLanding, trackOnce)
   auth/                       sign-in page, SignOutButton, GoogleIcon
   utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
-                              useMyList, useNow
+                              useMyList, useNow (1 s), useMinuteNow (per minute: "today" labels)
 styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anilist .crunchyroll .star)
 @types/                     Session.objectId, global _mongoClientPromise
 .github/workflows/          cron.yaml (curl /anime every 5 min), health-check.yml. GitHub auto-disabled both (re-enable in the Actions tab)
@@ -415,8 +426,9 @@ styles/globals.css          Tailwind layers, scrollbar, sprite icons (.mal .anil
 13. `body` is `grid-rows-[auto_1fr_auto]` (nav / page / footer). Extra in-flow children at the root
     shift the rows. Its single column is `auto`, so a fixed-width child wider than the phone widens
     the whole page; the landing's `main` has `min-w-0` and its sections `[contain:inline-size]`.
-    List layouts also need `min-w-0` through their grids/flex containers; schedule cards stay in one
-    column below 768px. Keep status/day scrolling inside its own row and metadata columns shrinkable.
+    List layouts also need `min-w-0` through their grids/flex containers. The Airing Schedule's week
+    panel keeps its 8 tab columns down to 320px; its rows wrap titles (2 lines) and status lines
+    instead of truncating. Keep metadata columns shrinkable.
 14. **Never use `server/lib/anilist.ts#anilistQuery` on static or ISR pages.** Its `cache: "no-store"`
     makes the route dynamic, and every view would call AniList. Use `getAniListData` (default fetch
     cache) or a `force-cache` fetch through `enqueueAniListRequest`, as `server/lib/landing.ts` does.

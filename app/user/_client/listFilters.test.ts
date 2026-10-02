@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_USER_DATA } from "@/lib/anime/types";
 import type { UserAnimeData } from "@/lib/anime/types";
 import {
+  DEFAULT_VIEW,
   EMPTY_FILTERS,
   countByStatus,
+  formatRuntime,
+  listViewQuery,
+  parseListView,
+  watchedRuntime,
   entryYear,
   groupByStatus,
   hasActiveFilters,
@@ -31,6 +36,7 @@ function entry(
     format: "TV",
     status: "FINISHED",
     episodes: 12,
+    duration: 24,
     startDate: { year: null, month: null, day: null },
     upcomingEpisode: null,
     upComingAirDate: { episode: [] },
@@ -165,5 +171,63 @@ describe("countByStatus / groupByStatus", () => {
       ["planning", 1],
       ["dropped", 1],
     ]);
+  });
+});
+
+describe("New episodes sort", () => {
+  it("puts the most aired-but-unlogged first, unknowns last", () => {
+    const behind = entry({ upComingAirDate: { episode: [{ airingAt: SAT, episode: 6 }] }, userData: { listType: "watching", episodeProgressNumber: 1 } });
+    const caughtUp = entry({ upComingAirDate: { episode: [{ airingAt: THU, episode: 4 }] }, userData: { listType: "watching", episodeProgressNumber: 3 } });
+    const slightly = entry({ upComingAirDate: { episode: [{ airingAt: THU, episode: 3 }] }, userData: { listType: "paused", episodeProgressNumber: 1 } });
+    const planned = entry({ upComingAirDate: { episode: [{ airingAt: THU, episode: 9 }] }, userData: { listType: "planning" } });
+    expect(sortEntries([planned, caughtUp, slightly, behind], "new").map((e) => e.id)).toEqual([
+      behind.id,
+      slightly.id,
+      caughtUp.id,
+      planned.id,
+    ]);
+  });
+});
+
+describe("watchedRuntime / formatRuntime", () => {
+  it("multiplies episodes watched by AniList's episode length and counts the unknowns", () => {
+    const list = [
+      entry({ duration: 24, userData: { episodeProgressNumber: 12 } }),
+      entry({ duration: null, userData: { episodeProgressNumber: 3 } }),
+      entry({ duration: 100, userData: { episodeProgressNumber: 0 } }),
+    ];
+    expect(watchedRuntime(list)).toEqual({ minutes: 288, skipped: 1 });
+  });
+
+  it("rounds to a readable unit", () => {
+    expect(formatRuntime(45)).toBe("45 minutes");
+    expect(formatRuntime(60)).toBe("1 hour");
+    expect(formatRuntime(288)).toBe("5 hours");
+    expect(formatRuntime(2879)).toBe("48 hours");
+    expect(formatRuntime(66 * 24 * 60 + 300)).toBe("66 days");
+  });
+});
+
+describe("the view in the URL", () => {
+  it("round-trips a view and omits defaults", () => {
+    const view = {
+      tab: "watching" as const,
+      sort: "new" as const,
+      filters: { query: "frieren", year: 2023, season: "fall" as const, weekday: "friday" as const, release: "RELEASING" as const },
+    };
+    const query = listViewQuery(view);
+    expect(query).toBe("?shelf=watching&sort=new&q=frieren&year=2023&season=fall&day=friday&release=RELEASING");
+    expect(parseListView(new URLSearchParams(query))).toEqual(view);
+    expect(listViewQuery(DEFAULT_VIEW)).toBe("");
+  });
+
+  it("ignores anything unknown or malformed", () => {
+    const parsed = parseListView(
+      new URLSearchParams("shelf=binging&sort=random&year=abc&season=monsoon&day=funday&release=SOON&q=" + "x".repeat(150))
+    );
+    expect(parsed.tab).toBe("all");
+    expect(parsed.sort).toBe("next");
+    expect(parsed.filters).toMatchObject({ year: null, season: null, weekday: null, release: null });
+    expect(parsed.filters.query).toHaveLength(100);
   });
 });

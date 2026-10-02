@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import ListToggle from "@/components/animev3/ListToggle";
 import CountdownText from "@/components/home/CountdownText";
@@ -9,6 +10,7 @@ import { SageTag } from "@/components/home/SageLine";
 import Slime from "@/components/home/Slime";
 import { markQuest } from "@/components/home/questStore";
 import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
+import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
 import PageBanner from "@/components/theme/PageBanner";
 import SagePanel from "@/components/theme/SagePanel";
 import ShareLink from "@/components/theme/ShareLink";
@@ -21,7 +23,7 @@ import {
   PRIMARY_BUTTON,
 } from "@/components/theme/tokens";
 import { scheduleSwrKey } from "@/components/utils/useMyList";
-import { useNow } from "@/components/utils/useNow";
+import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { compareByNextAiring, nextAiring, type Weekday } from "@/lib/anime/airing";
 import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
 import { LIST_STATUS_LABELS, displayTitle, type ListEntry } from "@/lib/anime/types";
@@ -29,7 +31,15 @@ import { defaultScheduleDay, formatWeekdayTime, showsLabel } from "@/lib/landing
 import { myListPath, searchPath } from "@/lib/routes";
 import NextEpisodes from "./NextEpisodes";
 import NotAiringList from "./NotAiringList";
-import { DAY_LABELS, SCHEDULE_DAYS, buildSchedule, weekdayAt } from "./schedule";
+import {
+  DAY_LABELS,
+  SCHEDULE_DAYS,
+  buildSchedule,
+  dayParam,
+  parseDayParam,
+  scheduleLine,
+  weekdayAt,
+} from "./schedule";
 
 type DayTab = "all" | Weekday;
 const TABS: readonly DayTab[] = ["all", ...SCHEDULE_DAYS];
@@ -89,22 +99,43 @@ export default function AiringSchedule({
   const listName = isOwner ? "your list" : `${ownerName}'s list`;
   const hasEntries = entries.length > 0;
   const airing = schedule.airingCount > 0;
+  // The week panel's tab, lifted so the Next-episodes card's "The whole week"
+  // can open the All tab. null = the default day (today, or the next with shows).
+  // Kept in the URL (?day=thu / ?day=all) so Back and a reload return to it.
+  const searchParams = useSearchParams();
+  const [choice, setChoice] = useState<DayTab | null>(() => parseDayParam(searchParams.get("day")));
+  useEffect(() => {
+    const { pathname, search, hash } = window.location;
+    const query = dayParam(choice);
+    if (query !== search) window.history.replaceState(null, "", `${pathname}${query}${hash}`);
+  }, [choice]);
+
+  // The banner line follows the day ("Today: 2 episodes left…"): the server's
+  // render time first (so hydration matches), then a per-minute clock.
+  const minute = useMinuteNow();
+  const fallbackLine = `Thought Acceleration: ${isOwner ? "your" : `${ownerName}'s`} week, computed in Pacific Time.`;
+  const line = scheduleLine(upcoming, minute ?? renderedAt, fallbackLine);
+  const showWholeWeek = useCallback(() => {
+    setChoice("all");
+    // Scroll explicitly: the ?day= replaceState can cancel the link's own hash jump.
+    document.getElementById("schedule-panel")?.scrollIntoView();
+    document.getElementById(tabId("all"))?.focus({ preventScroll: true });
+  }, []);
 
   return (
     <div className="flex min-w-0 flex-col text-white">
       <PageBanner
         eyebrow="Skill 03 · Thought Acceleration"
-        sage={{
-          kind: "Notice",
-          text: `Thought Acceleration: ${isOwner ? "your" : `${ownerName}'s`} week, computed in Pacific Time.`,
-        }}
+        sage={line}
+        // Re-type the line only when what it says changes, never on the clock.
+        sageKey={line.text}
         title={`${ownerName}'s airing schedule`}
         sub={
           airing
             ? `${showsLabel(schedule.airingCount)} with an upcoming episode, lined up by the day it airs. Completed and dropped shows stay out of the way.`
             : "Every show on the list with an upcoming episode, lined up by the day it airs."
         }
-        aside={airing ? <NextEpisodes entries={upcoming} /> : undefined}
+        aside={airing ? <NextEpisodes entries={upcoming} onShowWeek={showWholeWeek} /> : undefined}
       >
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link href={myListPath(userId)} prefetch={false} className={GHOST_BUTTON}>
@@ -124,8 +155,13 @@ export default function AiringSchedule({
         </div>
       </PageBanner>
 
+      {/* The owner gets a side column (share strip + not airing); visitors, whose
+          side column would hold only the collapsed not-airing panel, get one column. */}
       <div
-        className={`${APP_CONTAINER} grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start`}
+        className={`${APP_CONTAINER} grid gap-8 lg:items-start ${
+          // Visitors: one column, kept to a readable width on wide screens.
+          isOwner ? "lg:grid-cols-[minmax(0,1fr)_22rem]" : "lg:max-w-5xl"
+        }`}
       >
         <div className="min-w-0">
           {airing ? (
@@ -134,10 +170,19 @@ export default function AiringSchedule({
               total={schedule.airingCount}
               listName={listName}
               isOwner={isOwner}
+              ownerName={ownerName}
               renderedAt={renderedAt}
+              choice={choice}
+              onChoose={setChoice}
             />
           ) : (
-            <EmptySchedule isOwner={isOwner} hasEntries={hasEntries} ownerName={ownerName} listName={listName} />
+            <EmptySchedule
+              isOwner={isOwner}
+              hasEntries={hasEntries}
+              hasNotAiring={schedule.notAiring.length > 0}
+              ownerName={ownerName}
+              listName={listName}
+            />
           )}
         </div>
 
@@ -155,11 +200,13 @@ export default function AiringSchedule({
 function EmptySchedule({
   isOwner,
   hasEntries,
+  hasNotAiring,
   ownerName,
   listName,
 }: {
   isOwner: boolean;
   hasEntries: boolean;
+  hasNotAiring: boolean;
   ownerName: string;
   listName: string;
 }) {
@@ -190,40 +237,48 @@ function EmptySchedule({
   }
   return (
     <SagePanel kind="Report" mood="sage" title={`Nothing on ${listName} is airing right now`} actions={actions}>
-      Finished and upcoming shows are listed under &ldquo;Not airing right now&rdquo;. Looking for
-      something new to watch?
+      {hasNotAiring
+        ? "Finished and upcoming shows are listed under “Not airing right now”. Looking for something new to watch?"
+        : "Everything on it is marked Dropped. Looking for something new to watch?"}
     </SagePanel>
   );
 }
 
+/** Stable ids: one week panel per page, and the Next-episodes card focuses the All tab. */
+const tabId = (tab: DayTab) => `schedule-tab-${tab}`;
+const PANEL_ID = "schedule-tabpanel";
+
 /**
  * The landing demo's weekday panel: tint dots, a tab per day (dots = shows,
  * ringed = today) plus "All", and countdown rows. Opens on today, or the next
- * day with shows (the demo's rule).
+ * day with shows (the demo's rule). The chosen tab lives in AiringSchedule.
  */
 function WeekPanel({
   days,
   total,
   listName,
   isOwner,
+  ownerName,
   renderedAt,
+  choice,
+  onChoose,
 }: {
   days: Record<Weekday, ListEntry[]>;
   total: number;
   listName: string;
   isOwner: boolean;
+  ownerName: string;
   renderedAt: number;
+  choice: DayTab | null;
+  onChoose: (tab: DayTab) => void;
 }) {
-  const now = useNow();
-  const [choice, setChoice] = useState<DayTab | null>(null);
+  // Per minute: "today" changes daily, and only the countdown leaves need seconds.
+  const now = useMinuteNow();
   const tabRefs = useRef<Partial<Record<DayTab, HTMLButtonElement | null>>>({});
-  const baseId = useId();
 
   // SSR and hydration use the server's render time; the live clock after.
   const today = weekdayAt(now ?? renderedAt);
   const selected = choice ?? defaultScheduleDay(days, today);
-  const tabId = (tab: DayTab) => `${baseId}-tab-${tab}`;
-  const panelId = `${baseId}-panel`;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const last = TABS.length - 1;
@@ -244,11 +299,12 @@ function WeekPanel({
     if (target === null) return;
     event.preventDefault();
     const tab = TABS[target];
-    setChoice(tab);
+    onChoose(tab);
     tabRefs.current[tab]?.focus();
   };
 
   const visibleDays = selected === "all" ? SCHEDULE_DAYS.filter((day) => days[day].length > 0) : [];
+  const rowOwner = isOwner ? null : ownerName;
 
   return (
     <section
@@ -274,9 +330,10 @@ function WeekPanel({
           const count = tab === "all" ? total : days[tab].length;
           const isSelected = tab === selected;
           const isToday = tab === today;
+          // Each name starts with the visible label (WCAG 2.5.3: "All", "Mon").
           const label =
             tab === "all"
-              ? `Whole week, ${showsLabel(count)}`
+              ? `All, the whole week, ${showsLabel(count)}`
               : `${DAY_LABELS[tab].long}, ${showsLabel(count)}${isToday ? ", today" : ""}`;
           return (
             <button
@@ -288,12 +345,13 @@ function WeekPanel({
               type="button"
               role="tab"
               aria-selected={isSelected}
-              aria-controls={panelId}
+              aria-controls={PANEL_ID}
               aria-label={label}
               tabIndex={isSelected ? 0 : -1}
-              onClick={() => setChoice(tab)}
+              onClick={() => onChoose(tab)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors ${FOCUS_RING_INSET} ${
+              // White focus ring: the today tab already wears a sage ring.
+              className={`relative flex h-14 min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${
                 isSelected ? "bg-blue-600 text-white" : "text-[rgb(200,206,218)] hover:bg-white/5"
               } ${isToday ? "ring-1 ring-inset ring-[#95ccff]" : ""}`}
             >
@@ -315,7 +373,7 @@ function WeekPanel({
       </div>
 
       <div
-        id={panelId}
+        id={PANEL_ID}
         role="tabpanel"
         aria-labelledby={tabId(selected)}
         tabIndex={0}
@@ -324,9 +382,9 @@ function WeekPanel({
         <div key={selected} className="animate-[fade-in_150ms_ease-out]">
           {selected === "all" ? (
             visibleDays.map((day) => (
-              <section key={day} aria-labelledby={`${baseId}-${day}`} className="pb-2">
+              <section key={day} aria-labelledby={`schedule-day-${day}`} className="pb-2">
                 <h3
-                  id={`${baseId}-${day}`}
+                  id={`schedule-day-${day}`}
                   className="flex items-center gap-2 px-1 pb-1 pt-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#95ccff]"
                 >
                   {DAY_LABELS[day].long}
@@ -340,11 +398,11 @@ function WeekPanel({
                   </span>
                   <span aria-hidden="true" className="h-px flex-1 bg-gradient-to-r from-[#95ccff]/25 to-transparent" />
                 </h3>
-                <ScheduleRows entries={days[day]} isOwner={isOwner} />
+                <ScheduleRows entries={days[day]} ownerName={rowOwner} renderedAt={renderedAt} />
               </section>
             ))
           ) : days[selected].length ? (
-            <ScheduleRows entries={days[selected]} isOwner={isOwner} />
+            <ScheduleRows entries={days[selected]} ownerName={rowOwner} renderedAt={renderedAt} />
           ) : (
             <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
               <Slime size={44} mood="sage" />
@@ -359,22 +417,44 @@ function WeekPanel({
   );
 }
 
-function ScheduleRows({ entries, isOwner }: { entries: ListEntry[]; isOwner: boolean }) {
+/** `ownerName` is set for visitors: the row then says whose status it is and offers + Add. */
+function ScheduleRows({
+  entries,
+  ownerName,
+  renderedAt,
+}: {
+  entries: ListEntry[];
+  ownerName: string | null;
+  renderedAt: number;
+}) {
   return (
     <ol className="flex flex-col divide-y divide-[rgb(53,53,53)]">
       {entries.map((entry) => (
-        <ScheduleRow key={entry.id} entry={entry} isOwner={isOwner} />
+        <ScheduleRow key={entry.id} entry={entry} ownerName={ownerName} renderedAt={renderedAt} />
       ))}
     </ol>
   );
 }
 
-/** The demo's row, plus where the list stands on the show (and an add button for visitors). */
-function ScheduleRow({ entry, isOwner }: { entry: ListEntry; isOwner: boolean }) {
+/**
+ * The demo's row, plus where the list stands on the show (and + Add for
+ * visitors). Titles and lines wrap instead of truncating, so nothing is lost
+ * on a 360px phone.
+ */
+function ScheduleRow({
+  entry,
+  ownerName,
+  renderedAt,
+}: {
+  entry: ListEntry;
+  ownerName: string | null;
+  renderedAt: number;
+}) {
   const next = nextAiring(entry);
   const title = displayTitle(entry);
   const cover = entry.coverImage?.medium ?? entry.coverImage?.large;
-  const { listType, episodeProgressNumber } = entry.userData;
+  const { listType, episodeProgressNumber: seen } = entry.userData;
+  const total = entry.episodes && entry.episodes > 0 ? entry.episodes : null;
   if (!next) return null;
   return (
     <li className="flex min-h-16 items-center gap-3 px-1 py-2">
@@ -391,31 +471,41 @@ function ScheduleRow({ entry, isOwner }: { entry: ListEntry; isOwner: boolean })
           href={`https://anilist.co/anime/${entry.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          title={title}
-          className="truncate rounded-sm text-sm font-semibold text-white hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+          className="line-clamp-2 break-words rounded-sm text-sm font-semibold text-white hover:text-[#95ccff] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
         >
-          {title}
+          {/* The tooltip sits on a span so it isn't read as the link's description too. */}
+          <span title={title}>{title}</span>
           <span className="sr-only"> (AniList, opens in a new tab)</span>
         </a>
-        <p className="truncate text-xs text-[rgb(164,164,164)]">
+        <p className="break-words text-xs text-[rgb(164,164,164)]">
           {next.episode === 1 ? "Premiere" : next.episode ? `EP ${next.episode}` : "Next EP"} ·{" "}
           {formatWeekdayTime(next.airingAt)} PT
         </p>
-        <p className="flex min-w-0 items-center gap-1.5 text-xs text-[rgb(164,164,164)]">
+        <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-[rgb(164,164,164)]">
           <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[listType]}`} />
-          <span className="truncate">
-            {LIST_STATUS_LABELS[listType]} · seen {episodeProgressNumber} / {entry.episodes ?? "?"}
+          <span className="min-w-0 break-words">
+            {ownerName ? `${ownerName}: ` : ""}
+            {LIST_STATUS_LABELS[listType]}
+          </span>
+          <span aria-hidden="true" className="whitespace-nowrap tabular-nums">
+            · seen {seen} / {total ?? "?"}
+          </span>
+          <span className="sr-only">
+            , {seen} of {total ?? "an unknown number of"} episodes seen
           </span>
         </p>
-        {!isOwner && (
+        {ownerName !== null && (
           <div className="pt-1.5">
             <ListToggle info={entry} />
           </div>
         )}
       </div>
-      <span className="min-w-[5.5rem] shrink-0 self-center text-right text-sm font-semibold text-[#95ccff]">
-        <CountdownText airingAt={next.airingAt} episode={next.episode} mode="compact" className="justify-end" />
-      </span>
+      <div className="flex min-w-[5.5rem] shrink-0 flex-col items-end gap-1 self-center">
+        <span className="text-right text-sm font-semibold text-[#95ccff]">
+          <CountdownText airingAt={next.airingAt} episode={next.episode} mode="compact" className="justify-end" />
+        </span>
+        <NewEpisodesChip media={entry} ownerName={ownerName} renderedAt={renderedAt} />
+      </div>
     </li>
   );
 }

@@ -116,6 +116,8 @@ export interface TempestEntry {
   upcoming: boolean;
   /** coverImage.large (the ~230px file). */
   coverUrl: string | null;
+  /** coverImage.extraLarge (the ~460px file) for sharp 2× screens, when AniList has one. */
+  coverUrlXL: string | null;
   color: string | null;
   /** Start date as YYYYMMDD (unknown month/day sort last); null when the year is unknown. */
   startKey: number | null;
@@ -175,6 +177,9 @@ export interface AddIntent {
 
 const cover = (file: string) =>
   `https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/${file}`;
+/** The same file at AniList's ~460px size (checked to exist for every fallback cover). */
+const coverXL = (file: string) =>
+  `https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/${file}`;
 
 /** The Tempest shelf when the extras request failed: no banner, portrait or add buttons. */
 export const TEMPEST_FALLBACK: TempestEntry[] = [
@@ -189,6 +194,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx101280-tDxCVJm714nt.jpg"),
+    coverUrlXL: coverXL("bx101280-tDxCVJm714nt.jpg"),
     color: "#5daef1",
     startKey: 20181002,
   },
@@ -203,6 +209,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx108511-PufFordLNyIb.jpg"),
+    coverUrlXL: coverXL("bx108511-PufFordLNyIb.jpg"),
     color: "#f16b50",
     startKey: 20210112,
   },
@@ -217,6 +224,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx116742-jn0dW23ftehq.jpg"),
+    coverUrlXL: coverXL("bx116742-jn0dW23ftehq.jpg"),
     color: "#e4a15d",
     startKey: 20210706,
   },
@@ -231,6 +239,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx139498-DdVASeAj7ag4.jpg"),
+    coverUrlXL: coverXL("bx139498-DdVASeAj7ag4.jpg"),
     color: "#4393f1",
     startKey: 20221125,
   },
@@ -245,6 +254,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx156822-Jzo2ITWgm4kM.jpg"),
+    coverUrlXL: coverXL("bx156822-Jzo2ITWgm4kM.jpg"),
     color: "#e4785d",
     startKey: 20240405,
   },
@@ -259,6 +269,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx182206-LcitQfDLsdnC.png"),
+    coverUrlXL: coverXL("bx182206-LcitQfDLsdnC.png"),
     color: "#35a1e4",
     startKey: 20260227,
   },
@@ -273,6 +284,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "FINISHED",
     upcoming: false,
     coverUrl: cover("bx182205-q2AeO1owuQbO.jpg"),
+    coverUrlXL: coverXL("bx182205-q2AeO1owuQbO.jpg"),
     color: "#1abbd6",
     startKey: 20260403,
   },
@@ -287,6 +299,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "NOT_YET_RELEASED",
     upcoming: true,
     coverUrl: cover("bx217330-sk1dvlFIsM2O.png"),
+    coverUrlXL: coverXL("bx217330-sk1dvlFIsM2O.png"),
     color: null,
     startKey: 20270432,
   },
@@ -301,6 +314,7 @@ export const TEMPEST_FALLBACK: TempestEntry[] = [
     status: "NOT_YET_RELEASED",
     upcoming: true,
     coverUrl: cover("bx217331-iennFNPU2f7K.png"),
+    coverUrlXL: coverXL("bx217331-iennFNPU2f7K.png"),
     color: "#e4ae35",
     startKey: 20270732,
   },
@@ -564,6 +578,7 @@ export function toTempestEntry(media: AnimeMedia): TempestEntry {
     status: media.status,
     upcoming: media.status === "NOT_YET_RELEASED",
     coverUrl: media.coverImage.large ?? media.coverImage.medium,
+    coverUrlXL: media.coverImage.extraLarge ?? null,
     color: media.coverImage.color,
     startKey: startKey(media),
   };

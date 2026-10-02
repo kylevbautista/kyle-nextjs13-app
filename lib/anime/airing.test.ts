@@ -8,6 +8,7 @@ import {
   nextAiring,
   premiereLabel,
   secondsUntil,
+  unloggedAired,
 } from "./airing";
 
 // Thu Oct 1 2026 16:30 UTC = 9:30 AM PDT, and Fri Oct 2 00:30 UTC = Thu 5:30 PM PDT
@@ -81,5 +82,50 @@ describe("compareByNextAiring", () => {
     const sooner = { upComingAirDate: { episode: [{ airingAt: THU_MORNING, episode: 1 }] } };
     const none = { upComingAirDate: { episode: [] } };
     expect([none, later, sooner].sort(compareByNextAiring)).toEqual([sooner, later, none]);
+  });
+});
+
+describe("unloggedAired", () => {
+  const show = (next: { episode: number; airingAt: number } | null, progress: number, extra = {}) => ({
+    status: "RELEASING" as const,
+    episodes: null as number | null,
+    upComingAirDate: { episode: next ? [{ ...next, timeUntilAiring: 0 }] : [] },
+    userData: { listType: "watching" as const, episodeProgressNumber: progress },
+    ...extra,
+  });
+
+  it("counts aired episodes the viewer hasn't logged", () => {
+    // EP 1215 is next, so 1214 have aired; 1212 logged.
+    expect(unloggedAired(show({ episode: 1215, airingAt: THU_MORNING }, 1212), null)).toBe(2);
+    expect(unloggedAired(show({ episode: 13, airingAt: THU_MORNING }, 12), null)).toBe(0);
+    // Logged ahead of the schedule: caught up, never negative.
+    expect(unloggedAired(show({ episode: 3, airingAt: THU_MORNING }, 9), null)).toBe(0);
+  });
+
+  it("adds the next episode once its air time passes (live clock only)", () => {
+    const media = show({ episode: 5, airingAt: THU_MORNING }, 4);
+    expect(unloggedAired(media, null)).toBe(0);
+    expect(unloggedAired(media, (THU_MORNING - 60) * 1000)).toBe(0);
+    expect(unloggedAired(media, THU_MORNING * 1000)).toBe(1);
+  });
+
+  it("only applies to shows being watched, with a numbered next episode", () => {
+    const next = { episode: 5, airingAt: THU_MORNING };
+    expect(unloggedAired({ ...show(next, 0), userData: { listType: "paused", episodeProgressNumber: 2 } }, null)).toBe(2);
+    expect(unloggedAired({ ...show(next, 0), userData: { listType: "planning", episodeProgressNumber: 0 } }, null)).toBeNull();
+    expect(unloggedAired({ ...show(next, 0), userData: { listType: "completed", episodeProgressNumber: 12 } }, null)).toBeNull();
+    expect(unloggedAired(show(null, 3), null)).toBeNull();
+  });
+
+  it("keeps counting once the finale has aired (finished shows)", () => {
+    const finished = { ...show(null, 9, { status: "FINISHED", episodes: 12 }) };
+    expect(unloggedAired(finished, null)).toBe(3);
+    expect(unloggedAired({ ...finished, episodes: null }, null)).toBeNull();
+  });
+
+  it("refuses counts the episode total contradicts", () => {
+    // A split cour numbered continuously: "EP 14" of a 12-episode entry.
+    expect(unloggedAired(show({ episode: 14, airingAt: THU_MORNING }, 0, { episodes: 12 }), null)).toBeNull();
+    expect(unloggedAired(show({ episode: 12, airingAt: THU_MORNING }, 5, { episodes: 12 }), null)).toBe(6);
   });
 });

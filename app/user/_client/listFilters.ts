@@ -3,8 +3,8 @@
  * runs during render on both the server and the client, so it must be
  * deterministic (no clock, no locale-dependent collation).
  */
-import type { SeasonName } from "@/lib/season";
-import { WEEKDAYS, airingWeekday, compareByNextAiring } from "@/lib/anime/airing";
+import { isSeasonName, type SeasonName } from "@/lib/season";
+import { WEEKDAYS, airingWeekday, compareByNextAiring, unloggedAired } from "@/lib/anime/airing";
 import type { Weekday } from "@/lib/anime/airing";
 import { LIST_STATUSES, displayTitle } from "@/lib/anime/types";
 import type { ListEntry, ListStatus } from "@/lib/anime/types";
@@ -24,6 +24,7 @@ export type MyListEntry = Pick<
   | "format"
   | "status"
   | "episodes"
+  | "duration"
   | "startDate"
   | "upcomingEpisode"
   | "upComingAirDate"
@@ -40,6 +41,7 @@ export const toMyListEntry = (entry: ListEntry): MyListEntry => ({
   format: entry.format ?? null,
   status: entry.status,
   episodes: entry.episodes,
+  duration: entry.duration ?? null,
   startDate: entry.startDate,
   upcomingEpisode: entry.upcomingEpisode,
   upComingAirDate: entry.upComingAirDate,
@@ -141,10 +143,11 @@ export function matchesFilters(entry: MyListEntry, filters: ListFilters): boolea
   return true;
 }
 
-export type SortKey = "next" | "title" | "score" | "progress" | "added";
+export type SortKey = "next" | "new" | "title" | "score" | "progress" | "added";
 
 export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "next", label: "Next episode" },
+  { value: "new", label: "New episodes" },
   { value: "title", label: "Title A–Z" },
   { value: "score", label: "My score" },
   { value: "progress", label: "Progress" },
@@ -177,7 +180,12 @@ export const progressRatio = (entry: MyListEntry) =>
  * Returns a sorted copy. `entries` must be in stored (add) order, which is
  * what "Recently added" reverses.
  */
-export function sortEntries(entries: MyListEntry[], sort: SortKey): MyListEntry[] {
+export function sortEntries(
+  entries: MyListEntry[],
+  sort: SortKey,
+  /** For "new": the reference time (the server's render time), so server and client agree. */
+  nowMs: number | null = null
+): MyListEntry[] {
   switch (sort) {
     case "added":
       return [...entries].reverse();
@@ -190,6 +198,14 @@ export function sortEntries(entries: MyListEntry[], sort: SortKey): MyListEntry[
     case "progress":
       return [...entries].sort(
         (a, b) => descNullsLast(progressRatio(a), progressRatio(b)) || byTitle(a, b)
+      );
+    case "new":
+      // Most aired-but-unlogged first, at one fixed reference time.
+      return [...entries].sort(
+        (a, b) =>
+          descNullsLast(unloggedAired(a, nowMs), unloggedAired(b, nowMs)) ||
+          compareByNextAiring(a, b) ||
+          byTitle(a, b)
       );
     case "next":
     default:
@@ -218,4 +234,79 @@ export function groupByStatus(
     status,
     entries: entries.filter((entry) => entry.userData.listType === status),
   })).filter((section) => section.entries.length > 0);
+}
+
+/**
+ * Episodes watched × AniList's typical episode length, for the banner's
+ * "≈ 66 days of runtime". `skipped` counts watched shows with no known length.
+ */
+export function watchedRuntime(entries: readonly MyListEntry[]): { minutes: number; skipped: number } {
+  let minutes = 0;
+  let skipped = 0;
+  for (const entry of entries) {
+    const watched = entry.userData.episodeProgressNumber;
+    if (watched <= 0) continue;
+    if (entry.duration && entry.duration > 0) minutes += watched * entry.duration;
+    else skipped += 1;
+  }
+  return { minutes, skipped };
+}
+
+/** "66 days" / "31 hours" / "45 minutes" (rounded; it's an estimate). */
+export function formatRuntime(minutes: number): string {
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  if (minutes >= 2 * 24 * 60) return plural(Math.round(minutes / (24 * 60)), "day");
+  if (minutes >= 60) return plural(Math.round(minutes / 60), "hour");
+  return plural(Math.round(minutes), "minute");
+}
+
+// ---------------------------------------------------------------------------
+// The view in the URL (?shelf=&sort=&q=&year=&season=&day=&release=)
+// ---------------------------------------------------------------------------
+
+export interface ListView {
+  tab: StatusTab;
+  sort: SortKey;
+  filters: ListFilters;
+}
+
+export const DEFAULT_VIEW: ListView = { tab: "all", sort: "next", filters: EMPTY_FILTERS };
+
+const MAX_QUERY = 100;
+const isStatusTab = (value: unknown): value is StatusTab =>
+  value === "all" || (typeof value === "string" && (LIST_STATUSES as readonly string[]).includes(value));
+
+/** Reads a view from the query string; anything unknown or malformed falls back to the default. */
+export function parseListView(params: { get(name: string): string | null }): ListView {
+  const shelf = params.get("shelf");
+  const sort = params.get("sort");
+  const year = Number(params.get("year"));
+  const season = params.get("season");
+  const day = params.get("day");
+  const release = params.get("release");
+  return {
+    tab: isStatusTab(shelf) ? shelf : "all",
+    sort: isSortKey(sort) ? sort : "next",
+    filters: {
+      query: Array.from(params.get("q") ?? "").slice(0, MAX_QUERY).join(""),
+      year: Number.isInteger(year) && year >= 1900 && year <= 2200 ? year : null,
+      season: isSeasonName(season) ? season : null,
+      weekday: isWeekday(day) ? day : null,
+      release: isReleaseStatus(release) ? release : null,
+    },
+  };
+}
+
+/** The query string for a view ("" for the default), defaults omitted. */
+export function listViewQuery({ tab, sort, filters }: ListView): string {
+  const params = new URLSearchParams();
+  if (tab !== "all") params.set("shelf", tab);
+  if (sort !== "next") params.set("sort", sort);
+  if (filters.query.trim()) params.set("q", filters.query.trim());
+  if (filters.year !== null) params.set("year", String(filters.year));
+  if (filters.season) params.set("season", filters.season);
+  if (filters.weekday) params.set("day", filters.weekday);
+  if (filters.release) params.set("release", filters.release);
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }

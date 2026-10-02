@@ -1,10 +1,10 @@
 "use client";
 import { memo, useId, type CSSProperties } from "react";
 import Image from "next/image";
-import CountdownText from "@/components/home/CountdownText";
 import Slime from "@/components/home/Slime";
+import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
+import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
 import { CARD, FOCUS_RING_PANEL } from "@/components/theme/tokens";
-import { airingStatusLabel, nextAiring } from "@/lib/anime/airing";
 import { STATUS_BADGE_CLASS } from "@/lib/anime/statusBadge";
 import { LIST_STATUS_LABELS, displayTitle, type UserAnimeData } from "@/lib/anime/types";
 import { progressRatio } from "./listFilters";
@@ -21,29 +21,24 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-/** "Finished Apr 3, 2026" / "Started …" / "Not started" (the landing demo's line). */
-function dateLine({ startDate, finishDate }: UserAnimeData) {
+/**
+ * "Finished Apr 3, 2026" / "Started …" (the landing demo's line). Without
+ * dates, "Not started" only when nothing is logged yet: legacy entries and
+ * cleared dates can have progress.
+ */
+function dateLine({ startDate, finishDate, episodeProgressNumber, listType }: UserAnimeData) {
   if (finishDate) return `Finished ${dateFormat.format(finishDate)}`;
   if (startDate) return `Started ${dateFormat.format(startDate)}`;
-  return "Not started";
-}
-
-/** The live countdown, or the release status when nothing is scheduled. */
-function NextEpisode({ entry }: { entry: MyListEntry }) {
-  const next = nextAiring(entry);
-  if (!next) {
-    return <p className="truncate text-xs text-[rgb(164,164,164)]">{airingStatusLabel(entry)}</p>;
-  }
-  return (
-    <p className="text-xs font-semibold text-[#95ccff]">
-      <CountdownText airingAt={next.airingAt} episode={next.episode} mode="row" />
-    </p>
-  );
+  return episodeProgressNumber > 0 || listType === "completed" ? "No start date" : "Not started";
 }
 
 interface ListCardProps {
   entry: MyListEntry;
   isOwner: boolean;
+  /** The owner's first name on a visitor's view (for the "N new" chip's spoken text). */
+  ownerName: string | null;
+  /** The page's server render time (the chip's reference until the clock hydrates). */
+  renderedAt: number;
   /** A "+1" save for this entry is in flight. */
   pending: boolean;
   onIncrement: (entry: MyListEntry) => void;
@@ -59,6 +54,8 @@ interface ListCardProps {
 export const ListCard = memo(function ListCard({
   entry,
   isOwner,
+  ownerName,
+  renderedAt,
   pending,
   onIncrement,
   onEdit,
@@ -75,11 +72,13 @@ export const ListCard = memo(function ListCard({
     entry.coverImage?.large ?? entry.coverImage?.extraLarge ?? entry.coverImage?.medium ?? null;
 
   return (
-    <li className="flex min-w-0">
+    // The rise-in sits on the <li>: on the card, its fill-mode would pin `transform`
+    // and cancel CARD's hover/focus lift.
+    <li className="flex min-w-0 animate-[rise-in_400ms_ease-out_both]">
       <article
         aria-labelledby={titleId}
         style={{ "--card-glow": color ?? "rgba(93,174,241,.55)" } as CSSProperties}
-        className={`grid w-full min-w-0 grid-cols-[72px_minmax(0,1fr)] gap-4 p-4 text-white animate-[rise-in_400ms_ease-out_both] ${CARD}`}
+        className={`grid w-full min-w-0 grid-cols-1 gap-4 p-4 text-white min-[360px]:grid-cols-[72px_minmax(0,1fr)] ${CARD}`}
       >
         <div
           className="relative flex h-[104px] w-[72px] items-center justify-center overflow-hidden rounded-md bg-[rgb(38,38,38)]"
@@ -122,7 +121,9 @@ export const ListCard = memo(function ListCard({
                 }}
                 aria-disabled={incrementBlocked || undefined}
                 aria-busy={pending || undefined}
-                aria-label={atLastEpisode ? `All episodes of ${title} watched` : `+1 episode: ${title}`}
+                // Starts with the visible "+1" (WCAG 2.5.3) and stays the same between
+                // presses, so screen readers hear only the result line.
+                aria-label={atLastEpisode ? `All episodes of ${title} watched` : `+1: log the next episode of ${title}`}
                 title={atLastEpisode ? "All episodes watched" : "Mark the next episode as watched"}
                 className={`inline-flex h-11 w-16 shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors aria-busy:animate-pulse md:h-10 ${FOCUS_RING_PANEL} ${
                   atLastEpisode
@@ -135,30 +136,40 @@ export const ListCard = memo(function ListCard({
             )}
           </div>
 
-          <NextEpisode entry={entry} />
+          <NextEpisodeLine media={entry} />
 
           <div className="flex flex-col gap-1.5">
-            <p className="text-xs text-[rgb(164,164,164)]">
-              Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {total ?? "?"}
-              <span className="sr-only"> episodes watched</span>
-            </p>
+            <div className="flex min-h-5 items-center justify-between gap-2">
+              <p className="text-xs text-[rgb(164,164,164)]">
+                <span aria-hidden="true">
+                  Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {total ?? "?"}
+                </span>
+                <span className="sr-only">
+                  {progress} of {total ?? "an unknown number of"} episodes watched
+                </span>
+              </p>
+              <NewEpisodesChip media={entry} ownerName={isOwner ? null : ownerName} renderedAt={renderedAt} />
+            </div>
             <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]">
-              {ratio !== null && (
+              {ratio !== null ? (
                 <div
                   className={`h-full rounded-full transition-[width,background-color] duration-300 ${
                     listType === "completed" ? "bg-emerald-500" : "bg-blue-500"
                   }`}
                   style={{ width: `${Math.round(ratio * 100)}%` }}
                 />
+              ) : (
+                // Unknown episode count: a dashed track, so it can't read as 0%.
+                <div className="h-full w-full bg-[repeating-linear-gradient(90deg,rgba(149,204,255,.3)_0_6px,transparent_6px_12px)]" />
               )}
             </div>
           </div>
 
           <div className="mt-auto flex items-center justify-between gap-2">
             <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
-              {dateLine(entry.userData)} ·{" "}
+              {dateLine(entry.userData)}{" "}
               <span className="whitespace-nowrap">
-                Score{" "}
+                · Score{" "}
                 <span className="font-semibold tabular-nums text-white">
                   {score ?? "—"}
                   {score !== null && <span className="sr-only"> out of 10</span>}
@@ -172,7 +183,7 @@ export const ListCard = memo(function ListCard({
                 onClick={() => onEdit(entry)}
                 aria-haspopup="dialog"
                 aria-label={`Edit ${title}`}
-                className={`inline-flex h-11 shrink-0 items-center rounded-lg border border-[#95ccff]/30 bg-white/5 px-3 text-xs font-semibold text-[#e6f3ff] transition-colors hover:bg-white/10 md:h-8 ${FOCUS_RING_PANEL}`}
+                className={`inline-flex h-11 shrink-0 items-center rounded-lg border border-[#95ccff]/30 bg-white/5 px-3 text-xs font-semibold text-[#e6f3ff] transition-colors hover:bg-white/10 md:h-9 ${FOCUS_RING_PANEL}`}
               >
                 Edit
               </button>
