@@ -45,7 +45,7 @@ export default async function TopAnime() {
   if (firstPage.items.length === 0) {
     throw new JikanError("Jikan returned an empty ranking for page 1");
   }
-  // When this render fetched the ranking (server component: not Date.now(), see app/anime/layout.tsx).
+  // When this render fetched the ranking (server component: not Date.now(), which the React Compiler lint rejects in render).
   const fetchedAt = new Date().getTime();
   const crown = crownOf(firstPage.items);
 

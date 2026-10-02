@@ -35,7 +35,7 @@ describe("mergeFresh", () => {
 
 describe("remembered refreshes", () => {
   it("returns a refresh only when it is newer than the page's own data", () => {
-    const data = { at: 5_000, media: [media(1)], carryOver: [], hasNextPage: false };
+    const data = { at: 5_000, media: [media(1)], carryOver: [], carryOverCapped: false, hasNextPage: false };
     rememberRefresh("2026-fall", data);
     expect(recallRefresh("2026-fall", 4_000)).toBe(data);
     expect(recallRefresh("2026-fall", 6_000)).toBeNull(); // the page is newer (ISR rebuilt it)

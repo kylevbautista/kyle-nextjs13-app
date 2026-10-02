@@ -157,6 +157,7 @@ function buildLandingData(
     season: buildSeasonMeta(target, {
       showCount,
       continuingCount: season.carryOverIncluded ? season.carryOver.length : null,
+      continuingCapped: season.carryOverIncluded && season.carryOverCapped,
     }),
     airingIds,
     continuingIds,

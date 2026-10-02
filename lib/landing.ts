@@ -97,6 +97,8 @@ export interface LandingSeasonMeta {
   showCount: string | null;
   /** Shows continuing from earlier seasons; null when unknown. */
   continuingCount: number | null;
+  /** A carry-over list hit AniList's 50-item page: the count is a lower bound ("at least 21"). */
+  continuingCapped: boolean;
 }
 
 export interface TempestEntry {
@@ -342,7 +344,7 @@ const startsLabelFormat = new Intl.DateTimeFormat("en-US", {
 /** The landing's season meta from lib/season.ts#landingSeason plus the counts. */
 export function buildSeasonMeta(
   target: { year: number; season: SeasonName; preview: boolean; startsAtMs: number },
-  counts: { showCount: string | null; continuingCount: number | null }
+  counts: { showCount: string | null; continuingCount: number | null; continuingCapped?: boolean }
 ): LandingSeasonMeta {
   const label = `${SEASON_LABELS[target.season]} ${target.year}`;
   const seasonHref = seasonPath(target.year, target.season);
@@ -357,6 +359,7 @@ export function buildSeasonMeta(
     browseLabel: target.preview ? `Preview ${label}` : "Browse this season",
     showCount: counts.showCount,
     continuingCount: counts.continuingCount,
+    continuingCapped: counts.continuingCapped ?? false,
   };
 }
 
@@ -542,9 +545,10 @@ const FORMAT_LABELS: Record<string, string> = {
   SPECIAL: "Special",
   OVA: "OVA",
   ONA: "ONA",
+  MUSIC: "Music",
 };
 
-/** "TV", "Movie", "OVA", "Special", "ONA", "TV Short"; null for anything else. */
+/** "TV", "Movie", "OVA", "Special", "ONA", "TV Short", "Music"; null for anything else. */
 export const formatLabel = (format: string | null | undefined): string | null =>
   (format && FORMAT_LABELS[format]) || null;
 

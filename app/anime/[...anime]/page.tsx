@@ -1,18 +1,17 @@
 /**
  * /anime/<year>/<season>. Anything else under /anime/… (a bare year, a
  * capitalized season, extra segments, an out-of-range year) is redirected by
- * seasonRouteRedirect.
+ * seasonRouteRedirect (in proxy.ts, before anything renders).
+ *
+ * Static ISR, like /topanime: no request APIs, and deliberately no
+ * loading.tsx (it would ship the skeleton and hide the real page in a
+ * <div hidden> until JavaScript swaps it in; CLAUDE.md §9.15).
  */
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Boundary from "./Boundary";
-import {
-  SEASON_LABELS,
-  SEASON_MONTHS,
-  SeasonName,
-  allSeasonParams,
-  seasonRouteRedirect,
-} from "@/lib/season";
+import { seasonDescription } from "@/lib/anime/seasonCopy";
+import { SEASON_LABELS, SeasonName, allSeasonParams, seasonRouteRedirect } from "@/lib/season";
 
 export const dynamicParams = true;
 // AniList allows ~30 requests/minute; countdowns use absolute timestamps, so 5 minutes is plenty.
@@ -36,11 +35,9 @@ export async function generateMetadata({ params }: SeasonPageProps): Promise<Met
   if (!parsed) return { title: "Seasonal Anime" };
 
   const { year, season } = parsed;
-  const label = `${SEASON_LABELS[season]} ${year}`;
-  const { from, to } = SEASON_MONTHS[season];
   return {
-    title: `${label} Anime`,
-    description: `Every anime premiering in ${label} (${from} – ${to} ${year}): live countdowns to the next episode, air dates, studios, scores and synopses. Sort by countdown or popularity and add shows to your list.`,
+    title: `${SEASON_LABELS[season]} ${year} Anime`,
+    description: seasonDescription(year, season),
   };
 }
 

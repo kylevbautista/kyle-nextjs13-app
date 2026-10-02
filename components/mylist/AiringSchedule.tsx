@@ -135,7 +135,19 @@ export default function AiringSchedule({
             ? `${showsLabel(schedule.airingCount)} with an upcoming episode, lined up by the day it airs. Completed and dropped shows stay out of the way.`
             : "Every show on the list with an upcoming episode, lined up by the day it airs."
         }
-        aside={airing ? <NextEpisodes entries={upcoming} onShowWeek={showWholeWeek} /> : undefined}
+        aside={
+          airing ? (
+            <NextEpisodes
+              entries={upcoming}
+              jump={{
+                href: "#schedule-panel",
+                label: "The whole week",
+                srLabel: "See the whole week",
+                onClick: showWholeWeek,
+              }}
+            />
+          ) : undefined
+        }
       >
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link href={myListPath(userId)} prefetch={false} className={GHOST_BUTTON}>

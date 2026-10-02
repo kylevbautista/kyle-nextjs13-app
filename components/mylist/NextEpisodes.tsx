@@ -1,34 +1,53 @@
 "use client";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import CountdownText from "@/components/home/CountdownText";
 import { FOCUS_RING_PANEL } from "@/components/theme/tokens";
-import { useNow } from "@/components/utils/useNow";
+import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { formatAirDate, nextAiring } from "@/lib/anime/airing";
-import { displayTitle, type ListEntry } from "@/lib/anime/types";
+import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { AIRED_GRACE_SECONDS } from "@/lib/landing";
 
 const ROWS = 3;
 
+const CARD =
+  "hidden h-[276px] w-full flex-col overflow-hidden rounded-2xl border border-[#95ccff]/20 bg-[rgb(30,30,30)]/95 shadow-[0_24px_60px_-24px_rgba(93,174,241,.45)] sm:flex sm:max-w-[520px] lg:max-w-none";
+
 /**
  * The landing hero's "Next episodes" card (components/home/HeroNextUp.tsx),
- * fed by a list: its 3 soonest episodes, ticking live. A card from 640px and
- * a one-row ticker below that, both linking to the week panel. The jumps are
+ * fed by a page's shows: the 3 soonest episodes, ticking live. A card from
+ * 640px and a one-row ticker below that, both jumping to the page's full view
+ * (the Airing Schedule's week panel, the season page's grid). The jumps are
  * next/link, not plain "#" links: a native fragment entry has no router
- * state, so a later Back would change the URL without changing the page. Rows that
- * aired more than 30 minutes ago drop out once the clock is live.
+ * state, so a later Back would change the URL without changing the page.
+ * Rows that aired more than 30 minutes ago drop out on the per-minute clock.
  *
  * `entries` must be sorted soonest first and all have a next episode.
  */
 export default function NextEpisodes({
   entries,
-  onShowWeek,
+  jump,
+  restingText = "Those episodes just aired. The next ones appear as soon as AniList schedules them.",
+  headerNote = "Pacific Time",
+  loading = false,
 }: {
-  entries: ListEntry[];
-  /** Opens the week panel's All tab (the links still jump to it without JS). */
-  onShowWeek?: () => void;
+  entries: readonly AnimeMedia[];
+  /** The footer link and the ticker: `label` is shown, `srLabel` ends the ticker's name. */
+  jump: {
+    href: string;
+    label: string;
+    srLabel: string;
+    /** Runs first (the links still jump without JS). */
+    onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  };
+  /** Shown when no row is left. */
+  restingText?: string;
+  headerNote?: string;
+  /** The rows aren't known yet: skeleton rows, and no ticker. */
+  loading?: boolean;
 }) {
-  const now = useNow();
+  const now = useMinuteNow();
   const nowSeconds = now === null ? null : Math.floor(now / 1000);
   const rows = entries
     .filter((entry) => {
@@ -41,10 +60,7 @@ export default function NextEpisodes({
 
   return (
     <>
-      <section
-        aria-labelledby="next-up-title"
-        className="hidden h-[276px] w-full flex-col overflow-hidden rounded-2xl border border-[#95ccff]/20 bg-[rgb(30,30,30)]/95 shadow-[0_24px_60px_-24px_rgba(93,174,241,.45)] sm:flex sm:max-w-[520px] lg:max-w-none"
-      >
+      <section aria-labelledby="next-up-title" className={CARD}>
         <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-[rgb(53,53,53)] px-4 font-mono text-xs">
           <h2 id="next-up-title" className="font-semibold text-[#cfe8ff]">
             <span className="sr-only">Great Sage notice: </span>
@@ -53,9 +69,15 @@ export default function NextEpisodes({
             </span>
             Next episodes
           </h2>
-          <span className="text-[rgb(164,164,164)]">Pacific Time</span>
+          <span className="text-[rgb(164,164,164)]">{headerNote}</span>
         </header>
-        {rows.length ? (
+        {loading ? (
+          <ol aria-hidden="true" className="flex flex-1 flex-col divide-y divide-[rgb(53,53,53)]">
+            {Array.from({ length: ROWS }, (_, index) => (
+              <SkeletonRow key={index} />
+            ))}
+          </ol>
+        ) : rows.length ? (
           <ol className="flex flex-1 flex-col divide-y divide-[rgb(53,53,53)]">
             {rows.map((entry) => (
               <NextUpRow key={entry.id} entry={entry} />
@@ -63,28 +85,28 @@ export default function NextEpisodes({
           </ol>
         ) : (
           <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-[rgb(164,164,164)]">
-            Those episodes just aired. The next ones appear as soon as AniList schedules them.
+            {restingText}
           </p>
         )}
         <footer className="flex h-11 shrink-0 items-center border-t border-[rgb(53,53,53)] px-2">
           <Link
-            href="#schedule-panel"
-            onClick={onShowWeek}
+            href={jump.href}
+            onClick={jump.onClick}
             className={`flex h-9 items-center rounded-md px-2 text-sm font-medium text-[#95ccff] hover:bg-white/5 hover:text-white ${FOCUS_RING_PANEL}`}
           >
-            The whole week <span aria-hidden="true">&nbsp;↓</span>
+            {jump.label} <span aria-hidden="true">&nbsp;↓</span>
           </Link>
         </footer>
       </section>
 
       {/* Below 640px: a one-row ticker. */}
-      {first && firstNext && (
+      {!loading && first && firstNext && (
         <Link
-          href="#schedule-panel"
-          onClick={onShowWeek}
+          href={jump.href}
+          onClick={jump.onClick}
           aria-label={`Next up: ${displayTitle(first)}, ${
             firstNext.episode ? `episode ${firstNext.episode}` : "next episode"
-          }, airs ${formatAirDate(firstNext.airingAt)}. See the whole week`}
+          }, airs ${formatAirDate(firstNext.airingAt)}. ${jump.srLabel}`}
           className={`flex h-14 w-full items-center gap-2.5 overflow-hidden rounded-2xl border border-[#95ccff]/20 bg-[rgb(30,30,30)]/95 px-3 text-sm sm:hidden ${FOCUS_RING_PANEL}`}
         >
           <span className="flex w-0 min-w-0 flex-1 flex-col">
@@ -102,7 +124,19 @@ export default function NextEpisodes({
   );
 }
 
-function NextUpRow({ entry }: { entry: ListEntry }) {
+function SkeletonRow() {
+  return (
+    <li className="flex min-h-0 flex-1 animate-pulse items-center gap-3 px-4">
+      <div className="h-14 w-10 shrink-0 rounded-md bg-[rgb(53,53,53)]" />
+      <div className="flex w-0 min-w-0 flex-1 flex-col gap-2">
+        <span className="h-3.5 w-3/4 rounded bg-[rgb(53,53,53)]" />
+        <span className="h-3.5 w-1/2 rounded bg-[rgb(53,53,53)]" />
+      </div>
+    </li>
+  );
+}
+
+function NextUpRow({ entry }: { entry: AnimeMedia }) {
   const next = nextAiring(entry);
   const title = displayTitle(entry);
   const cover = entry.coverImage?.medium ?? entry.coverImage?.large;

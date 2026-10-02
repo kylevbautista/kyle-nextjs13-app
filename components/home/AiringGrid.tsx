@@ -1,26 +1,29 @@
 "use client";
-import { useId, type CSSProperties } from "react";
 import Link from "next/link";
-import AniListCover from "@/components/theme/AniListCover";
+import type { AnimeCardActionProps } from "@/components/theme/AnimeCard";
+import { useAnimeDetails } from "@/components/theme/AnimeDetailsDialog";
+import { CARD_LAYOUT } from "@/components/theme/cardLayout";
 import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
-import { nextAiring } from "@/lib/anime/airing";
-import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
-import { formatLabel, seasonLabel as toSeasonLabel } from "@/lib/landing";
-import { trackLanding, type LandingCta, type LandingLocation } from "./analytics";
-import CountdownText from "./CountdownText";
+import { trackLanding, type LandingCta } from "./analytics";
 import LandingAddButton from "./LandingAddButton";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
 import { FOCUS_RING } from "./SageLine";
 import Slime from "./Slime";
 
-const VISIBLE = 7;
-/** Cards from this index on are hidden below 640px (5 cards + the end card). */
-const PHONE_LIMIT = 5;
+/** The season page's card and this grid's shape (components/theme/cardLayout.ts). */
+const { Card, landing } = CARD_LAYOUT;
+
+/** The cards' add button: the landing's (sign-in intent dialog, analytics). Module level, so it is stable. */
+const AiringNextAdd = ({ media, onResult }: AnimeCardActionProps) => (
+  <LandingAddButton id={media.id} location="airing_next" size={landing.actionSize} onResult={onResult} />
+);
 
 /**
- * The live Magic Sense grid: 7 soonest episodes (5 on phones) plus an end
- * card into the season. Aired rows drop out after hydration and later
- * candidates backfill in place, so the grid never shifts.
+ * The live Magic Sense grid: the soonest episodes (landing.visible: 5 in the
+ * classic layout, fewer on phones) plus an end card into the season. Aired
+ * rows drop out after hydration and later candidates backfill in place, so
+ * the grid never shifts. The cards are the season page's own and open the
+ * same details sheet (tempest-theme rule 1).
  */
 export default function AiringGrid({
   ids,
@@ -34,133 +37,57 @@ export default function AiringGrid({
   showCount: string | null;
 }) {
   const { isContinuing } = useLanding();
-  const cards = useVisibleAiring(ids, VISIBLE);
+  const cards = useVisibleAiring(ids, landing.visible);
+  const { openDetails, sheet } = useAnimeDetails({ Action: AiringNextAdd, fallbackFocusId: "airing-next-title" });
 
   if (!cards.length) {
     return (
-      <ReportPanel
-        text="Those episodes just aired. Fresh countdowns are on the season page."
-        actions={[{ href: seasonHref, label: `Browse ${seasonLabel}`, cta: "browse_season" }]}
-      />
+      <>
+        <ReportPanel
+          text="Those episodes just aired. Fresh countdowns are on the season page."
+          actions={[{ href: seasonHref, label: `Browse ${seasonLabel}`, cta: "browse_season" }]}
+        />
+        {sheet}
+      </>
     );
   }
 
   const allLabel = `See all ${showCount ? `${showCount} ` : ""}${seasonLabel} shows`;
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-      {cards.map((media, index) => (
-        <li key={media.id} className={index >= PHONE_LIMIT ? "hidden sm:flex" : "flex"}>
-          <EpisodeCard
-            media={media}
-            variant="grid"
-            location="airing_next"
-            continuing={isContinuing(media.id)}
-          />
+    <>
+      <ul className={landing.grid}>
+        {cards.map((media, index) => (
+          <li key={media.id} className={`min-w-0 ${index >= landing.phoneLimit ? "hidden sm:flex" : "flex"}`}>
+            <Card
+              media={media}
+              Action={AiringNextAdd}
+              continuing={isContinuing(media.id)}
+              onOpenDetails={openDetails}
+              coverSizes={landing.coverSizes}
+            />
+          </li>
+        ))}
+        <li className="flex">
+          <Link
+            href={seasonHref}
+            aria-label={allLabel}
+            onClick={() => trackLanding("cta_click", { cta: "browse_season", location: "airing_next" })}
+            className={`group relative flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#95ccff]/40 bg-gradient-to-b from-night-900 to-[rgb(18,18,18)] px-3 pb-5 pt-14 text-center transition-colors hover:border-[#95ccff]/70 ${FOCUS_RING}`}
+          >
+            <Slime size={56} lookLeft className="absolute -top-3 left-1/2 -translate-x-1/2 sm:-top-5" />
+            <span className="text-sm font-semibold text-white">{allLabel}</span>
+            <span className="text-xs text-[rgb(164,164,164)]">Sort by countdown or popularity</span>
+            <span
+              aria-hidden="true"
+              className="mt-1 text-lg text-[#95ccff] transition-transform group-hover:translate-x-1"
+            >
+              →
+            </span>
+          </Link>
         </li>
-      ))}
-      <li className="flex">
-        <Link
-          href={seasonHref}
-          aria-label={allLabel}
-          onClick={() => trackLanding("cta_click", { cta: "browse_season", location: "airing_next" })}
-          className={`group relative flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#95ccff]/40 bg-gradient-to-b from-night-900 to-[rgb(18,18,18)] px-3 pb-5 pt-14 text-center transition-colors hover:border-[#95ccff]/70 ${FOCUS_RING}`}
-        >
-          <Slime size={56} lookLeft className="absolute -top-3 left-1/2 -translate-x-1/2 sm:-top-5" />
-          <span className="text-sm font-semibold text-white">{allLabel}</span>
-          <span className="text-xs text-[rgb(164,164,164)]">Sort by countdown or popularity</span>
-          <span
-            aria-hidden="true"
-            className="mt-1 text-lg text-[#95ccff] transition-transform group-hover:translate-x-1"
-          >
-            →
-          </span>
-        </Link>
-      </li>
-    </ul>
-  );
-}
-
-/**
- * One show counting down: cover, live chip, badge, title, meta and the add
- * button. `compact` (the Quest Log) drops the meta line and uses a smaller
- * title. Renders an <article>; wrap it in an <li> in lists.
- */
-export function EpisodeCard({
-  media,
-  variant,
-  location,
-  continuing = false,
-}: {
-  media: AnimeMedia;
-  variant: "grid" | "compact";
-  location: LandingLocation;
-  continuing?: boolean;
-}) {
-  const titleId = useId();
-  const title = displayTitle(media);
-  const next = nextAiring(media);
-  const premiere = next?.episode === 1;
-  const color = media.coverImage.color;
-  const from = continuing && !premiere ? toSeasonLabel(media.season, media.seasonYear) : null;
-  const studio = media.studios?.nodes?.find((node) => node.name)?.name ?? "Studio TBA";
-  const meta = [formatLabel(media.format), studio].filter(Boolean).join(" · ");
-  const compact = variant === "compact";
-
-  return (
-    <article
-      aria-labelledby={titleId}
-      style={{ "--card-glow": color ?? "rgba(93,174,241,.55)" } as CSSProperties}
-      className="flex w-full flex-col overflow-hidden rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-[#95ccff]/40 focus-within:shadow-[0_10px_30px_-12px_var(--card-glow)] hover:border-[#95ccff]/40 hover:shadow-[0_10px_30px_-12px_var(--card-glow)] focus-within:-translate-y-0.5 hover:-translate-y-0.5"
-    >
-      <div
-        className="relative aspect-[2/3] w-full bg-[rgb(38,38,38)]"
-        style={color ? { backgroundColor: color } : undefined}
-      >
-        {/* All three AniList sizes: the browser picks a sharp one for this screen. */}
-        <AniListCover
-          urls={[media.coverImage.medium, media.coverImage.large, media.coverImage.extraLarge]}
-          sizes={
-            compact
-              ? "(min-width: 1024px) 130px, (min-width: 640px) 22vw, 45vw"
-              : "(min-width: 1152px) 262px, (min-width: 640px) 23vw, 46vw"
-          }
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        {next && (
-          // Narrow cards wrap the chip onto two lines, where a pill would read as a
-          // blob: rounded-lg until the cards are wide enough for one line. The
-          // min width is capped too (min-width beats max-width on ~120px cards).
-          <span className="absolute left-2 top-2 min-w-[min(7.5rem,calc(100%-1rem))] max-w-[calc(100%-1rem)] rounded-lg bg-black/70 px-2 py-1 text-[11px] font-bold leading-tight text-white lg:rounded-full">
-            <CountdownText airingAt={next.airingAt} episode={next.episode} mode="chip" />
-          </span>
-        )}
-        {(premiere || continuing) && (
-          <span
-            className={`absolute bottom-2 left-2 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white ${
-              premiere ? "bg-violet-600/90" : "bg-blue-600/90"
-            }`}
-          >
-            {premiere ? "Premiere" : "Continuing"}
-            {from && <span className="sr-only"> from {from}</span>}
-          </span>
-        )}
-      </div>
-      <div className={`flex flex-1 flex-col ${compact ? "p-2" : "p-3"}`}>
-        <h3
-          id={titleId}
-          title={title}
-          className={`line-clamp-2 font-semibold text-white ${compact ? "h-8 text-xs leading-4" : "h-10 text-sm leading-5"}`}
-        >
-          {title}
-        </h3>
-        {!compact && (
-          <p className="mt-1 line-clamp-1 text-xs text-[rgb(164,164,164)]">{meta}</p>
-        )}
-        <div className="mt-auto pt-2">
-          <LandingAddButton id={media.id} location={location} />
-        </div>
-      </div>
-    </article>
+      </ul>
+      {sheet}
+    </>
   );
 }
 

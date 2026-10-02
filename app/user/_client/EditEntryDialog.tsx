@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import type { FormEvent, MouseEvent } from "react";
+import type { FormEvent } from "react";
 import { flushSync } from "react-dom";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { SageTag } from "@/components/home/SageLine";
 import { consoleToast } from "@/components/theme/consoleToast";
+import { isBackdropEvent } from "@/components/theme/dialog";
 import {
   FIELD,
   FOCUS_RING_PANEL,
@@ -40,21 +41,6 @@ const fieldClass = `${FIELD} max-w-full`;
 const ROSE_BUTTON = `inline-flex h-11 items-center justify-center whitespace-nowrap rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${FOCUS_RING_PANEL}`;
 
 const FIELD_ORDER: EditFormField[] = ["progress", "score", "startDate", "finishDate"];
-
-/**
- * ::backdrop clicks target the <dialog> itself, but so do clicks on its own
- * scrollbar, so also require the pointer to be outside the dialog's box.
- */
-const isBackdropEvent = (event: MouseEvent<HTMLDialogElement>) => {
-  if (event.target !== event.currentTarget) return false;
-  const rect = event.currentTarget.getBoundingClientRect();
-  return (
-    event.clientX < rect.left ||
-    event.clientX > rect.right ||
-    event.clientY < rect.top ||
-    event.clientY > rect.bottom
-  );
-};
 
 export function EditEntryDialog({
   entry,

@@ -1,10 +1,11 @@
 "use client";
+import { HUD_LABEL_CLASS } from "@/components/theme/tokens";
 import { useNow } from "@/components/utils/useNow";
 import { formatAirDate } from "@/lib/anime/airing";
 import { AIRED_GRACE_SECONDS, formatCountdownMinutes, formatWeekdayTime } from "@/lib/landing";
 import { useLiveSeconds } from "./liveTimers";
 
-type Mode = "chip" | "row" | "compact";
+type Mode = "chip" | "row" | "compact" | "hud";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -30,6 +31,9 @@ const formatMinutes = (total: number) => (total < 60 ? "<1m" : formatCountdownMi
  * - row:     "EP 13 in 2h 24m 10s" / "Premiere in …" (hero card)
  * - compact: "1d 4h 12m" only, always per minute (schedule rows; the
  *            episode and air time sit next to it, so SSR shows a skeleton)
+ * - hud:     two lines, the episode as a mono label over the time
+ *            ("PREMIERE" / "1h 28m 56s"; SSR "Fri 9:53 AM PT") — the classic
+ *            card's Magic Sense band (components/theme/AnimeInfoCard.tsx)
  *
  * `seconds={false}` forces per-minute precision in chip/row mode.
  *
@@ -79,6 +83,45 @@ export default function CountdownText({
   const episodeName = episode ? `Episode ${episode}` : "The next episode";
   const verb = left !== null && left <= 0 ? "aired" : "airs";
   const showDot = mode !== "compact" && (state === "soon" || state === "airing");
+  const dot = showDot && (
+    <span
+      aria-hidden="true"
+      className={`h-1.5 w-1.5 shrink-0 rounded-full ${state === "airing" ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`}
+    />
+  );
+
+  if (mode === "hud") {
+    const value =
+      left === null
+        ? `${formatWeekdayTime(airingAt)} PT`
+        : left > 0
+          ? perSecond
+            ? formatSeconds(left)
+            : formatMinutes(left)
+          : state === "airing"
+            ? "Airing now"
+            : "Aired";
+    return (
+      <time
+        dateTime={new Date(airingAt * 1000).toISOString()}
+        data-soon={state === "soon" ? "" : undefined}
+        data-state={state}
+        className={`flex max-w-full flex-col items-center tabular-nums data-[soon]:text-amber-200 ${className}`}
+      >
+        <span aria-hidden="true" className={HUD_LABEL_CLASS}>
+          {label}
+        </span>
+        <span
+          aria-hidden="true"
+          className="mt-0.5 inline-flex max-w-full items-center gap-1.5 whitespace-nowrap text-xs font-bold leading-4"
+        >
+          {dot}
+          {value}
+        </span>
+        <span className="sr-only">{`${episodeName} ${verb} ${formatAirDate(airingAt)}`}</span>
+      </time>
+    );
+  }
 
   return (
     <time
@@ -87,14 +130,7 @@ export default function CountdownText({
       data-state={state}
       className={`inline-flex items-center gap-1.5 tabular-nums data-[soon]:text-amber-200 ${className}`}
     >
-      {showDot && (
-        <span
-          aria-hidden="true"
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-            state === "airing" ? "bg-emerald-400" : "bg-amber-400 animate-pulse"
-          }`}
-        />
-      )}
+      {dot}
       {mode === "compact" && left === null ? (
         <span
           aria-hidden="true"

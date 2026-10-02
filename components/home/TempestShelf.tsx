@@ -238,7 +238,7 @@ function ShelfCard({
             <Link
               href={searchPath(entry.romaji)}
               prefetch={false}
-              className="flex h-9 w-full items-center justify-center rounded-lg border border-[#95ccff]/40 bg-white/5 text-xs font-bold text-[#e6f3ff] transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
+              className="flex h-11 w-full items-center justify-center rounded-lg border border-[#95ccff]/40 bg-white/5 text-xs font-bold text-[#e6f3ff] transition-colors hover:bg-white/10 md:h-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
             >
               Find it<span className="sr-only">: {entry.fullTitle}</span>
             </Link>

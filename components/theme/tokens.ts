@@ -31,6 +31,44 @@ export const CHAPTER_CLASS =
   "relative isolate mx-auto max-w-6xl scroll-mt-20 px-4 py-20 [contain:inline-size] sm:px-6 sm:py-28";
 /** App pages (lists, schedules): the content column under a PageBanner. */
 export const APP_CONTAINER = "mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6";
+/** The poster card grid (AnimeCard): an <ol> of card <li>s, 2 → 5 columns. */
+export const ANIME_GRID = "grid min-w-0 list-none grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5";
+/** Poster covers on the season grid (ANIME_GRID in APP_CONTAINER): 5 × 234px from 1280, then 4 / 3 / 2 columns. */
+export const SEASON_COVER_SIZES =
+  "(min-width: 1280px) 234px, (min-width: 1024px) calc(25vw - 24px), (min-width: 640px) calc(33.33vw - 27px), calc(50vw - 22px)";
+/** Poster covers on /search: its <main> has a 16px gutter at every width and the grid stops at 1280px. */
+export const SEARCH_COVER_SIZES =
+  "(min-width: 1312px) 243px, (min-width: 1280px) calc(20vw - 19px), (min-width: 1024px) calc(25vw - 20px), (min-width: 640px) calc(33.33vw - 21px), calc(50vw - 22px)";
+/** Poster covers on the landing's Magic Sense grid (4 columns from 640px, 2 below). */
+export const LANDING_GRID_SIZES = "(min-width: 1152px) 262px, (min-width: 640px) 23vw, 46vw";
+
+/* ------------------------------------------------------------------------- */
+/* Classic anime card (AnimeInfoCard + its skeleton; the CSS half is the      */
+/* "Classic anime card" section of styles/globals.css). Plain strings here,   */
+/* never in the "use client" card file: the server-rendered /search loading   */
+/* skeleton uses them too.                                                     */
+
+/** Classic card grid (season page, /search): 1 → 2 (640) → 3 (1280) columns. */
+export const INFO_GRID = "grid min-w-0 list-none grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3";
+/** Fixed-px covers: one sizes string for the season page, /search and the landing. */
+export const INFO_COVER_SIZES = "(min-width: 820px) 175px, 135px";
+export const INFO_SHELL = "relative isolate flex w-full min-w-0 flex-col overflow-hidden rounded-2xl";
+/** Not positioned: the title's full-card tap target must reach the article. */
+export const INFO_HEADER = "shrink-0 px-3 pb-2.5 pt-2.5 text-center";
+/** The title box with a genre row under it… */
+export const INFO_TITLE_BOX = "flex h-10 items-center justify-center";
+/** …and without one (40 + 6 + 20): every header is 86px. */
+export const INFO_TITLE_BOX_SOLO = "flex h-[66px] items-center justify-center";
+export const INFO_CHIPS = "mt-1.5 flex h-5 flex-wrap justify-center gap-1 overflow-hidden";
+export const INFO_HAIRLINE = "mx-4 h-px shrink-0";
+export const INFO_BODY = "flex h-[201px] min-w-0 shrink-0 tablet:h-[250px]";
+export const INFO_COVER = "relative w-[135px] shrink-0 overflow-hidden bg-[rgb(38,38,38)] tablet:w-[175px]";
+export const INFO_FOOTER = "flex h-14 min-w-0 shrink-0 items-center gap-2 px-2.5 md:h-12";
+export const INFO_ACTION_BOX = "min-w-0 max-w-[11rem] flex-1";
+export const INFO_LINK_BOX = "h-11 w-11 md:h-9 md:w-9";
+/** The Magic Sense HUD's mono label line (CountdownText mode="hud" and the card's status HUD). */
+export const HUD_LABEL_CLASS =
+  "font-mono text-[10px] font-semibold uppercase leading-3 tracking-[0.14em] text-[color:var(--hud-label,#95ccff)]";
 
 /* ------------------------------------------------------------------------- */
 /* Type                                                                        */
