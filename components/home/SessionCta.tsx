@@ -3,6 +3,7 @@ import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import GoogleIcon from "@/components/auth/GoogleIcon";
+import { isPlainClick } from "@/components/utils/isPlainClick";
 import { showsLabel } from "@/lib/landing";
 import { airingSchedulePath, myListPath, signInPath } from "@/lib/routes";
 import { trackLanding, type LandingCta, type LandingLocation } from "./analytics";
@@ -56,14 +57,6 @@ function GoogleChip() {
 }
 
 /** A plain left click that the page may take over (not cmd/ctrl/shift/alt or middle). */
-const isPlainClick = (event: MouseEvent) =>
-  !event.defaultPrevented &&
-  event.button === 0 &&
-  !event.metaKey &&
-  !event.ctrlKey &&
-  !event.shiftKey &&
-  !event.altKey;
-
 export function SessionCta({
   location,
   size,

@@ -162,7 +162,16 @@ describe("buildSeasonMeta", () => {
       browseLabel: "Preview Fall 2026",
       showCount: "74",
       continuingCount: 31,
+      continuingCapped: false,
     });
+  });
+  it("carries a capped continuing count", () => {
+    expect(
+      buildSeasonMeta(
+        { year: 2026, season: "fall", preview: false, startsAtMs: Date.UTC(2026, 9, 1) },
+        { ...counts, continuingCapped: true }
+      ).continuingCapped
+    ).toBe(true);
   });
   it("links /anime in season", () => {
     expect(
@@ -393,7 +402,8 @@ describe("labels", () => {
       "ONA",
       "TV Short",
     ]);
-    expect(formatLabel("MUSIC")).toBeNull();
+    expect(formatLabel("MUSIC")).toBe("Music");
+    expect(formatLabel("MANGA")).toBeNull();
     expect(formatLabel(null)).toBeNull();
   });
   it("formats seasons", () => {

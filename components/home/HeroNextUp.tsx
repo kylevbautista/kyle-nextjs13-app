@@ -1,6 +1,8 @@
 "use client";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { isPlainClick } from "@/components/utils/isPlainClick";
 import { formatAirDate, nextAiring } from "@/lib/anime/airing";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { trackLanding } from "./analytics";
@@ -23,7 +25,9 @@ type Resting = { text: string; href: string; label: string };
  */
 export default function HeroNextUp({ ids }: { ids: number[] }) {
   const { season } = useLanding();
-  const rows = useVisibleAiring(ids, ROWS);
+  // One past the card's rows: is there anything more below (in Magic Sense) than the hero shows?
+  const visible = useVisibleAiring(ids, ROWS + 1);
+  const rows = visible.slice(0, ROWS);
 
   let resting: Resting | null = null;
   if (!rows.length) {
@@ -49,10 +53,22 @@ export default function HeroNextUp({ ids }: { ids: number[] }) {
     }
   }
 
-  const footerLabel = season
-    ? `All ${season.showCount ? `${season.showCount} ` : ""}${season.label} countdowns`
-    : "All countdowns";
-  const trackFooter = () => trackLanding("cta_click", { cta: "browse_season", location: "hero_next_up" });
+  // The jump goes to Magic Sense's handful of cards (the same ones, up to 7; 5
+  // on phones), not the whole season: "More" only when it shows more than
+  // the card (3 rows) or the phone ticker (1).
+  const what = season ? `${season.label} countdowns` : "countdowns";
+  const footerLabel = visible.length > ROWS ? `More ${what}` : what.charAt(0).toUpperCase() + what.slice(1);
+  const srJump = visible.length > 1 ? `See more ${what}` : `See ${what}`;
+  // An explicit scroll, not the fragment: a native "#" entry has no router
+  // state, so a later Back would change the URL but not the page (rule 7).
+  const jump = (event: MouseEvent<HTMLAnchorElement>) => {
+    trackLanding("cta_click", { cta: "browse_season", location: "hero_next_up" });
+    // Modified clicks still open /#airing-next in a new tab.
+    if (!isPlainClick(event)) return;
+    event.preventDefault();
+    document.getElementById("airing-next")?.scrollIntoView();
+    document.getElementById("airing-next-title")?.focus({ preventScroll: true });
+  };
 
   return (
     <>
@@ -84,19 +100,19 @@ export default function HeroNextUp({ ids }: { ids: number[] }) {
 
         {!resting && (
           <footer className="flex h-11 shrink-0 items-center border-t border-[rgb(53,53,53)] px-2">
-            <a
+            <Link
               href="#airing-next"
-              onClick={trackFooter}
+              onClick={jump}
               className={`flex h-9 items-center rounded-md px-2 text-sm font-medium text-[#95ccff] hover:bg-white/5 hover:text-white ${FOCUS}`}
             >
               {footerLabel} <span aria-hidden="true">&nbsp;↓</span>
-            </a>
+            </Link>
           </footer>
         )}
       </section>
 
       {/* Below 640px: a one-row ticker. */}
-      <Ticker first={rows[0] ?? null} resting={resting} onClick={trackFooter} />
+      <Ticker first={rows[0] ?? null} resting={resting} srJump={srJump} onClick={jump} />
     </>
   );
 }
@@ -161,11 +177,14 @@ function RestingState({ text, href, label }: Resting) {
 function Ticker({
   first,
   resting,
+  srJump,
   onClick,
 }: {
   first: AnimeMedia | null;
   resting: Resting | null;
-  onClick: () => void;
+  /** Ends the ticker's accessible name ("See more Fall 2026 countdowns"). */
+  srJump: string;
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const base = `flex h-14 w-full items-center gap-2.5 overflow-hidden rounded-2xl border border-[#95ccff]/20 bg-[rgb(30,30,30)]/95 px-3 text-sm sm:hidden ${FOCUS}`;
   const next = first ? nextAiring(first) : null;
@@ -183,10 +202,10 @@ function Ticker({
   const title = displayTitle(first);
   const episode = next.episode ? `episode ${next.episode}` : "next episode";
   return (
-    <a
+    <Link
       href="#airing-next"
       onClick={onClick}
-      aria-label={`Next up: ${title}, ${episode}, airs ${formatAirDate(next.airingAt)}. See all countdowns`}
+      aria-label={`Next up: ${title}, ${episode}, airs ${formatAirDate(next.airingAt)}. ${srJump}`}
       className={base}
     >
       {/* "Next up" stacks over the title so a long countdown can't squeeze it out. */}
@@ -199,6 +218,6 @@ function Ticker({
       <span className="shrink-0 text-[13px] font-semibold text-[#95ccff]">
         <CountdownText airingAt={next.airingAt} episode={next.episode} mode="row" seconds={false} />
       </span>
-    </a>
+    </Link>
   );
 }

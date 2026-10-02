@@ -12,6 +12,8 @@ import {
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
+import AnimeCard, { type AnimeCardActionProps } from "@/components/theme/AnimeCard";
+import AnimeCardSkeleton from "@/components/theme/AnimeCardSkeleton";
 import EvolutionCard from "@/components/theme/EvolutionCard";
 import { useMyList } from "@/components/utils/useMyList";
 import {
@@ -30,8 +32,8 @@ import {
   type EvolutionTier,
 } from "@/lib/landing";
 import { airingSchedulePath, myListPath, signInPath } from "@/lib/routes";
-import { EpisodeCard } from "./AiringGrid";
 import { trackLanding, trackOnce } from "./analytics";
+import LandingAddButton from "./LandingAddButton";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
 import { markQuest, useQuestFlags } from "./questStore";
 import { SageLine, SageTag, type SageKind } from "./SageLine";
@@ -491,17 +493,20 @@ function PredatorQuest({
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {onListAtLoad === null
             ? Array.from({ length: Math.min(4, airingIds.length) }, (_, index) => (
-                <li key={index} aria-hidden="true">
-                  <CardPlaceholder />
+                <li key={index} aria-hidden="true" className="flex min-w-0">
+                  <AnimeCardSkeleton variant="compact" />
                 </li>
               ))
             : cards.map((item) => (
-                <li key={item.id}>
-                  <EpisodeCard
+                <li key={item.id} className="flex min-w-0">
+                  <AnimeCard
                     media={item}
                     variant="compact"
-                    location="quests"
+                    Action={QuestAdd}
                     continuing={isContinuing(item.id)}
+                    coverSizes={LANDING_COMPACT_SIZES}
+                    // The cards sit inside the quest row's h3.
+                    headingLevel={4}
                   />
                 </li>
               ))}
@@ -512,17 +517,13 @@ function PredatorQuest({
   );
 }
 
-function CardPlaceholder() {
-  return (
-    <div className="overflow-hidden rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)]">
-      <div className="aspect-[2/3] bg-white/5 animate-pulse" />
-      <div className="flex flex-col gap-2 p-3">
-        <div className="h-8 rounded bg-white/5" />
-        <div className="h-9 rounded-lg bg-white/10" />
-      </div>
-    </div>
-  );
-}
+/** Quest 1's card widths (4 columns from 640px, 2 below). */
+const LANDING_COMPACT_SIZES = "(min-width: 1024px) 130px, (min-width: 640px) 22vw, 45vw";
+
+/** Quest 1's add button (module level, so the memo'd card's `Action` is stable). */
+const QuestAdd = ({ media, onResult }: AnimeCardActionProps) => (
+  <LandingAddButton id={media.id} location="quests" onResult={onResult} />
+);
 
 function ScheduleQuest({ userId, done }: { userId: string; done: boolean }) {
   return (

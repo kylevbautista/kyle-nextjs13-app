@@ -10,17 +10,21 @@ The landing page (`/`) set the look the owner wants everywhere: a fan theme buil
 the **Great Sage** speaking in system messages (`《Notice》 …`), and an original slime mascot
 that **evolves as your list grows**. It is playful in its framing and exact in its content.
 
-My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`) and Top Anime (`/topanime`) were
-redesigned with this kit. Read one of them before starting a new page:
-`app/user/_client/MyList.tsx` and `components/mylist/AiringSchedule.tsx` for dynamic, signed-in
-pages; `app/topanime/` for a static ISR page (server-rendered banner and asides, one client island,
-pure `ranking.ts` helpers with tests).
+My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`), Top Anime (`/topanime`) and the
+season browser (`/anime/<year>/<season>`) were redesigned with this kit. Read one of them before
+starting a new page: `app/user/_client/MyList.tsx` and `components/mylist/AiringSchedule.tsx` for
+dynamic, signed-in pages; `app/topanime/` for a static ISR page (server-rendered banner and asides,
+one client island, pure `ranking.ts` helpers with tests); `components/animev3/PageBase.tsx` +
+`components/animev3/season/` for a static ISR page whose client root renders everything, with every
+line in a tested copy module (`lib/anime/seasonCopy.ts`).
 
 ## The rules
 
 1. **Demos and real pages match.** The landing demos real features: `TrackerDemo` shows My
    List's card, `ScheduleDemo` shows the Airing Schedule's week panel, `HeroNextUp` shows the
-   Next-episodes card. A page that has a demo uses the demo's markup and classes. If you change
+   Next-episodes card, and the Magic Sense chapter's cards *are* the season page's card
+   (`CARD_LAYOUT`: the same card, the same details sheet, the same eyebrow and Sage line
+   constants). The Quest Log keeps the compact poster card on purpose (a picker, not a demo). A page that has a demo uses the demo's markup and classes. If you change
    one side, change the other in the same PR. The owner noticed when they drifted apart.
 2. **Real data only.** Stats, counts, tiers and messages come from actual list or AniList data.
    Never show placeholder numbers or invented "activity".
@@ -29,7 +33,7 @@ pure `ranking.ts` helpers with tests).
    the information.
 4. **CLAUDE.md still rules.** Use `useNow()` for anything time-based (null until hydrated).
    Show times in Pacific. No `Date.now()` in render: server components use
-   `new Date().getTime()`, like `app/anime/layout.tsx`. Sanitize descriptions, put `min-w-0`
+   `new Date().getTime()`, like `app/topanime/page.tsx`. Sanitize descriptions, put `min-w-0`
    and `[contain:inline-size]` on wide content, and keep redirects before streaming.
 5. **Motion always plays.** It ignores `prefers-reduced-motion`; the owner chose this. No
    `motion-safe:` or `motion-reduce:`. Do keep offscreen pausing (NightSky and Slime do it for
@@ -45,8 +49,10 @@ pure `ranking.ts` helpers with tests).
    reports them: Jikan refreshes shows separately, so ranks can repeat or skip. Never present an
    upstream artifact as a fact about the source (no "tied" for a repeated Jikan rank).
 9. **Messages come from one place.** Tracker lines live in `lib/anime/trackerConsole.ts` (the
-   demo and My List both call it), with a `spoken` form where "/" would read badly. One speech
-   channel per page: a persistent sr-only `role="status"`; toasts are visual only.
+   demo and My List both call it), with a `spoken` form where "/" would read badly; the season
+   page's in `lib/anime/seasonCopy.ts`. One speech channel per page: a persistent sr-only
+   `role="status"`; toasts are visual only. A modal `<dialog>` makes the page (and its status)
+   inert, so a dialog that changes something speaks through its own status line.
 
 ## Palette
 
@@ -65,7 +71,7 @@ pure `ranking.ts` helpers with tests).
 | Gold (crown, trophies, the Octagram) | `#f5c451` | `gold`. Scarce on purpose: only #1–#8 on Top Anime, crowns, trophies |
 | Violet (aurora, Predator haze, premieres) | `rgba(139,92,246,…)`, `violet-600` | |
 | Status colors | watching blue · planning violet · completed emerald · paused amber · dropped rose | `STATUS_BADGE_CLASS`, `STATUS_DOT_CLASS` (`lib/anime/statusBadge.ts`) |
-| "Soon" / airing | amber-200 text + pulsing amber dot / emerald dot | built into `CountdownText` |
+| "Soon" / airing | amber-200 text + pulsing amber dot / emerald dot | built into `CountdownText` (the classic card's HUD band takes the same tones, plus violet for a premiere) |
 
 Glows are gradients and box-shadows, **never `filter: blur`**. A section's ambient glow is one
 `radial-gradient(closest-side, rgba(93,174,241,.10), …, transparent)` box behind it.
@@ -101,7 +107,7 @@ name everywhere:
 
 | Feature / page | Eyebrow | Status |
 |---|---|---|
-| Season browser, countdowns | `Skill 01 · Magic Sense` | landing |
+| Season browser (`/anime/<year>/<season>`), countdowns | `Skill 01 · Magic Sense` | done |
 | My List (`/user`) | `Skill 02 · Predator` (the list is the Stomach) | done |
 | Airing Schedule (`/mylist`) | `Skill 03 · Thought Acceleration` | done |
 | Search (`/search`) | `Skill 04 · Great Sage` | landing; page not yet redesigned |
@@ -125,17 +131,23 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `EvolutionCard` | `components/theme/EvolutionCard.tsx` | `layout="banner"` (row on phones, slime on a magic circle from 1024px) or `"stack"` (Quest Log). `gulpKey` replays the gulp when it grows |
 | `SagePanel` | `components/theme/SagePanel.tsx` | Empty, error and no-match states: slime (mood) + title + `《Kind》` line + actions |
 | `ShareLink`, `useCopyListLink` | `components/theme/ShareLink.tsx` | Share strip / copy handler (the Airing Schedule and the landing's schedule chapter). `userId={null}` shows a placeholder link; `onCopy` reports the click. Also clears the landing's Quest 3 |
-| `AniListCover` | `components/theme/AniListCover.tsx` | **New AniList covers shown wider than ~100px.** A `srcset` of AniList's files (100/230/460px), so each screen gets the sharpest it needs, up to AniList's largest upload (some new shows only have 230px); `next/image` can't (images are unoptimized). Pass all the cover URLs and a real `sizes`. The season page's AnimeInfoGrid loads the 460px file directly |
+| `AniListCover` | `components/theme/AniListCover.tsx` | **New AniList covers shown wider than ~100px.** A `srcset` of AniList's files (100/230/460px), so each screen gets the sharpest it needs, up to AniList's largest upload (some new shows only have 230px); `next/image` can't (images are unoptimized). Pass all the cover URLs and a real `sizes`; `fetchPriority="high"` for the likely LCP image |
+| `AnimeInfoCard`, `AnimeInfoCardSkeleton` | `components/theme/AnimeInfoCard.tsx` | **The season card (default, "classic").** The owner's original layout in the theme: gel surface warmed by the cover color (`coverTint`), title over genre chips, the cover with the Magic Sense HUD (`CountdownText mode="hud"`: violet premiere, amber last hour, emerald airing) + badge + "★ 8.2 · TV" pill + a perched slime on listed shows (gulps on your own add: `ListToggle`'s `data-in-list` / `data-just-added`), a Great Sage readout (Studio / Premiere / Source / Episodes), the synopsis well, a pill add button and the MAL / AniList / Crunchyroll glyphs. Class strings in `tokens.ts` (`INFO_*`), CSS in the "Classic anime card" section of `globals.css`. Labels from `lib/anime/cardLabels.ts`: unknown fields are left out |
+| `cardLayout` | `components/theme/cardLayout.ts` | **The one switch:** `ANIME_CARD_LAYOUT = "classic" \| "poster"` for the season page, `/search` and the landing's Magic Sense. `CARD_LAYOUT` bundles the card, skeleton, add control (`ListToggleFillAction` / `ListToggleAction`), grid (`INFO_GRID` / `ANIME_GRID`), cover sizes, waiting skeletons, end-card span and the landing grid |
+| `AnimeCard`, `AnimeCardSkeleton` | `components/theme/AnimeCard.tsx` | The poster card (switchable via `cardLayout`; always the Quest Log's `compact`): countdown chip or release status, Premiere/Continuing badge, title, "★ 7.6 · TV · Studio", genres, the add button. Pass the page's add control as `Action`, a component defined at **module level** (the card is memo'd; e.g. `ListToggleAction`). Put cards in an `<ol className={ANIME_GRID}>` of `<li className="flex min-w-0">`, with `SEASON_COVER_SIZES` / `SEARCH_COVER_SIZES` or your grid's own `sizes`. Fields AniList lacks are left out, never "TBA". The skeleton copies its box model exactly |
+| `useAnimeDetails` | `components/theme/AnimeDetailsDialog.tsx` | The 《Analyze》 details sheet behind every card: `const { openDetails, sheet } = useAnimeDetails({ Action, fallbackFocusId })`, pass `openDetails` to the cards and render `sheet` once, outside the grid. Bottom sheet on phones; speaks add/remove results itself |
+| `LinkPendingGlyph` | `components/theme/LinkPendingGlyph.tsx` | Inside a next/link `<Link>`: its arrow becomes a spinner while the navigation is pending (fixed 16px box, 100 ms delay). For links to static pages without `loading.tsx` |
+| `isBackdropEvent` | `components/theme/dialog.ts` | Backdrop-click check for a modal `<dialog>` (ignores its own scrollbar) |
 | `consoleToast` | `components/theme/consoleToast.tsx` | The Great Sage console as one toast that replaces the last (slime icon, 《Kind》 tag). Visual only: the page speaks the same line through its own sr-only `role="status"` |
 | `NewEpisodesChip` | `components/theme/NewEpisodesChip.tsx` | "2 new" (aired, not logged; Watching/Paused only). A 1 s clock leaf; nothing at 0 |
 | `NextEpisodeLine` | `components/theme/NextEpisodeLine.tsx` | A tracker card's live countdown, or the release status ("Finished airing · 12 eps"). ListCard and TrackerDemo both use it |
 | `useMinuteNow` | `components/utils/useMinuteNow.ts` | A per-minute clock for "today"-style labels; keep `useNow()` (1 s) for the countdown leaves only, or whole panels re-render every second |
-| `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component) |
+| `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component). `short` shows "Pause timers" below 420px, for a tight controls row (the season page) |
 | `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky |
 | `SageLine`, `SageTag`, `sageText`, `Skill` | `components/home/SageLine.tsx` | `scan="load"` types the line in; `scan="reveal"` needs a `data-reveal` ancestor (landing only) |
 | `Slime` | `components/home/Slime.tsx` | `mood`: idle, happy, worried, sage. `tier`: slime, named, demon, lord. Always aria-hidden. Use `size` px, and CSS width for responsive sizes |
 | `CountdownText` | `components/home/CountdownText.tsx` | Every countdown. `chip` (cards), `row` ("EP 5 in 2h 14m 03s"), `compact` (time only, right-aligned in rows). SSR-safe |
-| `NextEpisodes` | `components/mylist/NextEpisodes.tsx` | The hero's Next-episodes card fed by a list (card from 640px, ticker below) |
+| `NextEpisodes` | `components/mylist/NextEpisodes.tsx` | The hero's Next-episodes card fed by a page's shows (card from 640px, ticker below): the Airing Schedule's and the season banner's. `jump` = the footer/ticker target (`label` shown, `srLabel` ends the ticker's name, `onClick` for an explicit scroll); `restingText`, `headerNote`, `loading` (skeleton rows) |
 | `ListToggle` | `components/animev3/ListToggle.tsx` | The add/remove control. Never re-implement list writes |
 | Toasts | `app/providers.tsx` | Already themed (console navy, sage border); write messages with `sageText` |
 
@@ -148,7 +160,7 @@ Anatomy, top to bottom: a full-width wrapper → `PageBanner` → `APP_CONTAINER
 (controls `PANEL` → sections with `SECTION_TITLE_CLASS` → cards or rows) → `SagePanel` for
 every empty or error branch. **Dynamic** pages add a `loading.tsx` that draws the same banner with
 skeleton bars, so the sky doesn't flash when the data arrives. **Static or ISR pages with async
-data (`/`, `/topanime`) must not**: the cached HTML would ship the skeleton and hide the real page
+data (`/`, `/topanime`, the season pages) must not**: the cached HTML would ship the skeleton and hide the real page
 in a `<div hidden>` until JavaScript swaps it in (CLAUDE.md §9.15).
 
 ```tsx

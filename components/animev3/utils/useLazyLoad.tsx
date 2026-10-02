@@ -41,7 +41,7 @@ export default function useLazyLoad({
   }, [visibleCount, total, canFetchMore, fetchMore, chunkSize]);
 
   const sentinelRef = useCallback(
-    (node: HTMLDivElement | null) => {
+    (node: HTMLElement | null) => {
       if (!node) return;
       const observer = new IntersectionObserver(
         (entries) => {
@@ -55,5 +55,10 @@ export default function useLazyLoad({
     [onSentinelVisible]
   );
 
-  return { visibleCount, hasMore, sentinelRef };
+  /** Reveals at least `count` items (e.g. a retried page's first cards, before focusing one). */
+  const revealAtLeast = useCallback((count: number) => {
+    setRequested((current) => Math.max(current, count));
+  }, []);
+
+  return { visibleCount, hasMore, sentinelRef, revealAtLeast };
 }

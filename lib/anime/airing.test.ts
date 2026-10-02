@@ -5,7 +5,9 @@ import {
   compareByNextAiring,
   formatAirDate,
   formatCountdown,
+  isPremiereNext,
   nextAiring,
+  premiereAiring,
   premiereLabel,
   secondsUntil,
   unloggedAired,
@@ -50,6 +52,47 @@ describe("formatAirDate / premiereLabel", () => {
     expect(premiereLabel({ firstEpisode: { episode: [] }, startDate: { year: null, month: null, day: null } })).toBe(
       "Premiere TBA"
     );
+  });
+});
+
+describe("premiereAiring / isPremiereNext", () => {
+  const conan = {
+    status: "RELEASING",
+    startDate: { year: 1996, month: 1, day: 8 },
+    // AniList's earliest schedule node is EP 1067 (Dec 24, 2022), not the premiere.
+    firstEpisode: { episode: [{ airingAt: Date.UTC(2022, 11, 24, 9) / 1000, episode: 1067 }] },
+    upComingAirDate: { episode: [{ airingAt: THU_MORNING, episode: 1180 }] },
+  };
+
+  it("ignores an earliest node that isn't the first episode", () => {
+    expect(premiereAiring(conan)).toBeNull();
+    expect(premiereLabel(conan)).toBe("Jan 8, 1996");
+    expect(isPremiereNext(conan)).toBe(false);
+  });
+
+  it("trusts episode 1, and any node of a show that hasn't aired", () => {
+    const fresh = {
+      status: "RELEASING",
+      startDate: { year: 2026, month: 10, day: 1 },
+      firstEpisode: { episode: [{ airingAt: THU_MORNING, episode: 1 }] },
+    };
+    expect(premiereLabel(fresh)).toBe("Oct 1, 2026, 9:30 AM PDT");
+    // A second cour numbered from 13, not aired yet.
+    const cour2 = {
+      status: "NOT_YET_RELEASED",
+      startDate: { year: 2026, month: 10, day: 1 },
+      firstEpisode: { episode: [{ airingAt: THU_EVENING_PT, episode: 13 }] },
+      upComingAirDate: { episode: [{ airingAt: THU_EVENING_PT, episode: 13 }] },
+    };
+    expect(premiereAiring(cour2)).toEqual({ airingAt: THU_EVENING_PT, episode: 13 });
+    expect(premiereLabel(cour2)).toBe("Oct 1, 2026, 5:30 PM PDT");
+    expect(isPremiereNext(cour2)).toBe(true);
+  });
+
+  it("is a premiere when the next episode is episode 1", () => {
+    expect(isPremiereNext({ upComingAirDate: { episode: [{ airingAt: THU_MORNING, episode: 1 }] } })).toBe(true);
+    expect(isPremiereNext({ upComingAirDate: { episode: [{ airingAt: THU_MORNING, episode: 2 }] } })).toBe(false);
+    expect(isPremiereNext({ upComingAirDate: { episode: [] } })).toBe(false);
   });
 });
 

@@ -1,16 +1,14 @@
-import { HeaderSelectorWrapper } from "@/components/animev3/layoutSelector/HeaderSelectorWrapper";
 import { HeaderProvider } from "@/components/animev3/layoutSelector/HeaderProvider";
 
+/**
+ * The season pages' shell: full width (each page draws its own banner and
+ * containers) and the sort / continuing-series context, which lives here so
+ * it survives navigating between seasons.
+ */
 export default function AnimeRouteLayout({ children }: { children: React.ReactNode }) {
-  // The header's season math uses the server's clock so its markup hydrates cleanly.
-  const renderedAt = new Date().getTime();
-
   return (
-    <div id="animev3-route">
-      <HeaderProvider>
-        <HeaderSelectorWrapper renderedAt={renderedAt} />
-        {children}
-      </HeaderProvider>
-    </div>
+    <main id="season-browser" className="min-w-0 w-full overflow-x-clip pb-8 text-white [contain:inline-size]">
+      <HeaderProvider>{children}</HeaderProvider>
+    </main>
   );
 }

@@ -53,47 +53,6 @@
   background-color: #c0a0b9;
 }
 
-.scrollbar {
-  scrollbar-gutter: stable;
-}
-
-/* Sprite icons: each is a 30px cell of public/assets/animeSprites.png. */
-
-.mal {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -330px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-.crunchyroll {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -360px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.anilist {
-  display: block;
-  background: url(/assets/animeSprites.png) 0px -30px;
-  background-repeat: no-repeat;
-  background-size: 200%;
-  width: 30px;
-  height: 30px;
-}
-
-.star {
-  display: block;
-  background: url(/assets/star-32.png) 2px 1px;
-  background-repeat: no-repeat;
-  background-size: 75%;
-  width: 15px;
-  height: 15px;
-}
-
 /* ==========================================================================
    Landing page ("/"): rules Tailwind classes can't express.
    Landing animations intentionally ignore the OS reduced-motion preference.
@@ -307,4 +266,252 @@
 }
 .url-shimmer::after {
   animation: url-shimmer 6s ease-in-out 1.5s infinite;
+}
+
+/* ==========================================================================
+   Classic anime card (components/theme/AnimeInfoCard.tsx): the gel surface,
+   the Magic Sense HUD's live states, the synopsis well, the perched slime and
+   the MAL / AniList / Crunchyroll glyphs. Rules Tailwind can't express.
+   Static paint at rest; motion only on hover, on the viewer's own add, and the
+   soon dot. Motion ignores reduced-motion (owner's choice). No filter: blur.
+   ========================================================================== */
+
+/* Gel surface: a slime-blue gradient border warming into the cover's color
+   at the bottom-right (--card-edge), a top gloss, a cover-color lift on hover.
+   Owns `background`: never add a bg-* utility to .gel-card. */
+.gel-card {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(149, 204, 255, 0.075), rgba(149, 204, 255, 0) 84px) padding-box,
+    linear-gradient(rgb(30, 30, 30), rgb(30, 30, 30)) padding-box,
+    linear-gradient(
+        155deg,
+        rgba(149, 204, 255, 0.5),
+        rgba(93, 174, 241, 0.14) 32%,
+        rgb(53, 53, 53) 62%,
+        var(--card-edge, rgba(93, 174, 241, 0.45))
+      )
+      border-box;
+  box-shadow: inset 0 1px 0 rgba(230, 243, 255, 0.07);
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+.gel-card:hover,
+.gel-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(230, 243, 255, 0.09),
+    0 14px 34px -14px var(--card-glow, rgba(93, 174, 241, 0.55));
+}
+/* An episode is airing right now (CountdownText's data-state, ~30 min): an emerald rim. */
+.gel-card:has([data-state="airing"]) {
+  box-shadow:
+    inset 0 1px 0 rgba(230, 243, 255, 0.07),
+    0 0 0 1px rgba(52, 211, 153, 0.45),
+    0 10px 30px -12px rgba(52, 211, 153, 0.6);
+}
+
+/* The readout column: the cover's color washing off the art, over console navy. */
+.gel-readout {
+  background:
+    radial-gradient(130% 75% at 0% 0%, var(--card-tint, rgba(93, 174, 241, 0.17)), transparent 72%),
+    linear-gradient(180deg, rgba(10, 20, 40, 0.55), rgba(10, 20, 40, 0.2));
+  box-shadow: inset 1px 0 0 rgba(149, 204, 255, 0.12);
+}
+
+/* The synopsis well: a solid console surface with CSS-only scroll shadows
+   (background-attachment: local), so the sage glow shows only when there is
+   more text above or below. Clipped at rest: on touch it sits under the
+   card's tap target (a tap opens the details sheet, a swipe scrolls the page);
+   with a mouse it scrolls while the card is hovered. Never a tab stop. */
+.gel-well {
+  --well: rgb(13, 20, 34);
+  overflow: hidden;
+  background:
+    linear-gradient(var(--well) 35%, rgba(13, 20, 34, 0)) top / 100% 20px no-repeat local,
+    linear-gradient(rgba(13, 20, 34, 0), var(--well) 65%) bottom / 100% 20px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(149, 204, 255, 0.28), transparent) top / 100% 8px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(149, 204, 255, 0.28), transparent) bottom / 100% 8px no-repeat scroll,
+    var(--well);
+  box-shadow: inset 0 1px 0 rgba(149, 204, 255, 0.12);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(93, 174, 241, 0.55) transparent;
+}
+@media (hover: hover) and (pointer: fine) {
+  .gel-well {
+    position: relative;
+    z-index: 10;
+    scrollbar-gutter: stable;
+  }
+  .gel-card:hover .gel-well {
+    overflow-y: auto;
+  }
+}
+
+/* The Magic Sense HUD across the cover's top: navy; violet when the next
+   episode is the premiere; amber in the last hour; emerald while airing.
+   --hud-label colors the mono label line (CountdownText mode="hud"). */
+.gel-hud {
+  --hud-label: #95ccff;
+  background: linear-gradient(180deg, rgba(5, 9, 21, 0.92), rgba(5, 9, 21, 0.7));
+  box-shadow: inset 0 -1px 0 rgba(149, 204, 255, 0.3);
+}
+.gel-hud[data-tone="premiere"] {
+  --hud-label: #ddd6fe;
+  background: linear-gradient(180deg, rgba(22, 12, 46, 0.94), rgba(22, 12, 46, 0.74));
+  box-shadow: inset 0 -1px 0 rgba(167, 139, 250, 0.5);
+}
+.gel-hud:has([data-state="soon"]) {
+  --hud-label: #fcd34d;
+  background: linear-gradient(180deg, rgba(69, 26, 3, 0.92), rgba(69, 26, 3, 0.7));
+  box-shadow: inset 0 -1px 0 rgba(251, 191, 36, 0.55);
+}
+.gel-hud:has([data-state="airing"]) {
+  --hud-label: #6ee7b7;
+  background: linear-gradient(180deg, rgba(2, 44, 34, 0.94), rgba(2, 44, 34, 0.72));
+  box-shadow: inset 0 -1px 0 rgba(52, 211, 153, 0.6);
+}
+
+/* Hover gloss: one light band across the cover (transform only). */
+.gel-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(214, 240, 255, 0.28), transparent);
+  transform: translateX(-140%) skewX(-18deg);
+}
+.gel-card:hover .gel-cover::after {
+  animation: gel-sheen 1.1s ease-out;
+}
+
+/* The one playful touch: a slime droplet perches on the cover of a show on
+   your list (ListToggle's data-in-list) and gulps, with a magicule burst, when
+   you add it (data-just-added, ~0.9 s). Decor: the button says "On my list". */
+.gel-perch {
+  display: none;
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 24px;
+  height: 20px;
+  border-radius: 50% 50% 44% 44% / 64% 64% 36% 36%;
+  background:
+    radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.9) 0 8%, transparent 9%),
+    radial-gradient(ellipse 9% 13% at 37% 58%, #0f2442 0 90%, transparent 100%),
+    radial-gradient(ellipse 9% 13% at 63% 58%, #0f2442 0 90%, transparent 100%),
+    radial-gradient(circle at 38% 30%, #d6f0ff, #7cc4f7 35%, #3d95e6 70%, #2166b8);
+  box-shadow:
+    0 3px 6px -2px rgba(5, 9, 21, 0.9),
+    inset 0 -2px 3px rgba(27, 79, 145, 0.55);
+  transform-origin: 50% 100%;
+}
+.gel-card:has([data-in-list]) .gel-perch {
+  display: block;
+}
+/* The score pill keeps clear of the perch (its left edge is 31px in from the cover's right). */
+.gel-card:has([data-in-list]) .gel-pill {
+  max-width: calc(100% - 41px);
+}
+.gel-card:has([data-just-added]) .gel-perch {
+  animation: gel-gulp 500ms ease-out 2;
+}
+.gel-perch::before,
+.gel-perch::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  opacity: 0;
+  background: #bfe6ff;
+  box-shadow:
+    -9px 4px 0 0 #95ccff,
+    8px 2px 0 0 #d6f0ff,
+    -3px -6px 0 0 #7cc4f7;
+}
+.gel-perch::after {
+  box-shadow:
+    9px 5px 0 0 #95ccff,
+    -7px 1px 0 0 #d6f0ff,
+    3px -7px 0 0 #7cc4f7;
+}
+.gel-card:has([data-just-added]) .gel-perch::before {
+  animation: gel-spark 900ms ease-out both;
+}
+.gel-card:has([data-just-added]) .gel-perch::after {
+  animation: gel-spark 900ms ease-out 180ms both;
+}
+
+/* MAL / AniList / Crunchyroll: the owner's old sprite (public/assets/site-glyphs.webp,
+   120x780, two 60px columns) used as a mask, so the glyphs take the link's
+   color (currentColor). Cells are 60px, shown at 30px. */
+.site-glyph {
+  display: block;
+  width: 30px;
+  height: 30px;
+  background-color: currentColor;
+  -webkit-mask-image: url(/assets/site-glyphs.webp);
+  mask-image: url(/assets/site-glyphs.webp);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 60px 390px;
+  mask-size: 60px 390px;
+}
+.site-glyph-anilist {
+  -webkit-mask-position: 0 -30px;
+  mask-position: 0 -30px;
+}
+.site-glyph-mal {
+  -webkit-mask-position: 0 -330px;
+  mask-position: 0 -330px;
+}
+.site-glyph-crunchyroll {
+  -webkit-mask-position: 0 -360px;
+  mask-position: 0 -360px;
+}
+/* Windows High Contrast replaces background-color with Canvas, which would hide the glyphs. */
+@media (forced-colors: active) {
+  .site-glyph {
+    forced-color-adjust: none;
+    background-color: LinkText;
+  }
+}
+
+@keyframes gel-sheen {
+  0% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+@keyframes gel-gulp {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  35% {
+    transform: scale(1.14, 0.9);
+  }
+  70% {
+    transform: scale(0.94, 1.08);
+  }
+}
+@keyframes gel-spark {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px);
+  }
 }

@@ -7,9 +7,9 @@ import { seasonRouteRedirect } from "@/lib/season";
  * /anime and /anime/<year> → current season; bad years/seasons → current
  * season; "Fall"/extra segments → canonical URL.
  *
- * It runs here rather than in the page because a redirect() thrown inside a
- * loading.tsx boundary is streamed as a 200 with a client-side redirect.
- * (And not in next.config.js redirects(), which are frozen at build time.)
+ * It runs here rather than in the page because redirects must happen before
+ * streaming (CLAUDE.md §9.6), and not in next.config.js redirects(), which
+ * are frozen at build time.
  */
 export function proxy(request: NextRequest) {
   const segments = request.nextUrl.pathname.split("/").filter(Boolean).slice(1);

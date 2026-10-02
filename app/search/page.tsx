@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import type { ReactNode } from "react";
-import AnimeInfoGrid from "@/components/animev3/AnimeInfoGrid";
-import Grid from "@/components/common/Grid";
 import type { AnimeMedia } from "@/lib/anime/types";
 import { searchPath } from "@/lib/routes";
 import { AniListError, SEARCH_PAGE_SIZE, searchAnime } from "@/server/lib/anilist";
 import SearchForm from "./SearchForm";
+import SearchResults from "./SearchResults";
 import {
   MAX_PAGE,
   type SearchPageParams,
@@ -74,8 +73,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <SearchForm key={query} defaultValue={query} />
       </div>
 
-      <div className="mb-4 flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-xl font-bold sm:text-2xl">
+      <div className="mb-4 flex w-full max-w-7xl flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 id="search-results-title" tabIndex={-1} className="text-xl font-bold focus:outline-none sm:text-2xl">
           Results for <span className="break-words text-[#95ccff]">“{query}”</span>
         </h1>
         {outcome.ok && outcome.total > 0 && (
@@ -93,11 +92,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         )
       ) : (
         <>
-          <Grid>
-            {outcome.media.map((media) => (
-              <AnimeInfoGrid key={media.id} info={media} />
-            ))}
-          </Grid>
+          <SearchResults media={outcome.media} />
           <Pagination query={query} page={page} hasNextPage={outcome.hasNextPage} />
         </>
       )}

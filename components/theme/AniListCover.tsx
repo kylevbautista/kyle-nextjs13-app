@@ -44,6 +44,7 @@ export default function AniListCover({
   sizes,
   alt = "",
   loading = "lazy",
+  fetchPriority,
   className = "",
   style,
 }: {
@@ -53,6 +54,8 @@ export default function AniListCover({
   sizes: string;
   alt?: string;
   loading?: "lazy" | "eager";
+  /** "high" for the cover most likely to be the page's LCP. */
+  fetchPriority?: "high" | "low" | "auto";
   className?: string;
   style?: CSSProperties;
 }) {
@@ -71,6 +74,7 @@ export default function AniListCover({
       sizes={srcSet ? sizes : undefined}
       alt={alt}
       loading={loading}
+      fetchPriority={fetchPriority}
       decoding="async"
       className={className}
       style={style}

@@ -94,11 +94,34 @@ export const formatAirDate = (unixSeconds: number) =>
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
- * When the show premiered / premieres: the first aired episode's exact time
- * when known, otherwise AniList's (possibly partial) start date.
+ * The show's first-episode airing, when AniList's earliest schedule node is
+ * it. `firstEpisode` is the earliest node AniList holds, not necessarily
+ * episode 1 (Detective Conan's is EP 1067, from 2022), so it only counts when
+ * it is episode 1, or for a show that hasn't aired yet (a second cour can be
+ * numbered from 13).
+ */
+export function premiereAiring(media: Partial<AiringFields> | null | undefined) {
+  const node = media?.firstEpisode?.episode?.[0];
+  if (!node?.airingAt) return null;
+  if (node.episode !== 1 && media?.status !== "NOT_YET_RELEASED") return null;
+  return { airingAt: node.airingAt, episode: node.episode ?? null };
+}
+
+/** The next scheduled episode is the show's premiere (the "Premiere" badge). */
+export function isPremiereNext(media: Partial<AiringFields> | null | undefined) {
+  const next = nextAiring(media);
+  if (!next) return false;
+  if (next.episode === 1) return true;
+  return media?.status === "NOT_YET_RELEASED" && premiereAiring(media)?.airingAt === next.airingAt;
+}
+
+/**
+ * When the show premiered / premieres: the first episode's exact time when
+ * AniList has it (premiereAiring), otherwise AniList's (possibly partial)
+ * start date.
  */
 export function premiereLabel(media: Partial<AiringFields> | null | undefined) {
-  const first = media?.firstEpisode?.episode?.[0]?.airingAt;
+  const first = premiereAiring(media)?.airingAt;
   if (first) return formatAirDate(first);
   const { year, month, day } = media?.startDate ?? {};
   if (!year) return "Premiere TBA";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LINEUP_EXCLUDING, MAGIC_SENSE_LINE, SEASON_EYEBROW } from "@/lib/anime/seasonCopy";
 import type { LandingSeasonMeta } from "@/lib/landing";
 import AiringGrid, { LandingTimersToggle, ReportPanel } from "./AiringGrid";
 import {
@@ -14,6 +15,9 @@ import {
  * Chapter 1 · Magic Sense: this season's soonest episodes, counting down live.
  * The header and stat line are server-rendered; the grid is a client island.
  * `continuingIds` reaches the grid through LandingProvider (isContinuing).
+ * The demo of the season page: same eyebrow, Sage line and cards
+ * (lib/anime/seasonCopy.ts; the card is the season page's, CARD_LAYOUT in
+ * components/theme/cardLayout.ts).
  */
 export default function AiringNext({
   season,
@@ -24,15 +28,21 @@ export default function AiringNext({
   continuingIds: number[];
 }) {
   const sub = !season
-    ? "Every show this season, plus series continuing from earlier seasons, counts down live to its next episode. Times are Pacific."
+    ? "The season page counts down live to each show's next scheduled episode, series continuing from earlier seasons included. Times are Pacific."
     : season.preview
       ? `${season.label} starts ${season.startsLabel}. Here's what premieres first, plus the long-runners carrying on, each counting down live. Times are Pacific.`
-      : `Every show in ${season.label}, plus series continuing from earlier seasons, counts down live to its next episode. Times are Pacific.`;
+      : `The ${season.label} page counts down live to each show's next scheduled episode, series continuing from earlier seasons included. Times are Pacific.`;
 
+  // The season page's lineup: the same query, so the same scope (lib/anime/seasonCopy.ts).
   const stat =
     season?.showCount != null
-      ? `AniList lists ${season.showCount} ${season.label} shows${
-          season.continuingCount ? `, plus ${season.continuingCount} continuing from earlier seasons` : ""
+      ? `AniList lists ${season.showCount} ${season.label} shows, ${LINEUP_EXCLUDING}${
+          season.continuingCount
+            ? `, plus ${season.continuingCapped ? "at least " : ""}${season.continuingCount} ${
+                // Before the season starts, which series carry on is an estimate (lib/anime/carryOver.ts).
+                season.preview ? "expected to continue from earlier seasons" : "continuing from earlier seasons"
+              }`
+            : ""
         }.`
       : null;
 
@@ -49,11 +59,12 @@ export default function AiringNext({
 
       <div className="flex flex-col gap-4 laptop:flex-row laptop:items-end laptop:justify-between laptop:gap-10">
         <div data-reveal="" className="max-w-2xl">
-          <p className={EYEBROW_CLASS}>Skill 01 · Magic Sense</p>
+          <p className={EYEBROW_CLASS}>{SEASON_EYEBROW}</p>
           <SageLine kind="Notice" scan="reveal" className="mt-4">
-            Magic Sense active. Incoming episodes detected.
+            {MAGIC_SENSE_LINE}
           </SageLine>
-          <h2 id="airing-next-title" className={`mt-5 ${CHAPTER_TITLE_CLASS}`}>
+          {/* Focusable: HeroNextUp's jump and the details sheet's fallback land here. */}
+          <h2 id="airing-next-title" tabIndex={-1} className={`mt-5 scroll-mt-20 focus:outline-none ${CHAPTER_TITLE_CLASS}`}>
             Know exactly when the next episode drops.
           </h2>
           <p className={`mt-4 ${CHAPTER_SUB_CLASS}`}>{sub}</p>

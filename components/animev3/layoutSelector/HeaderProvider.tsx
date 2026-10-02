@@ -1,13 +1,9 @@
 "use client";
 import { createContext, ReactNode, useMemo, useState } from "react";
+import type { SortMode } from "@/lib/anime/seasonOrder";
 
-/** How the season grid is ordered. Lives in the /anime layout so it survives season changes. */
-export type SortMode = "countdown" | "popularity";
-
-export const SORT_LABELS: Record<SortMode, string> = {
-  countdown: "By Countdown",
-  popularity: "By Popularity",
-};
+/** How the season grid is ordered (lib/anime/seasonOrder.ts). Lives in the /anime layout so it survives season changes. */
+export type { SortMode };
 
 interface HeaderContextValue {
   sort: SortMode;

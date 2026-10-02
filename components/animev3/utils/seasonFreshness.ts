@@ -28,7 +28,10 @@ export interface RefreshedSeason {
   /** Browser time of the refresh (epoch ms). */
   at: number;
   media: AnimeMedia[];
+  /** A refresh always fetches continuing series (no season-only fallback). */
   carryOver: AnimeMedia[];
+  /** A carry-over list hit AniList's 50-item page (counts say "21+"). */
+  carryOverCapped: boolean;
   hasNextPage: boolean;
 }
 

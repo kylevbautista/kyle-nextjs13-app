@@ -71,6 +71,7 @@ describe("getAniListData", () => {
     });
     expect(result.carryOver).toEqual([]);
     expect(result.carryOverIncluded).toBe(false);
+    expect(result.carryOverCapped).toBe(false);
     expect(result.fetchedAt).toBe(Date.parse("2026-10-15T00:00:00Z"));
   });
 
@@ -95,10 +96,32 @@ describe("getAniListData", () => {
     const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
     if (!result.ok) throw new Error("expected ok");
     expect(result.carryOverIncluded).toBe(true);
+    expect(result.carryOverCapped).toBe(false);
     // Deduped, the season's own show excluded, most popular first — one request.
     expect(result.carryOver.map((m) => m.id)).toEqual([21, 30]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables.withCarryOver).toBe(true);
+  });
+
+  it("flags a carry-over list that hit AniList's 50-item page", async () => {
+    vi.setSystemTime(new Date("2026-10-15T00:00:00Z"));
+    const list = (n: number, from: number) =>
+      Array.from({ length: n }, (_, i) => ({ ...media(from + i), status: "RELEASING", startDate: { year: 2000, month: 1, day: 1 } }));
+    const body = (airing: number, ended: number) =>
+      respond({
+        data: {
+          page: { pageInfo: { hasNextPage: false }, media: [media(1)] },
+          ended: { media: list(ended, 500) },
+          airing: { media: list(airing, 100) },
+        },
+      });
+    fetchMock.mockResolvedValueOnce(body(50, 0)).mockResolvedValueOnce(body(49, 3)).mockResolvedValueOnce(body(2, 50));
+    const capped = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    const under = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    const endedCapped = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
+    expect(capped).toMatchObject({ ok: true, carryOverCapped: true });
+    expect(under).toMatchObject({ ok: true, carryOverCapped: false });
+    expect(endedCapped).toMatchObject({ ok: true, carryOverCapped: true });
   });
 
   it("asks for the oldest airing shows first when the season hasn't started", async () => {
@@ -114,7 +137,7 @@ describe("getAniListData", () => {
       .mockResolvedValueOnce(respond(pageBody([7])));
     const result = await run({ page: 1, year: 2026, season: "fall", withCarryOver: true });
     // carryOverIncluded tells callers the empty list means "not fetched", not "none".
-    expect(result).toMatchObject({ ok: true, carryOver: [], carryOverIncluded: false });
+    expect(result).toMatchObject({ ok: true, carryOver: [], carryOverIncluded: false, carryOverCapped: false });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body).variables.withCarryOver).toBe(false);
   });

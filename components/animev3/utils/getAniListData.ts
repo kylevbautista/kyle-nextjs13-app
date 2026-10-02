@@ -19,6 +19,8 @@ const ANILIST_URL =
   process.env.NEXT_PUBLIC_GRAPHQL_ANILIST ||
   "https://graphql.anilist.co";
 
+/** AniList's page size: the season pages and each carry-over list hold at most this many. */
+const PAGE_SIZE = 50;
 /** Pause after a response when fewer than this many requests remain in the window. */
 const LOW_RATE_LIMIT_REMAINING = 10;
 /** AniList currently allows ~30 requests/minute, i.e. one every 2 s. */
@@ -36,6 +38,11 @@ export type SeasonPageResult =
       carryOver: AnimeMedia[];
       /** False when `carryOver` wasn't fetched (not asked for, or the fallback ran). */
       carryOverIncluded: boolean;
+      /**
+       * A carry-over list came back full (AniList's 50 per page), so there may
+       * be more continuing series than `carryOver` holds: counts say "21+".
+       */
+      carryOverCapped: boolean;
       /** When AniList answered (epoch ms); lets a cached page tell how old its data is. */
       fetchedAt: number;
       /** HTTP requests this call sent (2 after a 429 retry). */
@@ -191,6 +198,7 @@ async function fetchSeasonPage({
         ? list.map(normalizeMedia).filter((item): item is AnimeMedia => item !== null)
         : [];
     const media = normalize(pageData.media);
+    const rawLength = (list: unknown) => (Array.isArray(list) ? list.length : 0);
 
     return {
       ok: true,
@@ -200,6 +208,9 @@ async function fetchSeasonPage({
       fetchedAt: Date.now(),
       requests,
       carryOverIncluded: withCarryOver,
+      carryOverCapped:
+        withCarryOver &&
+        (rawLength(json.data.ended?.media) >= PAGE_SIZE || rawLength(json.data.airing?.media) >= PAGE_SIZE),
       carryOver: withCarryOver
         ? selectCarryOver({
             ended: normalize(json.data.ended?.media),
