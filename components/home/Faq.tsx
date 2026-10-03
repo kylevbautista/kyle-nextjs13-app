@@ -38,7 +38,7 @@ const QUESTIONS = [
   {
     q: "import",
     question: "Can I import my MyAnimeList or AniList list?",
-    answer: "Not yet. Search covers everything on AniList, and each show is one tap to add.",
+    answer: "Not yet. Search covers all of AniList except adult titles, and each show is one tap to add.",
   },
   {
     q: "phone",

@@ -138,3 +138,18 @@ await b.close();
 ```
 
 Stop both background processes when you're done.
+
+## AniList states (errors, rate limits, loading)
+
+For pages that call AniList from the server (/search), run a small caching stub on :4100 and
+start the app with `GRAPHQL_ANILIST=http://localhost:4100 NEXT_PUBLIC_GRAPHQL_ANILIST=http://localhost:4100`.
+The stub forwards each new request body to AniList once (one at a time, ~0.7 s apart), caches the
+response on disk, and fakes the hard states by search term: e.g. `"ratelimit test"` → 429 with
+`Retry-After: 30`, `"error test"` → 500, `"slow test"` → real results after a delay (pending
+states). Point `seed.mjs` at the stub too, so seeding doesn't spend the budget twice.
+
+Two Playwright notes: `waitUntil: "networkidle"` can hang after a full-document navigation from one
+`/search` URL to another (Next leaves duplicate prefetch bodies unread; real requests are fine), so
+use `"load"` plus a short wait there; and `next dev` neither prefetches nor shows production
+streaming, so re-check budgets, titles and no-JS on `next build && next start`. Kill the servers by
+PID (`ss -ltnp`), never `pkill -f` (it matches your own shell).

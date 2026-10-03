@@ -18,7 +18,7 @@ const BAR = "rounded bg-[rgb(53,53,53)]";
  * AnimeInfoCard's placeholder, built from the same tokens, so it has the
  * card's exact box (every region has a fixed height) and swapping it for a
  * card shifts nothing. The season grid's lazy-load sentinel and /search's
- * loading grid. Hook-free, no directive (server components render it).
+ * pending grid. Hook-free, no directive (server components render it).
  */
 export default function AnimeInfoCardSkeleton() {
   return (

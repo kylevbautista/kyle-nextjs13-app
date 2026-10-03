@@ -5,7 +5,9 @@ import type { TopAnimeItem } from "@/components/animev3/utils/jinkanData/getTopA
 import Slime from "@/components/home/Slime";
 import { CrownIcon, StarIcon } from "@/components/theme/icons";
 import { CARD, FOCUS_RING_PANEL } from "@/components/theme/tokens";
+import { rememberSearchFocus } from "@/components/utils/searchArrival";
 import { searchPath } from "@/lib/routes";
+import { normalizeQuery } from "@/lib/search";
 import {
   altTitle,
   compactNumber,
@@ -217,6 +219,8 @@ export const TopAnimeRow = memo(function TopAnimeRow({
           <Link
             href={searchPath(title)}
             prefetch={false}
+            // /search focuses its results heading on arrival (the token matches what it prints).
+            onNavigate={() => rememberSearchFocus("title", normalizeQuery(title), 1)}
             className={`ml-auto inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500 md:h-9 ${FOCUS_RING_PANEL}`}
           >
             <MagnifierIcon className="hidden h-4 w-4 sm:block" />

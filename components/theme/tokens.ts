@@ -20,6 +20,9 @@ export const FOCUS_RING_PANEL =
 /** Inset ring, for tabs and controls flush against a panel edge. */
 export const FOCUS_RING_INSET =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#95ccff]";
+/** The ring on a Great Sage console surface (#0a1528): the search console, its chips and doorways. */
+export const FOCUS_RING_CONSOLE =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1528]";
 
 /* ------------------------------------------------------------------------- */
 /* Layout                                                                      */
@@ -33,19 +36,16 @@ export const CHAPTER_CLASS =
 export const APP_CONTAINER = "mx-auto w-full min-w-0 max-w-7xl px-4 sm:px-6";
 /** The poster card grid (AnimeCard): an <ol> of card <li>s, 2 → 5 columns. */
 export const ANIME_GRID = "grid min-w-0 list-none grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5";
-/** Poster covers on the season grid (ANIME_GRID in APP_CONTAINER): 5 × 234px from 1280, then 4 / 3 / 2 columns. */
+/** Poster covers on the season grid and /search (ANIME_GRID in APP_CONTAINER): 5 × 234px from 1280, then 4 / 3 / 2 columns. */
 export const SEASON_COVER_SIZES =
   "(min-width: 1280px) 234px, (min-width: 1024px) calc(25vw - 24px), (min-width: 640px) calc(33.33vw - 27px), calc(50vw - 22px)";
-/** Poster covers on /search: its <main> has a 16px gutter at every width and the grid stops at 1280px. */
-export const SEARCH_COVER_SIZES =
-  "(min-width: 1312px) 243px, (min-width: 1280px) calc(20vw - 19px), (min-width: 1024px) calc(25vw - 20px), (min-width: 640px) calc(33.33vw - 21px), calc(50vw - 22px)";
 /** Poster covers on the landing's Magic Sense grid (4 columns from 640px, 2 below). */
 export const LANDING_GRID_SIZES = "(min-width: 1152px) 262px, (min-width: 640px) 23vw, 46vw";
 
 /* ------------------------------------------------------------------------- */
 /* Classic anime card (AnimeInfoCard + its skeleton; the CSS half is the      */
 /* "Classic anime card" section of styles/globals.css). Plain strings here,   */
-/* never in the "use client" card file: the server-rendered /search loading   */
+/* never in the "use client" card file: the server-rendered /search pending   */
 /* skeleton uses them too.                                                     */
 
 /** Classic card grid (season page, /search): 1 → 2 (640) → 3 (1280) columns. */
@@ -103,6 +103,12 @@ export const PANEL =
   "rounded-2xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] shadow-[0_24px_60px_-30px_rgba(93,174,241,.35)]";
 /** A Great Sage console panel (Evolution card, stats, search console). */
 export const CONSOLE_PANEL = "rounded-2xl border border-[#95ccff]/25 bg-[#0a1428]/80";
+/** The framed Great Sage console (the landing's search chapter, the /search home): ConsoleFrame. */
+export const SAGE_CONSOLE =
+  "relative overflow-hidden rounded-2xl border border-[#95ccff]/30 bg-[#0a1528]/80 shadow-[inset_0_0_60px_-20px_rgba(149,204,255,.35),0_30px_80px_-40px_rgba(93,174,241,.45)]";
+/** CRT scanlines over a console (aria-hidden decor). */
+export const SCANLINES =
+  "pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,.04)_0_1px,transparent_1px_3px)]";
 /** Cards in a grid: lift and glow in the cover's color (set --card-glow). */
 export const CARD =
   "rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-[#95ccff]/40 hover:shadow-[0_10px_30px_-12px_var(--card-glow)] focus-within:-translate-y-0.5 focus-within:border-[#95ccff]/40 focus-within:shadow-[0_10px_30px_-12px_var(--card-glow)]";
@@ -112,8 +118,10 @@ export const EMPTY_PANEL = "rounded-2xl border border-dashed border-[#95ccff]/25
 /* ------------------------------------------------------------------------- */
 /* Controls                                                                    */
 
+// border-transparent: invisible normally, the button's edge in forced-colors mode (which drops
+// backgrounds and shadows).
 const PRIMARY_BASE =
-  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(149,204,255,.35),0_10px_40px_-10px_rgba(59,130,246,.8)] transition-colors hover:bg-blue-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-60";
+  "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-transparent bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(149,204,255,.35),0_10px_40px_-10px_rgba(59,130,246,.8)] transition-colors hover:bg-blue-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-60";
 const GHOST_BASE =
   "inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#95ccff]/40 bg-white/5 px-4 text-sm font-semibold text-[#e6f3ff] transition-colors hover:bg-white/10 aria-disabled:cursor-not-allowed aria-disabled:opacity-60";
 
@@ -126,6 +134,8 @@ export const PRIMARY_BUTTON_PANEL = `${PRIMARY_BASE} ${FOCUS_RING_PANEL}`;
 export const GHOST_BUTTON_PANEL = `${GHOST_BASE} ${FOCUS_RING_PANEL}`;
 /** Quiet text button ("Pause live timers", "Clear filters"). */
 export const QUIET_BUTTON = `inline-flex h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-[rgb(200,206,218)] transition-colors hover:bg-white/5 hover:text-white ${FOCUS_RING}`;
+/** A console doorway's link ("See the rankings →", "Browse this season →"); full width below 400px. */
+export const DOORWAY_LINK = `inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#95ccff]/40 bg-white/5 px-4 text-sm font-semibold text-[#e6f3ff] transition-colors hover:bg-white/10 max-[399px]:w-full ${FOCUS_RING_CONSOLE}`;
 /** Inline link in body copy. */
 export const TEXT_LINK = `rounded text-[#95ccff] underline-offset-2 hover:text-white hover:underline ${FOCUS_RING}`;
 /** Text input / select on a panel (rgb 30) or the page. */

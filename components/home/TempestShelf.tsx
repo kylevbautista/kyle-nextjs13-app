@@ -2,9 +2,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import AniListCover from "@/components/theme/AniListCover";
+import { rememberSearchFocus } from "@/components/utils/searchArrival";
 import { nextAiring } from "@/lib/anime/airing";
 import type { TempestEntry } from "@/lib/landing";
 import { searchPath } from "@/lib/routes";
+import { normalizeQuery } from "@/lib/search";
 import CountdownText from "./CountdownText";
 import LandingAddButton from "./LandingAddButton";
 import { useLanding } from "./LandingProvider";
@@ -238,6 +240,8 @@ function ShelfCard({
             <Link
               href={searchPath(entry.romaji)}
               prefetch={false}
+              // /search focuses its results heading on arrival.
+              onNavigate={() => rememberSearchFocus("title", normalizeQuery(entry.romaji), 1)}
               className="flex h-11 w-full items-center justify-center rounded-lg border border-[#95ccff]/40 bg-white/5 text-xs font-bold text-[#e6f3ff] transition-colors hover:bg-white/10 md:h-9 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]"
             >
               Find it<span className="sr-only">: {entry.fullTitle}</span>

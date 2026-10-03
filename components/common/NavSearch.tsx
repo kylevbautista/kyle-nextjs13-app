@@ -1,9 +1,9 @@
 "use client";
 import { Suspense, useId, useRef, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { rememberSearchFocus, repeatSearchArrival } from "@/components/utils/searchArrival";
 import { searchPath } from "@/lib/routes";
-
-const MAX_QUERY_LENGTH = 100;
+import { MAX_QUERY_LENGTH, normalizeQuery } from "@/lib/search";
 
 /**
  * Plain GET form (works before hydration / without JS); with JS it navigates
@@ -16,10 +16,12 @@ function SearchForm({ initialQuery }: { initialQuery: string }) {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const query = String(new FormData(event.currentTarget).get("q") ?? "")
-      .trim()
-      .slice(0, MAX_QUERY_LENGTH);
+    const query = normalizeQuery(String(new FormData(event.currentTarget).get("q") ?? ""));
+    // /search focuses its results heading when they arrive (the input is blurred here).
+    const arriving = rememberSearchFocus("title", query, 1);
     inputRef.current?.blur();
+    // The search already on screen: nothing arrives, so say the outcome again now.
+    if (!arriving) repeatSearchArrival();
     router.push(searchPath(query));
   };
 
@@ -81,8 +83,8 @@ function SearchForm({ initialQuery }: { initialQuery: string }) {
 function SearchFormWithQuery() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const query = pathname === "/search" ? (searchParams.get("q") ?? "") : "";
-  return <SearchForm initialQuery={query.slice(0, MAX_QUERY_LENGTH)} />;
+  const query = pathname === "/search" ? normalizeQuery(searchParams.get("q")) : "";
+  return <SearchForm initialQuery={query} />;
 }
 
 export default function NavSearch() {

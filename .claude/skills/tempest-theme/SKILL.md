@@ -10,13 +10,16 @@ The landing page (`/`) set the look the owner wants everywhere: a fan theme buil
 the **Great Sage** speaking in system messages (`《Notice》 …`), and an original slime mascot
 that **evolves as your list grows**. It is playful in its framing and exact in its content.
 
-My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`), Top Anime (`/topanime`) and the
-season browser (`/anime/<year>/<season>`) were redesigned with this kit. Read one of them before
-starting a new page: `app/user/_client/MyList.tsx` and `components/mylist/AiringSchedule.tsx` for
-dynamic, signed-in pages; `app/topanime/` for a static ISR page (server-rendered banner and asides,
-one client island, pure `ranking.ts` helpers with tests); `components/animev3/PageBase.tsx` +
-`components/animev3/season/` for a static ISR page whose client root renders everything, with every
-line in a tested copy module (`lib/anime/seasonCopy.ts`).
+My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`), Top Anime (`/topanime`), the
+season browser (`/anime/<year>/<season>`) and Search (`/search`) were redesigned with this kit.
+Read one of them before starting a new page: `app/user/_client/MyList.tsx` and
+`components/mylist/AiringSchedule.tsx` for dynamic, signed-in pages; `app/topanime/` for a static
+ISR page (server-rendered banner and asides, one client island, pure `ranking.ts` helpers with
+tests); `components/animev3/PageBase.tsx` + `components/animev3/season/` for a static ISR page
+whose client root renders everything, with every line in a tested copy module
+(`lib/anime/seasonCopy.ts`); `app/search/` for a dynamic server page that streams its data into a
+stable banner (keyed Suspense boundaries instead of `loading.tsx`, one status line in its layout,
+`lib/anime/searchCopy.ts`).
 
 ## The rules
 
@@ -24,7 +27,8 @@ line in a tested copy module (`lib/anime/seasonCopy.ts`).
    List's card, `ScheduleDemo` shows the Airing Schedule's week panel, `HeroNextUp` shows the
    Next-episodes card, and the Magic Sense chapter's cards *are* the season page's card
    (`CARD_LAYOUT`: the same card, the same details sheet, the same eyebrow and Sage line
-   constants). The Quest Log keeps the compact poster card on purpose (a picker, not a demo). A page that has a demo uses the demo's markup and classes. If you change
+   constants). `SageSearch` is the /search home: the same `ConsoleFrame`, `SearchConsole`,
+   `SearchChips` and `SageDoorway`. The Quest Log keeps the compact poster card on purpose (a picker, not a demo). A page that has a demo uses the demo's markup and classes. If you change
    one side, change the other in the same PR. The owner noticed when they drifted apart.
 2. **Real data only.** Stats, counts, tiers and messages come from actual list or AniList data.
    Never show placeholder numbers or invented "activity".
@@ -110,7 +114,7 @@ name everywhere:
 | Season browser (`/anime/<year>/<season>`), countdowns | `Skill 01 · Magic Sense` | done |
 | My List (`/user`) | `Skill 02 · Predator` (the list is the Stomach) | done |
 | Airing Schedule (`/mylist`) | `Skill 03 · Thought Acceleration` | done |
-| Search (`/search`) | `Skill 04 · Great Sage` | landing; page not yet redesigned |
+| Search (`/search`) | `Skill 04 · Great Sage` | done |
 | Top Anime (`/topanime`) | `Rankings · The Octagram` (the eight Demon Lords = ranks 1–8) | done |
 | Sharing a list | `Thought Communication` | landing quest 3, share strip |
 | Signing in | "Naming" (`Naming complete.`); tiers in `lib/landing.ts` | landing |
@@ -124,8 +128,10 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 
 | What | Where | Notes |
 |---|---|---|
-| Class tokens | `components/theme/tokens.ts` | Focus rings, containers, type, `PANEL`, `CONSOLE_PANEL`, `CARD` (lift + cover-color glow via `--card-glow`), `EMPTY_PANEL`, buttons (`*_PANEL` variants on rgb-30 surfaces), `FIELD`, `SHELF`/`SHELF_ON`/`SHELF_OFF`, `HAIRLINE`, `DAY_TINTS` |
-| `PageBanner` | `components/theme/PageBanner.tsx` | The night-sky header for app pages: eyebrow, typed-in SageLine, h1 (`titleId`, focusable, `scroll-mt-20`), sub, `children` (actions, stats), `aside` (right column from 1024px). `asideClassName="hidden lg:block"` for a desktop-only aside (keeps the phone banner short). `sageKey` re-types the Sage line when a live line changes (key it on the text, never the clock) |
+| Class tokens | `components/theme/tokens.ts` | Focus rings (`FOCUS_RING_CONSOLE` on a #0a1528 console), containers, type, `PANEL`, `CONSOLE_PANEL`, `SAGE_CONSOLE` + `SCANLINES` (the framed console), `CARD` (lift + cover-color glow via `--card-glow`), `EMPTY_PANEL`, buttons (`*_PANEL` variants on rgb-30 surfaces; the primary has a transparent border, its edge in forced colors), `DOORWAY_LINK`, `FIELD`, `SHELF`/`SHELF_ON`/`SHELF_OFF`, `HAIRLINE`, `DAY_TINTS` |
+| `PageBanner` | `components/theme/PageBanner.tsx` | The night-sky header for app pages: eyebrow, `lead` (under the eyebrow: /search's box on top), typed-in SageLine (or `sageSlot`: your own node, e.g. a Suspense boundary that streams the line), h1 (`titleId`, focusable, `scroll-mt-20`), sub, `children` (actions, stats), `aside` (right column from 1024px). `asideClassName="hidden lg:block"` for a desktop-only aside (keeps the phone banner short). `sageKey` re-types the Sage line when a live line changes (key it on the text, never the clock) |
+| `SearchConsole`, `SearchChips` | `components/theme/SearchConsole.tsx` | The Great Sage search console: a GET `/search` form (next/form, never prefetched: a prefetch of bare /search leaks its title), `size` `large` (stacked on phones) or `compact` (one row, icon-only Analyze below 360px), `showLabel`, `autoFocus`, `onSubmit` for analytics; leaves /search's arrival token. `SearchChips`: "Try:" + the `SEARCH_EXAMPLES` chips (44px hit area, no prefetch). /search and the landing's chapter |
+| `ConsoleFrame`, `SageDoorway` | `components/theme/{ConsoleFrame,SageDoorway}.tsx` | The framed console (glow border, scanlines, corner brackets; hook-free) and a doorway row: icon, `《kind》 line`, "**Lead:** text", one `DOORWAY_LINK`. Doorways ask, so `kind="Question"` |
 | `StatGrid`, `Stat` | `components/theme/StatGrid.tsx` | The console stat readout (My List's stats, Top Anime's glance). Optional `note` (with `noteClassName`, e.g. `hidden sm:block`). Four across on phones |
 | `TrophyIcon`, `CrownIcon`, `StarIcon` | `components/theme/icons.tsx` | Gold theme icons, aria-hidden. The crown is the Demon Lord slime's |
 | `EvolutionCard` | `components/theme/EvolutionCard.tsx` | `layout="banner"` (row on phones, slime on a magic circle from 1024px) or `"stack"` (Quest Log). `gulpKey` replays the gulp when it grows |
@@ -134,7 +140,7 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `AniListCover` | `components/theme/AniListCover.tsx` | **New AniList covers shown wider than ~100px.** A `srcset` of AniList's files (100/230/460px), so each screen gets the sharpest it needs, up to AniList's largest upload (some new shows only have 230px); `next/image` can't (images are unoptimized). Pass all the cover URLs and a real `sizes`; `fetchPriority="high"` for the likely LCP image |
 | `AnimeInfoCard`, `AnimeInfoCardSkeleton` | `components/theme/AnimeInfoCard.tsx` | **The season card (default, "classic").** The owner's original layout in the theme: gel surface warmed by the cover color (`coverTint`), title over genre chips, the cover with the Magic Sense HUD (`CountdownText mode="hud"`: violet premiere, amber last hour, emerald airing) + badge + "★ 8.2 · TV" pill + a perched slime on listed shows (gulps on your own add: `ListToggle`'s `data-in-list` / `data-just-added`), a Great Sage readout (Studio / Premiere / Source / Episodes), the synopsis well (swipe to scroll on touch, hover-scroll with a mouse), a pill add button and the MAL / AniList / Crunchyroll glyphs. Class strings in `tokens.ts` (`INFO_*`), CSS in the "Classic anime card" section of `globals.css`. Labels from `lib/anime/cardLabels.ts`: unknown fields are left out |
 | `cardLayout` | `components/theme/cardLayout.ts` | **The one switch:** `ANIME_CARD_LAYOUT = "classic" \| "poster"` for the season page, `/search` and the landing's Magic Sense. `CARD_LAYOUT` bundles the card, skeleton, add control (`ListToggleFillAction` / `ListToggleAction`), grid (`INFO_GRID` / `ANIME_GRID`), cover sizes, waiting skeletons, end-card span and the landing grid |
-| `AnimeCard`, `AnimeCardSkeleton` | `components/theme/AnimeCard.tsx` | The poster card (switchable via `cardLayout`; always the Quest Log's `compact`): countdown chip or release status, Premiere/Continuing badge, title, "★ 7.6 · TV · Studio", genres, the add button. Pass the page's add control as `Action`, a component defined at **module level** (the card is memo'd; e.g. `ListToggleAction`). Put cards in an `<ol className={ANIME_GRID}>` of `<li className="flex min-w-0">`, with `SEASON_COVER_SIZES` / `SEARCH_COVER_SIZES` or your grid's own `sizes`. Fields AniList lacks are left out, never "TBA". The skeleton copies its box model exactly |
+| `AnimeCard`, `AnimeCardSkeleton` | `components/theme/AnimeCard.tsx` | The poster card (switchable via `cardLayout`; always the Quest Log's `compact`): countdown chip or release status, Premiere/Continuing badge, title, "★ 7.6 · TV · Studio", genres, the add button. Pass the page's add control as `Action`, a component defined at **module level** (the card is memo'd; e.g. `ListToggleAction`). Put cards in an `<ol className={ANIME_GRID}>` of `<li className="flex min-w-0">`, with `SEASON_COVER_SIZES` (the season page and /search) or your grid's own `sizes`. Fields AniList lacks are left out, never "TBA". The skeleton copies its box model exactly |
 | `useAnimeDetails` | `components/theme/AnimeDetailsDialog.tsx` | The 《Analyze》 details sheet behind every card: `const { openDetails, sheet } = useAnimeDetails({ Action, fallbackFocusId })`, pass `openDetails` to the cards and render `sheet` once, outside the grid. Bottom sheet on phones; speaks add/remove results itself |
 | `LinkPendingGlyph` | `components/theme/LinkPendingGlyph.tsx` | Inside a next/link `<Link>`: its arrow becomes a spinner while the navigation is pending (fixed 16px box, 100 ms delay). For links to static pages without `loading.tsx` |
 | `isBackdropEvent` | `components/theme/dialog.ts` | Backdrop-click check for a modal `<dialog>` (ignores its own scrollbar) |
@@ -159,9 +165,13 @@ The landing-only pieces stay in `components/home` and are not for other pages: `
 Anatomy, top to bottom: a full-width wrapper → `PageBanner` → `APP_CONTAINER` content
 (controls `PANEL` → sections with `SECTION_TITLE_CLASS` → cards or rows) → `SagePanel` for
 every empty or error branch. **Dynamic** pages add a `loading.tsx` that draws the same banner with
-skeleton bars, so the sky doesn't flash when the data arrives. **Static or ISR pages with async
-data (`/`, `/topanime`, the season pages) must not**: the cached HTML would ship the skeleton and hide the real page
-in a `<div hidden>` until JavaScript swaps it in (CLAUDE.md §9.15).
+skeleton bars, so the sky doesn't flash when the data arrives, unless the banner depends on the
+URL's query: `loading.tsx` can't read it (its server fallback paints first on full loads) and Next
+doesn't show it for `?query` navigations within the page. /search instead renders its banner at
+once and streams the data through `<Suspense key={query…}>` boundaries (CLAUDE.md §5.4). **Static
+or ISR pages with async data (`/`, `/topanime`, the season pages) must not**: the cached HTML would
+ship the skeleton and hide the real page in a `<div hidden>` until JavaScript swaps it in
+(CLAUDE.md §9.15).
 
 ```tsx
 // app/<route>/layout.tsx: full width, the page draws its own containers.
@@ -196,7 +206,7 @@ import { APP_CONTAINER, GHOST_BUTTON, PANEL, PRIMARY_BUTTON, SECTION_TITLE_CLASS
 {/* Empty or error: */}
 <SagePanel kind="Report" mood="worried" title="Nothing found"
   actions={<><a className={PRIMARY_BUTTON}>Browse this season</a><a className={GHOST_BUTTON}>Top Anime</a></>}>
-  No anime matched “xyz”. Try the romaji title.
+  No anime found for “xyz”. This search skips adult titles. Try the romaji title.
 </SagePanel>
 ```
 

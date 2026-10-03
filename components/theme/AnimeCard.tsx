@@ -41,7 +41,7 @@ export interface AnimeGridCardProps {
   eager?: boolean;
   /** fetchPriority="high" (the likely LCP image). */
   priority?: boolean;
-  /** 3 by default; /search's cards are h2s, the Quest Log's h4s (inside h3 quest rows). */
+  /** 3 by default (season page, /search, landing); the Quest Log's h4s (inside h3 quest rows). */
   headingLevel?: 2 | 3 | 4;
 }
 
