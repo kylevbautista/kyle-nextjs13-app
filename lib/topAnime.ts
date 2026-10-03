@@ -7,10 +7,13 @@
  * reads it back with readTopAnimePage. Only the fields the page renders are
  * kept.
  *
- * MAL's ranking has one show per rank and no adult titles (measured over the
- * top 2,000: no gaps, no repeats, nsfw=true changes nothing). Pages are
- * fetched and cached separately, so a show can still cross a page boundary
- * between fetches: dedupeByMalId keeps the first copy.
+ * MAL's ranking has one show per rank (the top 2,000 measured: no gaps, no
+ * repeats). Its list goes on past the ranked shows: from about #22,900 every
+ * entry is unranked (no `rank` of its own), so toTopAnimePage ends the list at
+ * the first one. Entries rated Rx (adult) are left out, as everywhere on the
+ * site; the first is near #14,900. Pages are fetched and cached separately, so
+ * a show can still cross a page boundary between fetches: dedupeByMalId keeps
+ * the first copy.
  */
 
 export interface TopAnimeItem {
@@ -48,7 +51,7 @@ export const MAX_TOP_ANIME_PAGE = 2000;
 
 /** The ranking fields requested from MAL (the rest of each entry is never sent). */
 export const MAL_RANKING_FIELDS =
-  "alternative_titles,mean,media_type,num_episodes,start_season,start_date,num_list_users";
+  "rank,rating,alternative_titles,mean,media_type,num_episodes,start_season,start_date,num_list_users";
 
 /** A ?page value → a page number, or null when it isn't a whole number in 1…MAX_TOP_ANIME_PAGE. */
 export function parseTopAnimePage(value: string | null | undefined): number | null {
@@ -96,9 +99,15 @@ export const mediaTypeLabel = (value: unknown): string | null => {
   return type ? (MEDIA_TYPE_LABELS[type.toLowerCase()] ?? null) : null;
 };
 
-/** The ~225px-wide cover: plenty for a ≤ 96px poster at 2x. */
-const pickImage = (picture: unknown): string | null =>
-  isRecord(picture) ? (asHttpsUrl(picture.medium) ?? asHttpsUrl(picture.large)) : null;
+/** MAL's CDN also serves its covers as WebP at the same path (175 of 175 checked), at about a third of the bytes. */
+const MAL_JPEG = /^(https:\/\/cdn\.myanimelist\.net\/images\/.+)\.jpe?g$/i;
+
+/** The ~225px-wide cover (WebP): plenty for a ≤ 96px poster at 2x. */
+const pickImage = (picture: unknown): string | null => {
+  if (!isRecord(picture)) return null;
+  const url = asHttpsUrl(picture.medium) ?? asHttpsUrl(picture.large);
+  return url ? url.replace(MAL_JPEG, "$1.webp") : null;
+};
 
 /** The season's year, else the start date's ("2003", "2003-04" or "2003-04-05"). */
 const pickYear = (node: RawRecord): number | null => {
@@ -160,16 +169,28 @@ const byRank = (a: TopAnimeItem, b: TopAnimeItem) => {
   return a.rank - b.rank;
 };
 
-/** MAL's `{ data, paging }` → a page, or null when the body isn't a ranking. `paging.next` is absent on the last page. */
+/** An entry past the end of MAL's ranked shows: the show has no rank of its own ("N/A" on MAL). */
+const isUnranked = (raw: unknown) => isRecord(raw) && isRecord(raw.node) && asPositiveInt(raw.node.rank) === null;
+
+const isAdult = (raw: unknown) =>
+  isRecord(raw) && isRecord(raw.node) && asString(raw.node.rating)?.toLowerCase() === "rx";
+
+/**
+ * MAL's `{ data, paging }` → a page, or null when the body isn't a ranking. The ranking ends at the
+ * first unranked entry (even mid-page) or where MAL sends no `paging.next`. Rx entries are dropped.
+ */
 export function toTopAnimePage(json: unknown, page: number): TopAnimePage | null {
   if (!isRecord(json) || !Array.isArray(json.data)) return null;
-  const items = json.data
+  const end = json.data.findIndex(isUnranked);
+  const ranked = end === -1 ? json.data : json.data.slice(0, end);
+  const items = ranked
+    .filter((raw) => !isAdult(raw))
     .map(toTopAnimeItem)
     .filter((item): item is TopAnimeItem => item !== null);
   const paging = isRecord(json.paging) ? json.paging : {};
   return {
     items: dedupeByMalId([], items).sort(byRank),
-    hasNextPage: asString(paging.next) !== null,
+    hasNextPage: end === -1 && asString(paging.next) !== null,
     currentPage: page,
   };
 }

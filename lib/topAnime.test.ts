@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAL_RANKING_FIELDS,
   MAX_TOP_ANIME_PAGE,
   dedupeByMalId,
   mediaTypeLabel,
@@ -15,6 +16,8 @@ const malEntry = (node: Record<string, unknown> = {}, rank: unknown = 1) => ({
   node: {
     id: 52991,
     title: "Sousou no Frieren",
+    rank: 1,
+    rating: "pg_13",
     main_picture: {
       medium: "https://cdn.myanimelist.net/images/anime/1015/138006.jpg",
       large: "https://cdn.myanimelist.net/images/anime/1015/138006l.jpg",
@@ -39,7 +42,7 @@ describe("toTopAnimeItem", () => {
       title: "Sousou no Frieren",
       titleEnglish: "Frieren: Beyond Journey's End",
       score: 9.25,
-      imageUrl: "https://cdn.myanimelist.net/images/anime/1015/138006.jpg",
+      imageUrl: "https://cdn.myanimelist.net/images/anime/1015/138006.webp",
       type: "TV",
       episodes: 28,
       year: 2023,
@@ -55,7 +58,7 @@ describe("toTopAnimeItem", () => {
     const item = toTopAnimeItem(
       malEntry({
         alternative_titles: { en: "", ja: "x" },
-        main_picture: { large: "https://cdn.myanimelist.net/a.jpg" },
+        main_picture: { large: "https://img.example.test/a.jpg" },
         start_season: undefined,
         start_date: "2003",
         num_episodes: 0,
@@ -66,7 +69,7 @@ describe("toTopAnimeItem", () => {
     );
     expect(item).toMatchObject({
       titleEnglish: null,
-      imageUrl: "https://cdn.myanimelist.net/a.jpg",
+      imageUrl: "https://img.example.test/a.jpg", // only MAL's own CDN is switched to WebP
       year: 2003, // from start_date
       episodes: null, // MAL's 0 = not known yet
       score: null,
@@ -91,6 +94,22 @@ describe("toTopAnimeItem", () => {
 
   it("names a show with no title by its id", () => {
     expect(toTopAnimeItem(malEntry({ title: " ", alternative_titles: {} }))?.title).toBe("MyAnimeList #52991");
+  });
+});
+
+describe("covers", () => {
+  it("uses the WebP twin of MAL's JPEG covers and leaves other URLs alone", () => {
+    const image = (main_picture: unknown) => toTopAnimeItem(malEntry({ main_picture }))?.imageUrl;
+    expect(image({ medium: "https://cdn.myanimelist.net/images/anime/3/88469.jpg" })).toBe(
+      "https://cdn.myanimelist.net/images/anime/3/88469.webp"
+    );
+    expect(image({ medium: "https://cdn.myanimelist.net/images/anime/3/88469.webp" })).toBe(
+      "https://cdn.myanimelist.net/images/anime/3/88469.webp"
+    );
+    expect(image({ medium: "https://cdn.myanimelist.net/r/100x140/images/a.jpg?s=1" })).toBe(
+      "https://cdn.myanimelist.net/r/100x140/images/a.jpg?s=1"
+    );
+    expect(image(undefined)).toBeNull();
   });
 });
 
@@ -129,6 +148,37 @@ describe("toTopAnimePage", () => {
   it("has no next page when MAL sends no paging.next", () => {
     expect(toTopAnimePage({ data: [malEntry()], paging: { previous: "x" } }, 9)?.hasNextPage).toBe(false);
     expect(toTopAnimePage({ data: [] }, 9)?.hasNextPage).toBe(false);
+  });
+
+  it("ends the ranking at the first unranked entry, even mid-page", () => {
+    // From about #22,900 MAL lists shows with no rank of their own ("N/A"), re-sorted by score.
+    const page = toTopAnimePage(
+      {
+        data: [malEntry({ id: 1, rank: 22906 }, 22907), malEntry({ id: 2, rank: 22907 }, 22908), malEntry({ id: 3, rank: null }, 22909), malEntry({ id: 4, rank: null }, 22910)],
+        paging: { next: "https://api.myanimelist.net/v2/anime/ranking?offset=22925" },
+      },
+      917
+    );
+    expect(page?.items.map((item) => item.malId)).toEqual([1, 2]);
+    expect(page?.hasNextPage).toBe(false);
+    expect(toTopAnimePage({ data: [malEntry({ rank: null })], paging: { next: "x" } }, 918)).toEqual({
+      items: [],
+      hasNextPage: false,
+      currentPage: 918,
+    });
+  });
+
+  it("leaves out Rx (adult) entries, like the rest of the site", () => {
+    const page = toTopAnimePage(
+      { data: [malEntry({ id: 1 }, 14919), malEntry({ id: 2, rating: "rx" }, 14920), malEntry({ id: 3, rating: "r+" }, 14921)], paging: { next: "x" } },
+      597
+    );
+    expect(page?.items.map((item) => item.malId)).toEqual([1, 3]);
+    expect(page?.hasNextPage).toBe(true);
+  });
+
+  it("asks MAL for the fields the end-of-ranking and adult checks need", () => {
+    expect(MAL_RANKING_FIELDS.split(",")).toEqual(expect.arrayContaining(["rank", "rating", "num_list_users"]));
   });
 
   it("returns null for a body that isn't a ranking", () => {

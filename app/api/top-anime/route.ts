@@ -3,15 +3,21 @@ import { parseTopAnimePage } from "@/lib/topAnime";
 import { fetchTopAnimePage, MyAnimeListError } from "@/server/lib/myanimelist";
 
 /** Like /topanime itself: the ranking moves slowly. */
-const CACHE_SECONDS = 3600;
+const CDN_SECONDS = 3600;
+/** How long the CDN may serve an expired page while it fetches a fresh one. */
+const CDN_STALE_SECONDS = 300;
 
 /**
  * GET ?page=N → { page: TopAnimePage }: one page of MyAnimeList's ranking for
  * /topanime's "Show more". The browser can't call MAL itself (no CORS, and
- * the Client ID stays on the server). Each page is cached for an hour in
- * Next's data cache and at the CDN, so a page costs MAL about one request an
- * hour however many people load it. Errors: 400 bad page, 429 when MAL rate
- * limits (its Retry-After passed on), 502 for anything else upstream.
+ * the Client ID stays on the server).
+ *
+ * One cache layer, the CDN (s-maxage 1 h): a page is at most about an hour
+ * old. (Next's data cache isn't used here: it can serve a stale page of any
+ * age while it refreshes.) One MAL attempt per request, so a burst of misses
+ * isn't multiplied by retries, and server/lib/myanimelist.ts pauses this
+ * instance after a failure. Errors: 400 bad page, 429 when MAL rate limits
+ * (with the wait in Retry-After), 502 for anything else upstream.
  */
 export async function GET(request: NextRequest) {
   const page = parseTopAnimePage(request.nextUrl.searchParams.get("page"));
@@ -19,10 +25,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "page must be a whole number from 1" }, { status: 400 });
   }
   try {
-    const result = await fetchTopAnimePage(page, { attempts: 2, cacheSeconds: CACHE_SECONDS });
+    const { page: result } = await fetchTopAnimePage(page, { attempts: 1 });
     return NextResponse.json(
       { page: result },
-      { headers: { "Cache-Control": `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=${CACHE_SECONDS}` } }
+      { headers: { "Cache-Control": `public, s-maxage=${CDN_SECONDS}, stale-while-revalidate=${CDN_STALE_SECONDS}` } }
     );
   } catch (err) {
     console.error("Top anime page failed:", err);

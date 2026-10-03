@@ -62,7 +62,7 @@ throwaway DB (e.g. `mongodb-memory-server`). Insert a `users` doc and a
    │                       / (landing) ......... ISR 600s ── server/lib/landing ─ ≤ 2 req (1 h data cache) ─► AniList
    │                       /anime/[...anime] ... ISR 300s ── getAniListData ─────────────► AniList
    │                       /topanime ........... ISR 3600s ─ server/lib/myanimelist ─────► MyAnimeList
-   │                       /api/top-anime ...... route handler (data cache + CDN 1 h) ───► MyAnimeList
+   │                       /api/top-anime ...... route handler (CDN 1 h) ────────────────► MyAnimeList
    │                       /search ............. dynamic ─── server/lib/anilist ─────────► AniList
    │                       /user/<id>, /mylist/<id> dynamic ─ server/lib/userList ──┬────► AniList (stale refresh)
    │                       /api/anime-list/* ... route handlers ────────────────────┤
@@ -100,7 +100,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/api/anime-list/ids` | `app/api/anime-list/ids/route.ts` | – | session | `GET` → `{ids}` on the caller's list (401 signed out) |
 | `/api/anime-list/<animeId>/user-data` | `app/api/anime-list/[animeId]/user-data/route.ts` | – | session | `PATCH {userData}` → `{message, userData}` (validated, normalized) |
 | `/api/anime-list/user/<userId>` | `app/api/anime-list/user/[userParam]/route.ts` | – | public | `GET` → `{list}` (refreshes stale airing data) |
-| `/api/top-anime?page=` | `app/api/top-anime/route.ts` | – | public | `GET` → `{page}`: one 25-show page of MAL's ranking for "Show more" (the browser can't call MAL: no CORS, and the Client ID stays server-side). Cached 1 h in Next's data cache and at the CDN; 400 bad page, 429 (MAL's Retry-After), 502 |
+| `/api/top-anime?page=` | `app/api/top-anime/route.ts` | – | public | `GET` → `{page}`: one 25-show page of MAL's ranking for "Show more" (the browser can't call MAL: no CORS, and the Client ID stays server-side). Cached 1 h at the CDN only (Next's data cache would serve a stale page of any age); one MAL attempt per request, and the instance pauses after a failure; 400 bad page, 429 (MAL's wait in Retry-After), 502 |
 | `/api/auth/*` | `app/api/auth/[...nextauth]/route.ts` | – | – | NextAuth |
 
 `app/robots.ts` keeps crawlers off `/search` (each hit costs an AniList request), list pages, `/api`
@@ -144,7 +144,7 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 | Tracker rules | +1 on Plan to Watch/Paused moves the show to Watching; auto-complete at the last episode; dates auto-filled; score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
 | Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows ("The whole week" on the Next-episodes card opens All); countdown rows with list status/progress and the "N new" chip (visitors see whose, and get + Add); a day-aware Great Sage line ("Now airing…", "Today: 2 episodes left, the next at 7:30 AM PT."); share strip and "Not airing right now" in a side column for the owner, below the panel for visitors | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" and the banner line until the per-minute clock (`useMinuteNow`) hydrates; the selected tab lives in `?day=` | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
-| Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. MAL's ranking has one show per rank and no adult titles; pages are cached separately, so a show that crosses a page boundary is deduped and nothing on the page calls two shows at one rank a tie | Page 1 server-rendered from MAL's API (`server/lib/myanimelist.ts`; a default, uncached fetch, so "fetched at" is the render's time; throws on failure); later pages from the browser one at a time through `/api/top-anime` (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. MAL's response is parsed in `lib/topAnime.ts` (ranking position, not the show's lagging `rank` field; tested). Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `app/api/top-anime/route.ts`, `lib/topAnime.ts`, `server/lib/myanimelist.ts`, `components/theme/{StatGrid,icons}.tsx` |
+| Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. MAL's ranking has one show per rank; its list ends where the unranked entries begin (about #22,900), and Rx (adult) entries are left out. Pages are cached separately, so a show that crosses a page boundary is deduped and nothing on the page calls two shows at one rank a tie | Page 1 server-rendered from MAL's API (`server/lib/myanimelist.ts`; fresh in every ISR render, but `next build` may reuse a copy cached by a build up to 1 h earlier, so the banner's "fetched" time is MAL's own Date header; throws on failure); later pages from the browser one at a time through `/api/top-anime` (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status; errors say whether MAL or the reader's connection failed, with MAL's Retry-After); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. MAL's response is parsed in `lib/topAnime.ts` (ranking position, not the show's lagging `rank` field; WebP covers; tested). Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `app/api/top-anime/route.ts`, `lib/topAnime.ts`, `server/lib/myanimelist.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 5 live countdown cards (the season page's card via `CARD_LAYOUT`, opening the same details sheet; 7 in the poster layout) with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the "N new" chip and countdown line use the real show's schedule | `components/home/TrackerDemo.tsx` |
@@ -395,7 +395,8 @@ drops duplicates, re-sanitizes, and bounds dates.
 | Layer | Where | Notes |
 |---|---|---|
 | ISR | season pages 300 s, `/topanime` 3600 s, `/` 600 s | Season/Top Anime: upstream failure **throws** → last good page kept. `/` throws only for the season request (the build renders fallbacks) |
-| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s · MAL ranking pages for `/api/top-anime`, 3600 s | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached. `/api/top-anime` also sends `s-maxage=3600`, so the CDN answers repeat "Show more"s |
+| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s · `next build`'s implicit copy of `/topanime`'s page 1 (the segment's 3600 s) | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached. A build within an hour of the last reuses page 1, so its banner time comes from MAL's Date header |
+| CDN | `/api/top-anime?page=N`: `s-maxage=3600, stale-while-revalidate=300` | The only cache for "Show more" pages (errors are `no-store`) |
 | Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode + continuing toggle), under `app/anime/layout.tsx` | |
@@ -418,8 +419,9 @@ lib/                        pure, shared by server + client (unit-tested)
   landing.ts                  landing constants/types + pure helpers (airing candidates, extras parsing, Tempest,
                               tiers, schedule grouping, add-intent parse/serialize)
   routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath, isCurrentPath (nav + menu current page)
-  topAnime.ts                 /topanime's data: TopAnimeItem/Page, MAL ranking → slim page (toTopAnimePage), dedupeByMalId,
-                              parseTopAnimePage (?page bound), readTopAnimePage (the browser re-reading /api/top-anime)
+  topAnime.ts                 /topanime's data: TopAnimeItem/Page, MAL ranking → slim page (toTopAnimePage: ends at the first
+                              unranked entry, drops Rx, WebP covers), dedupeByMalId, parseTopAnimePage (?page bound),
+                              readTopAnimePage (the browser re-reading /api/top-anime)
   search.ts                   /search's rules: normalizeQuery/Page, searchResultsPath, resultWindow (exact totals only on
                               the last page), searchView, the h1/h2 ids
   anime/types.ts              AnimeMedia, ListEntry, UserAnimeData, LIST_STATUSES(+labels), displayTitle
@@ -441,8 +443,9 @@ server/                     server-only
   lib/mongodb.ts              the only MongoClient (cached on globalThis, retries, failed connects not cached)
   lib/anilist.ts              anilistQuery (throws AniListError with status + retryAfterSeconds, 429 retry), fetchMediaByIds,
                               searchAnime (→ {media, hasNextPage, page}; no total, §5.4)
-  lib/myanimelist.ts          fetchTopAnimePage (MAL API v2 ranking with X-MAL-CLIENT-ID; retries 429/5xx/network, then throws
-                              MyAnimeListError; data-cached only when asked)
+  lib/myanimelist.ts          fetchTopAnimePage → {page, fetchedAt (MAL's Date)} (MAL API v2 ranking with X-MAL-CLIENT-ID; one
+                              deadline for headers + body; retries 429/5xx/network, then throws MyAnimeListError and pauses
+                              the instance: MAL's Retry-After after a 429, 15 s otherwise)
   lib/userList.ts             resolveListOwner, readEntries, loadListEntries, refreshEntriesIfStale, getListIds
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
   lib/landing.ts              loadLandingData (≤ 2 AniList requests; throws only at runtime when the season fails), fetchLandingExtras
@@ -450,7 +453,7 @@ app/
   layout.tsx, providers.tsx   metadata, NavBar + SiteFooter; SessionProvider > {children, Toaster (themed), Analytics}
   error.tsx, global-error.tsx, not-found.tsx
   (home)/  anime/  search/  topanime/  auth/  user/  mylist/   see §3
-  api/anime-list/             route handlers (see §3)
+  api/anime-list/, api/top-anime/, api/auth/   route handlers (see §3)
 components/
   animev3/                    season browser: PageBase (the page's client root), layoutSelector/HeaderProvider (sort +
                               continuing context), utils/ (getAniListData, useLazyLoad, seasonFreshness)

@@ -34,18 +34,17 @@ export const metadata: Metadata = {
  * loading.tsx (it would ship the skeleton and hide the ranking in a
  * <div hidden> until JavaScript swaps it in; CLAUDE.md §9.15).
  *
- * Page 1 is fetched here, from MyAnimeList's API (its default fetch is
- * uncached, so each render fetches fresh and "fetched at" is true). A failure
- * or an empty ranking throws, so ISR keeps the last good page (or error.tsx
- * offers a Retry).
+ * Page 1 is fetched here, from MyAnimeList's API: fresh in every ISR render,
+ * but `next build` can reuse a copy cached by a build up to an hour earlier,
+ * so the banner's time is MAL's own (fetchedAt, from its Date header), never
+ * the render's. A failure or an empty ranking throws, so ISR keeps the last
+ * good page (or error.tsx offers a Retry).
  */
 export default async function TopAnime() {
-  const firstPage = await fetchTopAnimePage(1);
+  const { page: firstPage, fetchedAt } = await fetchTopAnimePage(1);
   if (firstPage.items.length === 0) {
     throw new MyAnimeListError("MyAnimeList returned an empty ranking for page 1");
   }
-  // When this render fetched the ranking (server component: not Date.now(), which the React Compiler lint rejects in render).
-  const fetchedAt = new Date().getTime();
   const crown = crownOf(firstPage.items);
 
   return (

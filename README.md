@@ -27,7 +27,9 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3.4
 
 ## 🚦 Getting started
 
-Prerequisites: Node.js 22, a MongoDB database (Atlas or local), and Google OAuth credentials.
+Prerequisites: Node.js 22, a MongoDB database (Atlas or local), Google OAuth credentials, and a
+MyAnimeList API Client ID ([myanimelist.net/apiconfig](https://myanimelist.net/apiconfig); `/topanime`
+and `npm run build` need it).
 
 ```bash
 npm ci
@@ -43,7 +45,7 @@ NEXTAUTH_SECRET=…                 # e.g. `openssl rand -base64 32`
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=…
 GOOGLE_CLIENT_SECRET=…
-MAL_CLIENT_ID=…                   # MyAnimeList API Client ID (myanimelist.net/apiconfig), for /topanime
+MAL_CLIENT_ID=…                   # required: /topanime and the build fail without it (server-only)
 
 # Optional (these are the defaults)
 GRAPHQL_ANILIST=https://graphql.anilist.co
@@ -61,7 +63,7 @@ TWITTER_CLIENT_SECRET=…
 
 ```bash
 npm run dev         # development server
-npm run build       # production build (prerenders 28 season pages from AniList, so it needs network)
+npm run build       # production build (prerenders the season pages, /topanime and / from AniList and MyAnimeList: needs network and MAL_CLIENT_ID)
 npm start           # serve the production build
 npm run typecheck   # tsc --noEmit
 npm run lint        # ESLint (next/core-web-vitals + React Compiler rules)

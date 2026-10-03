@@ -1,4 +1,3 @@
-import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import {
   MAL_RANKING_FIELDS,
   TOP_ANIME_PAGE_SIZE,
@@ -17,17 +16,26 @@ import {
  * MAL doesn't publish a rate limit. 429s, 5xx and network failures are
  * retried with a short backoff (Retry-After when it is short), then this
  * THROWS a MyAnimeListError, so an ISR render keeps the last good page.
+ * After a failure, this server instance stops asking MAL for a while (MAL's
+ * Retry-After after a 429, a short cool-down otherwise) so a public route
+ * can't keep hammering it during an outage.
  */
 
 const DEFAULT_MAL_API_URL = "https://api.myanimelist.net/v2";
+/** One deadline for the headers and the body together. */
 const REQUEST_TIMEOUT_MS = 7_000;
 const MAX_RETRY_WAIT_MS = 5_000;
+/** Without a usable Retry-After, a 429 pauses this instance for a minute. */
+const DEFAULT_RATE_LIMIT_PAUSE_S = 60;
+const MAX_RATE_LIMIT_PAUSE_S = 600;
+/** After a 5xx, a timeout or a network failure. */
+const FAILURE_COOL_DOWN_MS = 15_000;
 
 export class MyAnimeListError extends Error {
   constructor(
     message: string,
     readonly status?: number,
-    /** A 429's Retry-After in whole seconds, when MAL sent a number. */
+    /** A 429's Retry-After in whole seconds, when MAL sent a number (or the pause still left). */
     readonly retryAfterSeconds?: number
   ) {
     super(message);
@@ -63,21 +71,75 @@ const retryDelayMs = (res: Response | null, attempt: number): number | null => {
 const describe = (err: unknown) =>
   err instanceof Error ? (err.name === "AbortError" ? "timed out" : err.message) : String(err);
 
-export interface TopAnimeFetchOptions {
-  /** Attempts before throwing (default 3). */
-  attempts?: number;
-  /**
-   * Seconds to keep MAL's answer in Next's data cache (shared by every caller of the same page).
-   * Omit on the ISR page: its default fetch runs once per render, so "fetched at" stays true.
-   */
-  cacheSeconds?: number;
+/* Per-instance pause after a failure (module state: each server instance has its own). */
+let pausedUntil = 0;
+let pausedStatus: number | undefined;
+
+function pauseAfter(status: number | undefined, retryAfter: number | undefined) {
+  const ms =
+    status === 429
+      ? Math.min(retryAfter ?? DEFAULT_RATE_LIMIT_PAUSE_S, MAX_RATE_LIMIT_PAUSE_S) * 1000
+      : FAILURE_COOL_DOWN_MS;
+  pausedUntil = Date.now() + ms;
+  pausedStatus = status;
 }
 
-/** One page of MyAnimeList's ranking (25 shows). Throws a MyAnimeListError on failure. */
+/** fetch + the JSON body under one abort deadline (a body that stalls after the headers is aborted too). */
+async function fetchJson(url: string, headers: HeadersInit): Promise<{ res: Response; json: unknown }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    let json: unknown = null;
+    if (res.ok) {
+      try {
+        json = await res.json();
+      } catch (err) {
+        // A stalled body is a network failure (retried); a body that isn't JSON is a bad response.
+        if (controller.signal.aborted) throw err;
+      }
+    }
+    return { res, json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * When MAL produced the answer: its Date header, which Next's data cache keeps when a build reuses a
+ * cached page 1. Never later than now; now when the header is missing.
+ */
+function answeredAt(res: Response): number {
+  const now = Date.now();
+  const date = Date.parse(res.headers.get("date") ?? "");
+  return Number.isFinite(date) ? Math.min(date, now) : now;
+}
+
+export interface TopAnimeFetch {
+  page: TopAnimePage;
+  /** Epoch ms when MAL answered (see answeredAt). */
+  fetchedAt: number;
+}
+
+/**
+ * One page of MyAnimeList's ranking (25 shows), with a default fetch: Next doesn't data-cache it at
+ * runtime (each ISR render and each /api/top-anime call asks MAL), but `next build` does, for the
+ * page's revalidate, which is why `fetchedAt` comes from MAL's Date header. Throws a MyAnimeListError.
+ */
 export async function fetchTopAnimePage(
   page: number,
-  { attempts = 3, cacheSeconds }: TopAnimeFetchOptions = {}
-): Promise<TopAnimePage> {
+  { attempts = 3 }: { attempts?: number } = {}
+): Promise<TopAnimeFetch> {
+  const id = clientId();
+  const left = pausedUntil - Date.now();
+  if (left > 0) {
+    throw new MyAnimeListError(
+      "MyAnimeList is paused after a recent failure",
+      pausedStatus,
+      pausedStatus === 429 ? Math.ceil(left / 1000) : undefined
+    );
+  }
+
   const params = new URLSearchParams({
     ranking_type: "all",
     limit: String(TOP_ANIME_PAGE_SIZE),
@@ -85,27 +147,26 @@ export async function fetchTopAnimePage(
     fields: MAL_RANKING_FIELDS,
   });
   const url = `${apiUrl()}/anime/ranking?${params}`;
-  const headers = { Accept: "application/json", "X-MAL-CLIENT-ID": clientId() };
-  const cache: RequestInit =
-    cacheSeconds !== undefined ? { cache: "force-cache", next: { revalidate: cacheSeconds } } : {};
+  const headers = { Accept: "application/json", "X-MAL-CLIENT-ID": id };
 
   for (let attempt = 1; ; attempt++) {
     let res: Response;
+    let json: unknown;
     try {
-      res = await fetchWithTimeout(url, { timeout: REQUEST_TIMEOUT_MS, headers, ...cache });
+      ({ res, json } = await fetchJson(url, headers));
     } catch (err) {
       if (attempt < attempts) {
         await sleep(retryDelayMs(null, attempt) ?? 0);
         continue;
       }
+      pauseAfter(undefined, undefined);
       throw new MyAnimeListError(`MyAnimeList request failed: ${describe(err)}`);
     }
 
     if (res.ok) {
-      const json: unknown = await res.json().catch(() => null);
       const result = toTopAnimePage(json, page);
       if (!result) throw new MyAnimeListError(`MyAnimeList returned an unexpected response for page ${page}`);
-      return result;
+      return { page: result, fetchedAt: answeredAt(res) };
     }
 
     if (isRetryableStatus(res.status) && attempt < attempts) {
@@ -115,10 +176,8 @@ export async function fetchTopAnimePage(
         continue;
       }
     }
-    throw new MyAnimeListError(
-      `MyAnimeList responded ${res.status} for page ${page}`,
-      res.status,
-      res.status === 429 ? retryAfterSeconds(res) : undefined
-    );
+    const retryAfter = res.status === 429 ? retryAfterSeconds(res) : undefined;
+    if (isRetryableStatus(res.status)) pauseAfter(res.status, retryAfter);
+    throw new MyAnimeListError(`MyAnimeList responded ${res.status} for page ${page}`, res.status, retryAfter);
   }
 }
