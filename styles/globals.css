@@ -322,9 +322,10 @@
 
 /* The synopsis well: a solid console surface with CSS-only scroll shadows
    (background-attachment: local), so the sage glow shows only when there is
-   more text above or below. Clipped at rest: on touch it sits under the
-   card's tap target (a tap opens the details sheet, a swipe scrolls the page);
-   with a mouse it scrolls while the card is hovered. Never a tab stop. */
+   more text above or below. It sits above the card's tap target and scrolls:
+   on touch with a swipe (always scrollable; once it reaches the end, the next
+   swipe scrolls the page), with a mouse while the card is hovered (no
+   scrollbars at rest). Never a tab stop. */
 .gel-well {
   --well: rgb(13, 20, 34);
   overflow: hidden;
@@ -345,6 +346,14 @@
     scrollbar-gutter: stable;
   }
   .gel-card:hover .gel-well {
+    overflow-y: auto;
+  }
+}
+/* Everything else (phones, tablets, styluses): a swipe on the synopsis scrolls it. */
+@media not all and (hover: hover) and (pointer: fine) {
+  .gel-well {
+    position: relative;
+    z-index: 10;
     overflow-y: auto;
   }
 }

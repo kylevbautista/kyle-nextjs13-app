@@ -69,8 +69,8 @@ const RULE = "border-t border-dashed border-[#95ccff]/15";
  * list that gulps when you add one. Fields AniList doesn't have are left out.
  *
  * The title is a button whose ::after covers the card (one tab stop), so a
- * tap anywhere but the footer opens the details sheet. With a mouse, the
- * synopsis sits above it and scrolls instead. Switch back to the poster card
+ * tap anywhere but the footer and the synopsis opens the details sheet. The
+ * synopsis sits above it and scrolls (a swipe on touch, hover with a mouse). Switch back to the poster card
  * with ANIME_CARD_LAYOUT (components/theme/cardLayout.ts). Wrap it in an <li>.
  */
 function AnimeInfoCard({
@@ -277,7 +277,7 @@ function AnimeInfoCard({
           {note && <p className="shrink-0 px-2.5 pb-1.5 font-mono text-[10px] leading-3 text-[#95ccff]/75">{note}</p>}
           {synopsis ? (
             <div
-              // Never a tab stop (Chrome makes hover-scrollable boxes focusable): keyboards read it in the sheet.
+              // Never a tab stop (Chrome makes scrollable boxes focusable): keyboards read it in the sheet.
               tabIndex={-1}
               className="gel-well min-h-0 flex-1 px-2.5 py-2 text-xs leading-[18px] text-[rgb(200,206,218)] [overflow-wrap:anywhere] focus:outline-none"
               dangerouslySetInnerHTML={{ __html: synopsis }}
