@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { TopAnimeItem } from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import type { TopAnimeItem } from "@/lib/topAnime";
 import { MagicCircle } from "@/components/home/NightSky";
 import { PauseParentWhenOffscreen } from "@/components/home/Reveal";
 import { SageLine } from "@/components/home/SageLine";

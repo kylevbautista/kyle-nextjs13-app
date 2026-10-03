@@ -45,10 +45,6 @@ export default function SiteFooter() {
             · rankings from{" "}
             <a href="https://myanimelist.net" {...EXTERNAL} className={FOOTER_CREDIT_LINK}>
               MyAnimeList
-            </a>{" "}
-            via{" "}
-            <a href="https://jikan.moe" {...EXTERNAL} className={FOOTER_CREDIT_LINK}>
-              Jikan
             </a>
             .
           </p>

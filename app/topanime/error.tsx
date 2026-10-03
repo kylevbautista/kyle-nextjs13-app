@@ -25,7 +25,7 @@ export default function TopAnimeError({
   return (
     <TopAnimeShell
       banner={
-        <TopAnimeBanner sage={{ kind: "Warning", text: "Couldn't reach MyAnimeList's ranking (via Jikan)." }} />
+        <TopAnimeBanner sage={{ kind: "Warning", text: "Couldn't reach MyAnimeList's ranking." }} />
       }
     >
       <div role="alert" className="lg:col-span-2">
@@ -54,7 +54,7 @@ export default function TopAnimeError({
             </>
           }
         >
-          MyAnimeList (via Jikan) may be busy or briefly down. Wait a few seconds, then retry.
+          MyAnimeList may be busy or briefly down. Wait a few seconds, then retry.
         </SagePanel>
       </div>
     </TopAnimeShell>

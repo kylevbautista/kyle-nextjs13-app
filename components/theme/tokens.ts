@@ -311,7 +311,7 @@ export const FOOTER_BODY =
 export const FOOTER_ROW =
   "mx-auto flex max-w-screen-2xl flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
 export const FOOTER_CREDITS = "min-w-0 leading-6";
-/** AniList / MyAnimeList / Jikan inside the credit sentence (inline links: exempt from target size). */
+/** AniList / MyAnimeList inside the credit sentence (inline links: exempt from target size). */
 export const FOOTER_CREDIT_LINK = `rounded text-[#95ccff] underline-offset-2 hover:text-white hover:underline ${FOCUS_RING_FOOTER}`;
 /** "Top anime", "Search": 44px targets on phones; -mx-2 on the list lines their text up with the credits. */
 /** shrink-0: at 640–735px the credits wrap, never the links. */

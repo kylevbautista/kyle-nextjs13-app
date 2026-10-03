@@ -50,9 +50,10 @@ stable banner (keyed Suspense boundaries instead of `loading.tsx`, one status li
    history entry has no router state, so a later Back (from Track, say) changes the URL but not
    the page. `<Link href="#panel">` when it must work without JS; a button that calls
    `scrollIntoView()` and focuses the target otherwise ("Back to the top").
-8. **Say where the data really comes from.** Top Anime's numbers are MyAnimeList's as Jikan
-   reports them: Jikan refreshes shows separately, so ranks can repeat or skip. Never present an
-   upstream artifact as a fact about the source (no "tied" for a repeated Jikan rank).
+8. **Say where the data really comes from.** Top Anime's numbers are MyAnimeList's, from its API,
+   and each page of the ranking is fetched and cached separately, so a show can shift between
+   pages. Never present an artifact of how we fetch as a fact about the source (no "tied" for two
+   shows that land on one rank across pages).
 9. **Messages come from one place.** Tracker lines live in `lib/anime/trackerConsole.ts` (the
    demo and My List both call it), with a `spoken` form where "/" would read badly; the season
    page's in `lib/anime/seasonCopy.ts`. One speech channel per page: a persistent sr-only

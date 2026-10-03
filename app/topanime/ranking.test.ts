@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TopAnimeItem, TopAnimePage } from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import type { TopAnimeItem, TopAnimePage } from "@/lib/topAnime";
 import {
   altTitle,
   compactNumber,
@@ -46,7 +46,7 @@ describe("splitOctagram", () => {
     expect(ranks(rest)).toEqual([9, 10]);
   });
 
-  it("keeps both shows Jikan lists at #8 in the Octagram", () => {
+  it("keeps both shows loaded at #8 in the Octagram", () => {
     const items = [...Array.from({ length: 8 }, (_, i) => item(i + 1)), item(99, { rank: 8 }), item(10)];
     expect(splitOctagram(items).octagram).toHaveLength(9);
   });
@@ -84,7 +84,7 @@ describe("rankRange, rangeText, rangeSpoken", () => {
 describe("rankLabel", () => {
   it("labels ranked and unranked rows, and never claims a tie", () => {
     expect(rankLabel(item(1))).toBe("Rank 1");
-    // Jikan can repeat a rank; MyAnimeList itself has one show per rank.
+    // Separately cached pages can briefly put two shows at one rank; MyAnimeList itself has one per rank.
     expect(rankLabel(item(22, { rank: 21 }))).toBe("Rank 21");
     expect(rankLabel(item(3, { rank: null }))).toBe("Unranked");
   });
@@ -186,10 +186,10 @@ describe("octagramBlurb", () => {
       "In Tensura, the Octagram are the eight Demon Lords. Here, they're MyAnimeList's top eight."
     );
     expect(octagramBlurb(Array.from({ length: 9 }, (_, i) => item(i + 1)))).toBe(
-      "In Tensura, the Octagram are the eight Demon Lords. Here, they're the 9 shows ranked 1–8 in Jikan's copy of MyAnimeList's ranking, which can repeat or skip a rank."
+      "In Tensura, the Octagram are the eight Demon Lords. Here, they're the 9 shows loaded at MyAnimeList's ranks 1–8."
     );
-    expect(octagramBlurb(Array.from({ length: 7 }, (_, i) => item(i + 1)))).toContain("the 7 shows ranked 1–8");
-    expect(octagramBlurb([item(1)])).toContain("the 1 show ranked 1–8");
+    expect(octagramBlurb(Array.from({ length: 7 }, (_, i) => item(i + 1)))).toContain("the 7 shows loaded at MyAnimeList's ranks 1–8");
+    expect(octagramBlurb([item(1)])).toContain("the 1 show loaded at MyAnimeList's ranks 1–8");
   });
 });
 
@@ -201,10 +201,10 @@ describe("consoleLine and loadedAnnouncement", () => {
       "25 shows loaded: ranks 1 to 25."
     );
     expect(consoleLine({ items: page, loading: true, lastPage: 1, hasNextPage: true })).toBe(
-      "Asking Jikan for the ranks after #25…"
+      "Asking MyAnimeList for the ranks after #25…"
     );
     expect(consoleLine({ items: [item(1, { rank: null })], loading: true, lastPage: 1, hasNextPage: true })).toBe(
-      "Asking Jikan for the next page of the ranking…"
+      "Asking MyAnimeList for the next page of the ranking…"
     );
     // The joke needs at least one "Show more".
     expect(consoleLine({ items: page, loading: false, lastPage: 1, hasNextPage: false })).toBe(
@@ -231,7 +231,7 @@ describe("consoleLine and loadedAnnouncement", () => {
 describe("fetchedLine", () => {
   it("states the fetch time in Pacific Time", () => {
     // 2026-10-01 22:05 UTC = 3:05 PM PDT
-    expect(fetchedLine(Date.UTC(2026, 9, 1, 22, 5))).toBe("Ranking fetched via Jikan, Oct 1, 2026, 3:05 PM PDT.");
+    expect(fetchedLine(Date.UTC(2026, 9, 1, 22, 5))).toBe("Ranking fetched from MyAnimeList, Oct 1, 2026, 3:05 PM PDT.");
   });
 });
 
