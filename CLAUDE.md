@@ -104,9 +104,21 @@ and `/auth`.
 **only for their signed-in owner**, who is redirected to the id URL. Everyone else gets a 404, so
 emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner`).
 
-**Nav** (`components/common/NavBar.tsx`, `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`): Home ·
-カイル and Seasons (→ `/anime`) · Top Anime · search box (GET `/search`) · Log in **or** avatar menu
-{My List, Airing Schedule, Lift Tracker (external), Sign out}.
+**Nav** (`components/common/NavBar.tsx` (server), `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`;
+classes in the "Site chrome" section of `components/theme/tokens.ts`): Home · カイル and Seasons
+(→ `/anime`) · Top Anime · search box (GET `/search`, landmark "Site search") · Log in **or** avatar
+menu {My List, Airing Schedule, Lift Tracker (external), Sign out}. Tempest look: the top edge of
+the night sky (it ends in `#050915`, the banners' first color), static stars in the empty middle
+from 1024px, a moonlit hairline. The owner's full-height pills fill with slime gel on hover; the
+current page gets a sage underline (a border, so forced colors keeps it; the brand is never
+current). A static 20px slime marks カイル at 360–639px and from 820px (the 640–819 bar has no room
+for it); on phones the brand's name is "カイル Seasons". The loading placeholder (a static ring),
+Log in (a round gel pill) and the avatar share one box (48×48, 63×63 from 640), so the bar never
+shifts when the session resolves. The menu is a Great Sage console ("《Notice》 Signed in as <full
+name>.") that marks the item for the current page (● + `aria-current`). The nav is `z-40`, above
+the landing's StickyCta. **Footer** (`components/common/SiteFooter.tsx`, server, a direct child of
+`<body>`): the forest floor (NightSky's `Treeline` + a static slime), the AniList / MyAnimeList /
+Jikan credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 
 ---
 
@@ -133,6 +145,7 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Friendly error/404 pages with retry; the season page's is themed (its banner, "《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime, both Next 16.3's `retry()`). Retry must refetch the server render: `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
+| Site chrome | The nav as the top of the night sky (gel hover pills, a sage underline on the current page, the slime mark on カイル, a console search field, a fixed-size Log in / avatar slot) and the account menu as a Great Sage console ("《Notice》 Signed in as Kyle Bautista.", ● on the current page's item, Lift Tracker ↗); the footer as a forest floor with the 《Report》 credits | Static, paint-only chrome with a fixed box (§9.22); current-page logic in `lib/routes.ts#isCurrentPath` (tested); every class in `tokens.ts`'s "Site chrome" section; the brand slime is server-rendered and passed to `AnimeBar` as `brandMark`, and both chrome slimes take a fixed `idScope` | `components/common/*`, `components/theme/tokens.ts`, `components/home/NightSky.tsx#Treeline` |
 
 ---
 
@@ -398,7 +411,7 @@ lib/                        pure, shared by server + client (unit-tested)
   season.ts                   season math: current season, valid years, route validation, shiftSeason, landingSeason
   landing.ts                  landing constants/types + pure helpers (airing candidates, extras parsing, Tempest,
                               tiers, schedule grouping, add-intent parse/serialize)
-  routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath
+  routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath, isCurrentPath (nav + menu current page)
   search.ts                   /search's rules: normalizeQuery/Page, searchResultsPath, resultWindow (exact totals only on
                               the last page), searchView, the h1/h2 ids
   anime/types.ts              AnimeMedia, ListEntry, UserAnimeData, LIST_STATUSES(+labels), displayTitle
@@ -424,7 +437,7 @@ server/                     server-only
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
   lib/landing.ts              loadLandingData (≤ 2 AniList requests; throws only at runtime when the season fails), fetchLandingExtras
 app/
-  layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster (themed), Analytics}
+  layout.tsx, providers.tsx   metadata, NavBar + SiteFooter; SessionProvider > {children, Toaster (themed), Analytics}
   error.tsx, global-error.tsx, not-found.tsx
   (home)/  anime/  search/  topanime/  auth/  user/  mylist/   see §3
   api/anime-list/             route handlers (see §3)
@@ -435,11 +448,12 @@ components/
                                 SeasonNav + SeasonLink (intent prefetch, focus token), SeasonControls (+ SortHint),
                                 SeasonGridNotices (OrderDivider, LoadMoreError, SeasonEndCard), SeasonEmpty, useSeasonPhase
   mylist/                     Airing Schedule UI (week panel, NextEpisodes card) + schedule.ts (grouping)
-  common/                     NavBar, AnimeBar (nav links), NavSearch, LogInBox (account menu)
+  common/                     the site chrome: NavBar (server: box, stars, hairline, link strip), AnimeBar (NavLink + the
+                              brand), NavSearch, LogInBox (session slot + account menu), SiteFooter (server: the forest floor)
   animev3/ListToggle.tsx      the shared add/remove toggle (every card); ListToggleAction = AnimeCard's full-width version
   theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
     tokens.ts                   class tokens (focus rings, containers, ANIME_GRID / INFO_GRID + cover sizes, the classic card's INFO_*,
-                                type, panels, cards, buttons, fields, shelves)
+                                type, panels, cards, buttons, fields, shelves, the site chrome's NAV_* / MENU_* / FOOTER_*)
     cardLayout.ts               ANIME_CARD_LAYOUT ("classic" | "poster"): the one switch for the season page, /search and
                                 the landing's Magic Sense (CARD_LAYOUT bundles card, skeleton, action, grid, sizes, spans)
     AnimeInfoCard, AnimeInfoCardSkeleton  the classic card (owner's layout, gel surface, Magic Sense HUD, readout, synopsis well,
@@ -471,7 +485,8 @@ components/
     QuestSection, QuestLog      #quests: sign-up pitch or Quest Log + AddIntentHandler; questStore (flags)
     Hero, HeroSlime, HeroNextUp, NightSky, AiringNext, AiringGrid, CountdownText, TrackerDemo,
     ScheduleDemo, SageSearch, TempestArchive, TempestShelf, Faq, PostCredits, Reveal
-                                the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines)
+                                the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines);
+                                NightSky also exports MagicCircle and Treeline (the footer's static forest)
     analytics.ts                typed Vercel Analytics events (trackLanding, trackOnce)
   auth/                       sign-in page, SignOutButton, GoogleIcon
   utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
@@ -498,7 +513,8 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 4. **Entries are keyed by AniList `id`.** Jikan (`/topanime`) only has MAL ids, so never send those
    to `/api/anime-list`. Use the "Track" → search flow instead.
 5. **The AniList budget is shared** (~30/min per server IP). Don't prefetch links to search results
-   (or to `/search` from its own forms: §5.4.5).
+   (or to `/search` from its own forms: §5.4.5); links to bare `/search` (the footer, the 404 page)
+   use `prefetch={false}`.
    Avoid new server-side AniList calls on hot paths, and keep `getAniListData`'s queue.
 6. **Redirects/404s must happen before streaming.** A `redirect()`/`notFound()` under a `loading.tsx`
    boundary is sent as a 200 with a client-side redirect. Use `proxy.ts` or a layout (see
@@ -519,7 +535,12 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     the whole page; the landing's `main` has `min-w-0` and its sections `[contain:inline-size]`.
     List layouts also need `min-w-0` through their grids/flex containers. The Airing Schedule's week
     panel keeps its 8 tab columns down to 320px; its rows wrap titles (2 lines) and status lines
-    instead of truncating. Keep metadata columns shrinkable.
+    instead of truncating. Keep metadata columns shrinkable. The nav can't widen the column
+    (`[container-type:inline-size]`); its links need 312px at 320 (no brand slime), 338 at 360–639
+    and 620 at 640 (no brand slime at 640–819) in the widest fonts (`tokens.ts` "Site chrome" has the
+    arithmetic). The 640 row must fit 625, not 640: desktop browsers with a classic 15px scrollbar
+    still match `sm:` at 640–654px. When the links can't fit (large default fonts, zoom, a 280px
+    screen) the link strip scrolls sideways. Re-measure before adding to the bar.
 14. **Never use `server/lib/anilist.ts#anilistQuery` on static or ISR pages.** Its `cache: "no-store"`
     makes the route dynamic, and every view would call AniList. Use `getAniListData` (default fetch
     cache) or a `force-cache` fetch through `enqueueAniListRequest`, as `server/lib/landing.ts` does.
@@ -563,6 +584,22 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 21. **Class strings a server component renders come from a non-client module** (`tokens.ts`). A
     string imported from a `"use client"` file is a client reference on the server, so its classes
     break (the server-rendered `/search` pending skeleton uses the classic card's tokens).
+22. **The site chrome's box is load-bearing, and the nav is paint-only.** The nav is `h-16` + `mb-2`,
+    `sticky top-0 z-40`: PageBanner, Hero and both list skeletons use `-mt-2`, Hero's
+    `calc(100svh-4rem)`, every `scroll-mt-20` and AboutRanking's `lg:top-20` assume it, so change them
+    together. It sits over every scroll frame: static gradients, stars and shadows only, no infinite
+    animation, `filter`, `backdrop-filter` or scroll listeners; its only motion is hover/focus color,
+    the phone search's 200 ms width, the menu's one-shot fade + Notice typing, and Pepe while
+    hovered/focused. The phone search's open width is `calc(100cqw-3.5rem)` against the nav (a
+    size container), so a classic scrollbar can't push it off-screen; closed, the input has no
+    padding (border-box can't shrink below padding + border) and `indent-12` hides its text (forced
+    colors repaints `text-transparent`). The link strip scrolls, so its controls use `FOCUS_RING_NAV`
+    (`-outline-offset-2`: forced colors paints the outline, and an outer one would be clipped) and a
+    focused link scrolls only the strip into view. `<footer>` must stay a direct child of `<body>`
+    (StickyCta observes `body > footer`), and its classes come from `tokens.ts` (§9.21). A `Slime`
+    a root-layout server component renders needs a fixed `idScope`: server `useId` values restart at
+    `_S_1_` in every RSC render, so the first slime of a segment reached by client navigation would
+    otherwise paint from the layout's (possibly hidden) gradient defs.
 
 ---
 
@@ -574,8 +611,20 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
   needs a code change for new franchise entries.
 - A stale ISR season page is corrected in the browser about a second after load (§5.1). Visitors
   without JavaScript still get the cached copy until Next's background rebuild lands.
-- `SessionProvider` has no server session, so the nav avatar and card toggles show a loading pill
-  for a moment on full page loads.
+- `SessionProvider` has no server session, so on full page loads the nav shows a static
+  placeholder ring for a moment (the same 48/63px box as Log in and the avatar, so nothing shifts)
+  and card toggles a loading pill. Without JavaScript the placeholder stays.
+- No skip link yet. It needs one shared, non-focusable-by-default target across the route
+  `<main>`s (§9.15) and a router-safe jump (§9.18); do it as its own change.
+- The sticky nav can cover a focused element when tabbing backwards (Shift+Tab scrolls it to the
+  very top, under the 64px bar: WCAG 2.4.11). `html { scroll-padding-top }` is not the fix: it makes
+  the page jump ≈ 460px whenever a nav link gets focus while scrolled. A focusin nudge (scroll by
+  the overlap, skipping the nav and open dialogs) would be.
+- The plain pages (404, `/auth/signin`, `/auth`) keep their rgb(38) cards under the themed nav.
+- Browsers without container query units (iOS 15) keep the phone search a 44px field while it is
+  focused (still usable).
+- The banners' 64px forest band turns width-scaled past ≈ 1370px, so on very wide screens their
+  tallest pines are cut flat at the top. The footer's `Treeline` avoids it with a 7000-unit viewBox.
 - `+1` sends `current + 1`. A stale tab could still overwrite a newer value; an atomic increment
   endpoint would fix it.
 - No per-user rate limiting on the write APIs. Lists are capped at 2,000 shows.

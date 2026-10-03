@@ -32,6 +32,14 @@ interface SlimeProps {
   gulpKey?: string | number;
   /** Pupils rest looking left (the Magic Sense end card). */
   lookLeft?: boolean;
+  /**
+   * A fixed scope for the <defs> ids instead of useId(), for a slime the root layout renders
+   * (NavBar's brand mark, SiteFooter's). Server useId values restart at _S_1_ in every RSC
+   * render, and a client navigation renders the new segment on its own: its first slime would
+   * reuse the layout's ids and url(#…) would paint from the layout's defs (invisible when the
+   * brand mark is display:none). Unique per document.
+   */
+  idScope?: string;
   className?: string;
 }
 
@@ -55,10 +63,12 @@ export default function Slime({
   animated = true,
   gulpKey,
   lookLeft = false,
+  idScope,
   className,
 }: SlimeProps) {
-  // useId() may contain characters that break url(#…) references.
-  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  // useId() may contain characters that break url(#…) references. Always called (hook order).
+  const reactId = useId();
+  const uid = (idScope ?? reactId).replace(/[^a-zA-Z0-9_-]/g, "");
   const id = (name: string) => `slime-${name}-${uid}`;
   const c = SLIME_COLORS;
   const { gloss, sparkle, reflection, shadow, bandFrom } = SLIME_DETAILS;

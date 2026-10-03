@@ -3,7 +3,8 @@ import { PauseParentWhenOffscreen } from "./Reveal";
 
 /**
  * The Jura forest at night: layered, server-rendered decor for the hero, the
- * #quests bookend and app-page banners (`page`, components/theme/PageBanner). Everything is CSS gradients, box-shadows and inline
+ * #quests bookend, app-page banners (`page`, components/theme/PageBanner) and the
+ * site footer's treeline (`Treeline`). Everything is CSS gradients, box-shadows and inline
  * SVG (no raster, no filter: blur), aria-hidden and pointer-events: none.
  *
  * Star and magicule positions are generated ONCE at module scope from a
@@ -112,12 +113,21 @@ const RIDGES = {
 
 type RidgeName = keyof typeof RIDGES;
 
-function Ridge({ name, variant }: { name: RidgeName; variant: string }) {
+function Ridge({
+  name,
+  variant,
+  width = FOREST_WIDTH,
+}: {
+  name: RidgeName;
+  variant: string;
+  /** The viewBox (and pattern rect) width; the ridges tile seamlessly at any width. */
+  width?: number;
+}) {
   const ridge = RIDGES[name];
   const patternId = `forest-${variant}-${name}`;
   return (
     <svg
-      viewBox={`0 0 ${FOREST_WIDTH} ${FOREST_HEIGHT}`}
+      viewBox={`0 0 ${width} ${FOREST_HEIGHT}`}
       preserveAspectRatio="xMidYMax slice"
       className="absolute inset-0 h-full w-full"
       focusable="false"
@@ -127,7 +137,7 @@ function Ridge({ name, variant }: { name: RidgeName; variant: string }) {
           <path d={ridge.d} fill={ridge.color} />
         </pattern>
       </defs>
-      <rect width={FOREST_WIDTH} height={FOREST_HEIGHT} fill={`url(#${patternId})`} />
+      <rect width={width} height={FOREST_HEIGHT} fill={`url(#${patternId})`} />
     </svg>
   );
 }
@@ -161,6 +171,33 @@ function Forest({ variant }: { variant: SkyVariant }) {
         <div className="absolute inset-x-0 bottom-0 h-10 bg-[#081020]" />
       </div>
       <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-[rgb(18,18,18)]" />
+    </div>
+  );
+}
+
+/**
+ * The footer's viewBox width. "xMidYMax slice" scales a ridge by the larger of width / viewBox and
+ * height / 140, so with the banners' 3000 a 64px band turns width-scaled past ≈ 1370px and its
+ * tallest pines are cut flat at the top on wide screens. At 7000 the band stays height-scaled up to
+ * ≈ 3200px. Centering a wider box also lines the tiles up differently (0.45, 0.71 and 0.65 of a tile
+ * for far, mid and near), so on a short page the footer is another stretch of the woods, not a
+ * copy of the banner's treeline above it.
+ */
+const TREELINE_WIDTH = 7000;
+
+/**
+ * The forest alone, static (no parallax, no fade into the page): the site footer's treeline
+ * (components/common/SiteFooter.tsx). Hook-free, so the server root layout renders it. Its
+ * pattern ids are `forest-footer-*`: render it once per page.
+ */
+export function Treeline({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden="true" className={`pointer-events-none ${className}`}>
+      {(["far", "mid", "near"] as const).map((name) => (
+        <div key={name} className="absolute inset-0">
+          <Ridge name={name} variant="footer" width={TREELINE_WIDTH} />
+        </div>
+      ))}
     </div>
   );
 }
