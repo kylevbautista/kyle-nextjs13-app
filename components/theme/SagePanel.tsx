@@ -33,8 +33,10 @@ export default function SagePanel({
       className={`flex flex-col items-center justify-center gap-4 px-6 py-12 text-center ${EMPTY_PANEL} ${className}`}
     >
       <Slime size={64} mood={mood} />
-      {title && <Title className="max-w-full break-words text-xl font-bold text-white">{title}</Title>}
-      <p className="max-w-md text-sm leading-6 text-[rgb(200,206,218)] sm:text-base">
+      {/* overflow-wrap:anywhere (not break-words) also lowers min-content, so a long
+          unbroken word (a search query) wraps instead of widening the panel. */}
+      {title && <Title className="max-w-full text-xl font-bold text-white [overflow-wrap:anywhere]">{title}</Title>}
+      <p className="max-w-md text-sm leading-6 text-[rgb(200,206,218)] [overflow-wrap:anywhere] sm:text-base">
         <SageTag kind={kind} />
         {children}
       </p>

@@ -5,11 +5,13 @@ import { APP_CONTAINER, EYEBROW_CLASS, PAGE_TITLE_CLASS } from "./tokens";
 
 /**
  * The top of every redesigned app page: the landing hero's night sky, cut
- * down to a banner. Eyebrow ("Skill 02 · Predator"), a Great Sage line that
- * types in on load, the moonlit h1, a subhead, then `children` (actions,
- * stats) under the text and `aside` (an Evolution card, a Next-episodes
- * card) on the right from 1024px. Below 1024px the aside stacks under the
- * text; pass `asideClassName="hidden lg:block"` for a desktop-only aside.
+ * down to a banner. Eyebrow ("Skill 02 · Predator"), an optional `lead`
+ * (/search's box on top), a Great Sage line that types in on load (or a
+ * `sageSlot` that streams one), the moonlit h1, a subhead, then `children`
+ * (actions, stats) under the text and `aside` (an Evolution card, a
+ * Next-episodes card) on the right from 1024px. Below 1024px the aside stacks
+ * under the text; pass `asideClassName="hidden lg:block"` for a desktop-only
+ * aside.
  *
  * Hook-free, so server and client components can both render it. The h1
  * takes `titleId` and is focusable (tabIndex -1) so a page can move focus to
@@ -17,7 +19,9 @@ import { APP_CONTAINER, EYEBROW_CLASS, PAGE_TITLE_CLASS } from "./tokens";
  */
 export default function PageBanner({
   eyebrow,
+  lead,
   sage,
+  sageSlot,
   title,
   titleId,
   sub,
@@ -27,7 +31,14 @@ export default function PageBanner({
   sageKey,
 }: {
   eyebrow: string;
-  sage: { kind: SageKind; text: ReactNode };
+  /** Under the eyebrow, before the Great Sage line (/search keeps its search box on top). */
+  lead?: ReactNode;
+  sage?: { kind: SageKind; text: ReactNode };
+  /**
+   * Your own Great Sage line in place of `sage`: /search streams its report
+   * (a Suspense boundary around a SageLine with scan="load" className="mt-4").
+   */
+  sageSlot?: ReactNode;
   title: ReactNode;
   titleId?: string;
   sub?: ReactNode;
@@ -47,9 +58,13 @@ export default function PageBanner({
       >
         <div className="min-w-0">
           <p className={EYEBROW_CLASS}>{eyebrow}</p>
-          <SageLine key={sageKey} kind={sage.kind} scan="load" className="mt-4">
-            {sage.text}
-          </SageLine>
+          {lead && <div className="mt-5 min-w-0">{lead}</div>}
+          {sageSlot ??
+            (sage && (
+              <SageLine key={sageKey} kind={sage.kind} scan="load" className="mt-4">
+                {sage.text}
+              </SageLine>
+            ))}
           <h1
             id={titleId}
             tabIndex={-1}

@@ -3,6 +3,7 @@ import { searchAnimeQuery } from "@/components/utils/anilist-queries/searchAnime
 import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import { normalizeMedia } from "@/lib/anime/normalize";
 import type { AnimeMedia } from "@/lib/anime/types";
+import { SEARCH_PAGE_SIZE } from "@/lib/search";
 
 /**
  * Server-side AniList client (search, list refresh). Unlike the isomorphic
@@ -22,11 +23,21 @@ const LOW_RATE_LIMIT_REMAINING = 5;
 const MAX_RETRY_AFTER_MS = 5_000;
 
 export class AniListError extends Error {
-  constructor(message: string, readonly status?: number) {
+  constructor(
+    message: string,
+    readonly status?: number,
+    /** A 429's Retry-After in whole seconds, when AniList sent a number. */
+    readonly retryAfterSeconds?: number
+  ) {
     super(message);
     this.name = "AniListError";
   }
 }
+
+const parseRetryAfter = (value: string | null): number | undefined => {
+  const seconds = Number(value?.trim());
+  return value && Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : undefined;
+};
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -69,7 +80,11 @@ export async function anilistQuery<T>(
   ]).finally(() => clearTimeout(bodyTimer));
   if (!res.ok || !json?.data) {
     const message = json?.errors?.[0]?.message ?? res.statusText;
-    throw new AniListError(`AniList responded ${res.status}: ${message}`, res.status);
+    throw new AniListError(
+      `AniList responded ${res.status}: ${message}`,
+      res.status,
+      res.status === 429 ? parseRetryAfter(res.headers.get("retry-after")) : undefined
+    );
   }
 
   const remainingHeader = res.headers.get("x-ratelimit-remaining");
@@ -81,7 +96,7 @@ export async function anilistQuery<T>(
 
 type PageResult = {
   page: {
-    pageInfo?: { total?: number; hasNextPage?: boolean; currentPage?: number; lastPage?: number };
+    pageInfo?: { hasNextPage?: boolean; currentPage?: number };
     media: unknown[];
   };
 };
@@ -108,12 +123,11 @@ export async function fetchMediaByIds(
   return results;
 }
 
-export const SEARCH_PAGE_SIZE = 30;
-
+/** One page of a title search (30 results). No total: AniList's is false here (lib/search.ts). */
 export async function searchAnime(
   search: string,
   page = 1
-): Promise<{ media: AnimeMedia[]; total: number; hasNextPage: boolean; page: number }> {
+): Promise<{ media: AnimeMedia[]; hasNextPage: boolean; page: number }> {
   const data = await anilistQuery<PageResult>(searchAnimeQuery, {
     search,
     page,
@@ -122,7 +136,6 @@ export async function searchAnime(
   const pageInfo = data.page?.pageInfo ?? {};
   return {
     media: normalizeAll(data.page?.media),
-    total: pageInfo.total ?? 0,
     hasNextPage: Boolean(pageInfo.hasNextPage),
     page: pageInfo.currentPage ?? page,
   };

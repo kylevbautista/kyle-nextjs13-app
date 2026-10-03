@@ -9,7 +9,6 @@ import {
   INFO_COVER_SIZES,
   INFO_GRID,
   LANDING_GRID_SIZES,
-  SEARCH_COVER_SIZES,
   SEASON_COVER_SIZES,
 } from "./tokens";
 
@@ -20,7 +19,7 @@ import {
  * Quest Log always uses the compact poster card (a 4-up picker inside quest
  * rows, not a demo of the season page).
  *
- * No "use client": the server-rendered /search loading skeleton imports it
+ * No "use client": the server-rendered /search pending skeleton imports it
  * (every class string here comes from tokens.ts, never from a client file).
  */
 
@@ -76,7 +75,7 @@ export interface CardLayout {
   waitingSkeletons: (cellsBefore: number) => string[];
   /** The season end card's span; `fillsRow` = the phones' 2-column poster grid has a free cell. */
   endCardSpan: (fillsRow: boolean) => string;
-  /** /search's loading skeletons. */
+  /** /search's pending skeletons. */
   searchSkeletons: number;
   /** The landing's Magic Sense grid (components/home/AiringGrid.tsx). */
   landing: {
@@ -118,7 +117,8 @@ export const LAYOUTS: Record<CardLayoutName, CardLayout> = {
     Action: ListToggleAction,
     grid: ANIME_GRID,
     seasonCoverSizes: SEASON_COVER_SIZES,
-    searchCoverSizes: SEARCH_COVER_SIZES,
+    // /search's grid sits in APP_CONTAINER, like the season grid.
+    searchCoverSizes: SEASON_COVER_SIZES,
     eager: 5,
     priority: 2,
     waitingSkeletons: (cellsBefore) => rowFill(POSTER_COLUMNS, cellsBefore),
