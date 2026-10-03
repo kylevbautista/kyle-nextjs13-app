@@ -1,7 +1,7 @@
 import "../styles/globals.css";
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import NavBar from "../components/common/NavBar";
+import SiteFooter from "../components/common/SiteFooter";
 import Providers from "./providers";
 
 const SITE_DESCRIPTION =
@@ -32,12 +32,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#121212",
+  // The nav's top color (the night sky), so a phone's browser toolbar continues it.
+  themeColor: "#0a1428",
   colorScheme: "dark",
 };
-
-const footerLink =
-  "rounded underline-offset-2 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
 
 export default function RootLayout({
   children,
@@ -51,53 +49,8 @@ export default function RootLayout({
           <NavBar />
           {children}
         </Providers>
-        <footer className="mt-8 border-t border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-4 py-4 text-sm text-[rgb(164,164,164)]">
-          <div className="mx-auto flex max-w-screen-2xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              Anime data from{" "}
-              <a
-                href="https://anilist.co"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-[#95ccff] ${footerLink}`}
-              >
-                AniList
-              </a>{" "}
-              · rankings from{" "}
-              <a
-                href="https://myanimelist.net"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-[#95ccff] ${footerLink}`}
-              >
-                MyAnimeList
-              </a>{" "}
-              via{" "}
-              <a
-                href="https://jikan.moe"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-[#95ccff] ${footerLink}`}
-              >
-                Jikan
-              </a>
-            </p>
-            <nav aria-label="Footer">
-              <ul className="flex gap-4">
-                <li>
-                  <Link href="/topanime" className={footerLink}>
-                    Top anime
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/search" className={footerLink}>
-                    Search
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </footer>
+        {/* A direct child of <body>: the landing's StickyCta observes `body > footer`. */}
+        <SiteFooter />
       </body>
     </html>
   );

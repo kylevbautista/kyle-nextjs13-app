@@ -1,12 +1,7 @@
 "use client";
 import { useId, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import {
-  dedupeByMalId,
-  getTopAnimeJinkan,
-  type TopAnimeItem,
-  type TopAnimePage,
-} from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import { dedupeByMalId, type TopAnimeItem, type TopAnimePage } from "@/lib/topAnime";
 import { SageTag } from "@/components/home/SageLine";
 import Slime from "@/components/home/Slime";
 import { TrophyIcon } from "@/components/theme/icons";
@@ -28,6 +23,7 @@ import {
   splitOctagram,
   titleLinkId,
 } from "./ranking";
+import { loadTopAnimePage } from "./loadTopAnimePage";
 import { initialRankingState, saveRankingSnapshot } from "./rankingStore";
 import { RowSkeleton, TopAnimeRow } from "./TopAnimeRow";
 
@@ -37,8 +33,8 @@ const EAGER_POSTERS = 4;
 /**
  * The ranking: the Octagram (ranks 1–8), then everything after, and a Great
  * Sage console that loads the next page. Page 1 comes from the server; later
- * pages come from Jikan in the browser, one at a time (in-flight guard,
- * dedupe, inline Retry). Loaded pages survive a Back from "Track"
+ * pages come from the browser through /api/top-anime (the server asks
+ * MyAnimeList), one at a time (in-flight guard, dedupe, inline Retry). Loaded pages survive a Back from "Track"
  * (rankingStore). Root element places itself in TopAnimeShell's grid.
  */
 export default function TopAnimeList({ initialPage }: { initialPage: TopAnimePage }) {
@@ -70,7 +66,7 @@ export default function TopAnimeList({ initialPage }: { initialPage: TopAnimePag
     setAnnouncement("Loading more of the ranking…");
     try {
       const nextPage = lastPage + 1;
-      const result = await getTopAnimeJinkan({ page: nextPage, isClient: true });
+      const result = await loadTopAnimePage(nextPage);
       if (!result.ok) {
         setError(result.error);
         setAnnouncement(""); // the role=alert message speaks instead

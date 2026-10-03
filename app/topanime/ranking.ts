@@ -3,11 +3,11 @@
  * banner's glance facts and every sentence the page builds from data. No
  * React, no clock: server and browser produce identical text.
  *
- * MyAnimeList's own ranking has one show per rank. Jikan refreshes each show
- * separately, so its copy can repeat or skip a rank for a while: never call
- * a repeated rank a "tie".
+ * MyAnimeList's ranking has one show per rank, but pages are fetched and
+ * cached separately, so the loaded list can briefly repeat (deduped) or skip
+ * a rank at a page boundary: never call two shows at one rank a "tie".
  */
-import type { TopAnimeItem } from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import type { TopAnimeItem } from "@/lib/topAnime";
 import { formatAirDate } from "@/lib/anime/airing";
 
 /** Ranks 1–8 are "the Octagram" (Tensura's eight Demon Lords). */
@@ -177,12 +177,12 @@ export function glanceStats(items: readonly TopAnimeItem[]): GlanceFact[] {
   return facts;
 }
 
-/** The Octagram's explainer, still accurate when Jikan repeats or skips a rank around #8. */
+/** The Octagram's explainer, still accurate if the loaded ranks 1–8 aren't exactly eight shows. */
 export function octagramBlurb(octagram: readonly TopAnimeItem[]) {
   const lead = "In Tensura, the Octagram are the eight Demon Lords.";
   return octagram.length === OCTAGRAM_RANK
     ? `${lead} Here, they're MyAnimeList's top eight.`
-    : `${lead} Here, they're the ${countLabel(octagram.length)} ranked 1–8 in Jikan's copy of MyAnimeList's ranking, which can repeat or skip a rank.`;
+    : `${lead} Here, they're the ${countLabel(octagram.length)} loaded at MyAnimeList's ranks 1–8.`;
 }
 
 /** The Great Sage console's line under the ranking. */
@@ -199,7 +199,9 @@ export function consoleLine({
 }) {
   const range = rankRange(items);
   if (loading) {
-    return range ? `Asking Jikan for the ranks after #${range.max}…` : "Asking Jikan for the next page of the ranking…";
+    return range
+      ? `Asking MyAnimeList for the ranks after #${range.max}…`
+      : "Asking MyAnimeList for the next page of the ranking…";
   }
   if (!hasNextPage) {
     // The joke only once the reader has actually loaded more.
@@ -218,9 +220,9 @@ export function loadedAnnouncement(added: readonly TopAnimeItem[], total: number
   return `Loaded ${exactNumber(added.length)} more${range ? `, ${rangeSpoken(range)}` : ""}. ${tail}`;
 }
 
-/** "Ranking fetched via Jikan, Oct 1, 2026, 3:05 PM PDT." (Pacific, like every time on the site). */
+/** "Ranking fetched from MyAnimeList, Oct 1, 2026, 3:05 PM PDT." (Pacific, like every time on the site). */
 export const fetchedLine = (fetchedAtMs: number) =>
-  `Ranking fetched via Jikan, ${formatAirDate(Math.floor(fetchedAtMs / 1000))}.`;
+  `Ranking fetched from MyAnimeList, ${formatAirDate(Math.floor(fetchedAtMs / 1000))}.`;
 
 export const malAnimeUrl = (malId: number) => `https://myanimelist.net/anime/${malId}`;
 /** MyAnimeList's own ranking, starting after the shows already on screen. */

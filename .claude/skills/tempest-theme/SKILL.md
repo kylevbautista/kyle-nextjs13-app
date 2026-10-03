@@ -11,7 +11,8 @@ the **Great Sage** speaking in system messages (`《Notice》 …`), and an orig
 that **evolves as your list grows**. It is playful in its framing and exact in its content.
 
 My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`), Top Anime (`/topanime`), the
-season browser (`/anime/<year>/<season>`) and Search (`/search`) were redesigned with this kit.
+season browser (`/anime/<year>/<season>`), Search (`/search`) and the site chrome (nav, account
+menu, footer) were redesigned with this kit.
 Read one of them before starting a new page: `app/user/_client/MyList.tsx` and
 `components/mylist/AiringSchedule.tsx` for dynamic, signed-in pages; `app/topanime/` for a static
 ISR page (server-rendered banner and asides, one client island, pure `ranking.ts` helpers with
@@ -49,9 +50,10 @@ stable banner (keyed Suspense boundaries instead of `loading.tsx`, one status li
    history entry has no router state, so a later Back (from Track, say) changes the URL but not
    the page. `<Link href="#panel">` when it must work without JS; a button that calls
    `scrollIntoView()` and focuses the target otherwise ("Back to the top").
-8. **Say where the data really comes from.** Top Anime's numbers are MyAnimeList's as Jikan
-   reports them: Jikan refreshes shows separately, so ranks can repeat or skip. Never present an
-   upstream artifact as a fact about the source (no "tied" for a repeated Jikan rank).
+8. **Say where the data really comes from.** Top Anime's numbers are MyAnimeList's, from its API,
+   and each page of the ranking is fetched and cached separately, so a show can shift between
+   pages. Never present an artifact of how we fetch as a fact about the source (no "tied" for two
+   shows that land on one rank across pages).
 9. **Messages come from one place.** Tracker lines live in `lib/anime/trackerConsole.ts` (the
    demo and My List both call it), with a `spoken` form where "/" would read badly; the season
    page's in `lib/anime/seasonCopy.ts`. One speech channel per page: a persistent sr-only
@@ -149,13 +151,14 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `NextEpisodeLine` | `components/theme/NextEpisodeLine.tsx` | A tracker card's live countdown, or the release status ("Finished airing · 12 eps"). ListCard and TrackerDemo both use it |
 | `useMinuteNow` | `components/utils/useMinuteNow.ts` | A per-minute clock for "today"-style labels; keep `useNow()` (1 s) for the countdown leaves only, or whole panels re-render every second |
 | `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component). `short` shows "Pause timers" below 420px, for a tight controls row (the season page) |
-| `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky |
+| `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky. `Treeline` is the forest alone, static (the site footer's; a wider viewBox, so it is another stretch of the woods than a banner's and its pines never get cut flat) |
 | `SageLine`, `SageTag`, `sageText`, `Skill` | `components/home/SageLine.tsx` | `scan="load"` types the line in; `scan="reveal"` needs a `data-reveal` ancestor (landing only) |
-| `Slime` | `components/home/Slime.tsx` | `mood`: idle, happy, worried, sage. `tier`: slime, named, demon, lord. Always aria-hidden. Use `size` px, and CSS width for responsive sizes |
+| `Slime` | `components/home/Slime.tsx` | `mood`: idle, happy, worried, sage. `tier`: slime, named, demon, lord. Always aria-hidden. Use `size` px, and CSS width for responsive sizes. A slime the root layout renders (the chrome's) takes a fixed `idScope`, or a page slime reached by client navigation reuses its gradient ids |
 | `CountdownText` | `components/home/CountdownText.tsx` | Every countdown. `chip` (cards), `row` ("EP 5 in 2h 14m 03s"), `compact` (time only, right-aligned in rows). SSR-safe |
 | `NextEpisodes` | `components/mylist/NextEpisodes.tsx` | The hero's Next-episodes card fed by a page's shows (card from 640px, ticker below): the Airing Schedule's and the season banner's. `jump` = the footer/ticker target (`label` shown, `srLabel` ends the ticker's name, `onClick` for an explicit scroll); `restingText`, `headerNote`, `loading` (skeleton rows) |
 | `ListToggle` | `components/animev3/ListToggle.tsx` | The add/remove control. Never re-implement list writes |
 | Toasts | `app/providers.tsx` | Already themed (console navy, sage border); write messages with `sageText` |
+| Site chrome | `components/common/{NavBar,AnimeBar,NavSearch,LogInBox,SiteFooter}.tsx`; tokens `NAV_*`, `MENU_*`, `FOOTER_*` | Already themed on every page; don't restyle it per page. The nav is the top edge of the night sky and ends in `#050915`, so a `PageBanner` (with its `-mt-2`) continues it. Its box is fixed (`h-16` + `mb-2`), it can't widen the page (a size container; the link strip scrolls when it can't fit), and nothing in it may animate on its own (it is sticky over every scroll). Its focusables use `FOCUS_RING_NAV` (an inset outline: the strip clips, and forced colors paints the outline). The footer is the forest floor (`Treeline`) with the `《Report》` credits and stays `body > footer` |
 
 The landing-only pieces stay in `components/home` and are not for other pages: `Reveal`
 (scroll reveals), `LandingProvider`, `SessionCta`, `trackLanding` analytics.

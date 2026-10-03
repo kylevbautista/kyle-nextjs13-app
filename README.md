@@ -16,18 +16,20 @@ list of what you're watching with progress, scores and dates.
   final episode. Lists are public by link; only you can edit yours.
 - **Airing Schedule** (`/mylist/<id>`): the shows on your list that have an upcoming episode, grouped
   by weekday (Pacific Time).
-- **Top Anime** (`/topanime`): MyAnimeList's ranking via Jikan, with a "Track" shortcut into search.
+- **Top Anime** (`/topanime`): MyAnimeList's ranking (its official API), with a "Track" shortcut into search.
 - **Google sign-in** via NextAuth, with sessions stored in MongoDB.
 
 ## 🛠️ Tech stack
 
 Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3.4 · NextAuth v4 · MongoDB
 (native driver) · SWR · Vitest. Data comes from [AniList](https://anilist.co) (GraphQL) and
-[Jikan](https://jikan.moe) (MyAnimeList). Hosted on Vercel.
+[MyAnimeList](https://myanimelist.net/apiconfig/references/api/v2) (API v2). Hosted on Vercel.
 
 ## 🚦 Getting started
 
-Prerequisites: Node.js 22, a MongoDB database (Atlas or local), and Google OAuth credentials.
+Prerequisites: Node.js 22, a MongoDB database (Atlas or local), Google OAuth credentials, and a
+MyAnimeList API Client ID ([myanimelist.net/apiconfig](https://myanimelist.net/apiconfig); `/topanime`
+and `npm run build` need it).
 
 ```bash
 npm ci
@@ -43,12 +45,12 @@ NEXTAUTH_SECRET=…                 # e.g. `openssl rand -base64 32`
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=…
 GOOGLE_CLIENT_SECRET=…
+MAL_CLIENT_ID=…                   # required: /topanime and the build fail without it (server-only)
 
 # Optional (these are the defaults)
 GRAPHQL_ANILIST=https://graphql.anilist.co
 NEXT_PUBLIC_GRAPHQL_ANILIST=https://graphql.anilist.co
-JINKANV4_URL=https://api.jikan.moe/v4
-NEXT_PUBLIC_JINKANV4_URL=https://api.jikan.moe/v4
+MAL_API_URL=https://api.myanimelist.net/v2
 
 # Optional extra providers (registered only when both values are set; the sign-in page shows Google)
 GITHUB_ID=…
@@ -61,7 +63,7 @@ TWITTER_CLIENT_SECRET=…
 
 ```bash
 npm run dev         # development server
-npm run build       # production build (prerenders 28 season pages from AniList, so it needs network)
+npm run build       # production build (prerenders the season pages, /topanime and / from AniList and MyAnimeList: needs network and MAL_CLIENT_ID)
 npm start           # serve the production build
 npm run typecheck   # tsc --noEmit
 npm run lint        # ESLint (next/core-web-vitals + React Compiler rules)
@@ -90,6 +92,7 @@ This project is private and not licensed for public use.
 
 ## 🙏 Acknowledgments
 
-[AniList](https://anilist.co) and [Jikan](https://jikan.moe) for the APIs, and Vercel for hosting.
+[AniList](https://anilist.co) and [MyAnimeList](https://myanimelist.net) for the APIs, [Jikan](https://jikan.moe)
+for serving MyAnimeList's data until 2026, and Vercel for hosting.
 
 Built with ❤️ by Kyle | [kylevb.com](https://kylevb.com)

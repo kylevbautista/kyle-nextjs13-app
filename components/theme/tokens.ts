@@ -154,3 +154,167 @@ export const SHELF_OFF = "text-[rgb(164,164,164)] hover:bg-white/5 hover:text-wh
 export const HAIRLINE = "h-px bg-gradient-to-r from-transparent via-[#95ccff]/30 to-transparent";
 /** Faint weekday tints (Mon…Sun) along a schedule panel's top edge. */
 export const DAY_TINTS = ["#95ccff", "#a5b4fc", "#c4b5fd", "#f0abfc", "#fda4af", "#fcd34d", "#86efac"];
+
+/* ------------------------------------------------------------------------- */
+/* Site chrome: NavBar, AnimeBar, NavSearch, LogInBox and SiteFooter          */
+/* (components/common). NavBar and SiteFooter are server components, so their */
+/* classes must live here (CLAUDE.md §9.21); the client parts use them too.   */
+/*                                                                             */
+/* The nav's BOX is load-bearing and stays the owner's: h-16 + mb-2, sticky    */
+/* top-0. PageBanner, Hero and both list skeletons cancel mb-2 with -mt-2,     */
+/* Hero's laptop min-height is calc(100svh-4rem), every scroll-mt-20 is        */
+/* 64 + 16, AboutRanking is lg:top-20. Change them together.                   */
+/* The nav is sticky over every page, so it is PAINT ONLY: static gradients,  */
+/* stars and shadows; no infinite animation, filter, backdrop-filter or       */
+/* scroll-linked effect. Gradient fills can't transition: they snap on, as    */
+/* the owner's hover:bg-blue-500 did.                                         */
+/*                                                                             */
+/* Width budget (the body has ONE auto column: a wider nav widens the page),  */
+/* in the widest fonts (DejaVu Sans + a full-width カイル):                     */
+/*   320: nav 8 + Home 57 + カイル 58 + Top Anime 89 + gap 4 + search 44 +      */
+/*        gap 4 + session slot 48 = 312 (8 spare)                              */
+/*   360–639: + the brand slime (20 + 6) = 338                                 */
+/*   640: 16 + (Home 71 + カイル 72 + Seasons 90 + Top Anime 107) + 16 +         */
+/*        (176 + 8 + 63) = 620. No brand slime at 640–819: a desktop browser   */
+/*        with a classic 15px scrollbar lays a 640–654px window out at 625–639 */
+/*        while sm: still matches, and 620 still fits.                         */
+/*   820+: the owner's px-4 and the slime = 694.                               */
+/* Below 320 (a 280px Fold, page zoom) the links tighten to px-1.5; past      */
+/* that, and with large default fonts, the link strip scrolls sideways        */
+/* (NAV_LINK_STRIP) while the nav keeps the page's width (container-type).    */
+/* Re-measure before adding anything to the bar.                              */
+
+/**
+ * The chrome's focus ring (nav links, Log in, the avatar, menu items): the inset sage ring, plus
+ * an inset outline. Forced colors drops the ring (a box-shadow) and paints Tailwind's transparent
+ * outline-none (2px, offset 2px) instead; -outline-offset-2 keeps that outline inside the box, so
+ * the link strip's overflow (NAV_LINK_STRIP) can't clip its bottom edge (or Home's left, Top Anime's right).
+ */
+export const FOCUS_RING_NAV = `${FOCUS_RING_INSET} focus-visible:-outline-offset-2`;
+
+/**
+ * The bar: the night sky's top edge, ending in #050915 (NightSky's first stop), so a banner
+ * continues it. z-40: the account menu sits above the landing's StickyCta (z-30).
+ * container-type: the phone search's open width is measured against the bar (100cqw), not the
+ * viewport (100vw counts a classic scrollbar), and inline-size containment means the bar's content
+ * can never widen the body's one auto column (large fonts scroll the link strip instead).
+ */
+export const NAV_BAR =
+  "sticky top-0 z-40 mb-2 flex [container-type:inline-size] h-16 items-center justify-between gap-1 bg-[#0a1428] bg-[radial-gradient(42%_170%_at_6%_0%,rgba(139,92,246,.16),transparent_70%),radial-gradient(38%_170%_at_94%_0%,rgba(93,174,241,.13),transparent_70%),linear-gradient(180deg,#0a1428,#050915)] px-1 text-[#e6f3ff] shadow-[0_12px_28px_-20px_rgba(0,0,0,.95)] sm:gap-4 sm:px-2";
+/** The moonlit bottom edge, inside the 64px (render it as the nav's LAST child). A real border in forced colors. */
+export const NAV_HAIRLINE =
+  "pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-[#95ccff]/10 via-[#95ccff]/45 to-[#95ccff]/10 forced-colors:h-0 forced-colors:border-t forced-colors:border-[color:CanvasText]";
+/**
+ * One 1px span carrying NAV_STARS as box-shadows (inline style), from 1024px only. It starts at
+ * 42% of the bar and its stars reach +21.5vw (≈ 64%): the band between the links (≤ 40% at 1024)
+ * and the search (≥ 66%). Adding a nav link or widening the search means re-checking it. Static,
+ * never animated. Hidden in forced colors (which drops box-shadows anyway).
+ */
+export const NAV_STAR_FIELD =
+  "pointer-events-none absolute left-[42%] top-0 hidden h-px w-px laptop:block forced-colors:hidden";
+export const NAV_STARS =
+  "0.5vw 14px 0 0 rgba(223,241,255,.5),3.5vw 44px 0 0 rgba(255,255,255,.3),6.5vw 24px 0 0 rgba(255,255,255,.42),9.5vw 50px 0 0 rgba(223,241,255,.35),12.5vw 11px 0 0 rgba(255,255,255,.32),15vw 36px 0 0 rgba(223,241,255,.55),18vw 19px 0 0 rgba(255,255,255,.36),21.5vw 46px 0 0 rgba(255,255,255,.4)";
+/**
+ * The left group (Home · カイル · Seasons · Top Anime). Normally everything fits; when it can't
+ * (large default fonts, zoom, a 280px screen) it scrolls sideways instead of hiding Top Anime
+ * (swipe, or NavLink scrolls a focused link into view), with no visible scrollbar.
+ */
+export const NAV_LINK_STRIP =
+  "flex min-w-0 items-center overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+/** The gel pill (nav links, Log in), filled with slime gel on hover and keyboard focus. No height, shape or padding. */
+const NAV_PILL = `relative flex shrink-0 items-center text-sm text-[#e6f3ff] hover:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] hover:text-white hover:shadow-[inset_0_1px_0_rgba(191,230,255,.35),inset_0_0_0_1px_rgba(149,204,255,.28)] focus-visible:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] aria-[current=page]:text-[#95ccff] aria-[current=page]:hover:text-white sm:text-base ${FOCUS_RING_NAV}`;
+/** Nav links: the owner's full-height rounded-2xl pill; px-2 on phones (the 320 budget; px-1.5 below 320), px-3 at 640–819 (the 640 budget), his px-4 from 820. */
+export const NAV_LINK = `${NAV_PILL} h-16 rounded-2xl px-2 max-[319px]:px-1.5 sm:px-3 tablet:px-4`;
+/** Under the current page's link: a moonlit underline as wide as the label (insets = NAV_LINK's padding). A border, so forced colors keeps it. */
+export const NAV_CURRENT_MARK =
+  "pointer-events-none absolute inset-x-2 bottom-3 rounded-full border-t-2 border-[#95ccff] shadow-[0_0_8px_rgba(149,204,255,.75)] max-[319px]:inset-x-1.5 sm:inset-x-3 tablet:inset-x-4";
+/** The static slime before カイル: 360–639px and from 820px (no room at 320, nor at 640–819: see the budget above). */
+export const NAV_BRAND_MARK = "mr-1.5 hidden shrink-0 min-[360px]:block sm:hidden tablet:block";
+
+/**
+ * The session slot: the loading placeholder, "Log in" and the avatar are ONE box (48×48, 63×63
+ * from 640), so nothing in the bar moves when the session resolves.
+ * Coupled: the phone search's open width calc(100cqw-3.5rem). 100cqw is the bar's content box
+ * (the layout width − NAV_BAR's px-1 on both sides); the field ends at the form's right edge
+ * (layout − 4 − this slot 48 − NavBar's gap-1 4), so 3.5rem (56 = 48 + 4 + 4) puts its left edge
+ * 8px from the page edge, with or without a classic scrollbar. Change NAV_BAR's px-1, NavBar's
+ * gap-1, this slot and NAV_SEARCH_INPUT's focus:w-[…] together.
+ */
+export const NAV_SESSION_SLOT = "h-12 w-12 sm:h-[63px] sm:w-[63px]";
+export const NAV_SESSION_PLACEHOLDER = `${NAV_SESSION_SLOT} flex shrink-0 items-center justify-center`;
+/** Static (no pulse): without JavaScript the session never resolves. */
+export const NAV_SESSION_RING = "h-8 w-8 rounded-full border border-[#95ccff]/25 bg-[#95ccff]/5";
+/** "Log in": the owner's plain link in a round gel pill, the slot's box (min-w: a huge font grows it instead of clipping). */
+export const NAV_LOG_IN = `${NAV_PILL} h-12 min-w-12 justify-center rounded-full px-0.5 sm:h-[63px] sm:min-w-[63px] sm:px-1`;
+/** The owner's round avatar button: gel on hover, keyboard focus and while open (aria-expanded). */
+export const NAV_AVATAR_BUTTON = `${NAV_SESSION_SLOT} relative flex items-center justify-center rounded-full hover:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] hover:shadow-[inset_0_1px_0_rgba(191,230,255,.35),inset_0_0_0_1px_rgba(149,204,255,.28)] focus-visible:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] aria-expanded:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] aria-expanded:shadow-[inset_0_1px_0_rgba(191,230,255,.35),inset_0_0_0_1px_rgba(149,204,255,.45)] ${FOCUS_RING_NAV}`;
+/** The Google photo: a faint, static "Named" glow. (The /rimuru.png fallback stays h-8 w-auto, no ring.) */
+export const NAV_AVATAR_PHOTO =
+  "h-8 w-8 rounded-full object-cover shadow-[0_0_14px_-2px_rgba(149,204,255,.55)] ring-1 ring-[#95ccff]/50";
+
+/** NavSearch: phones, a 44×44 circle (the input itself) that opens leftwards while focused. */
+export const NAV_SEARCH_FORM = "relative h-11 w-11 shrink-0 sm:h-10 sm:w-44 tablet:w-48 lg:w-64";
+/**
+ * The input: 16px text below 1024px (iOS zooms smaller inputs, landscape phones included). Closed
+ * on phones it has NO padding: border-box can't shrink below padding + border, so pl-9 pr-3 would
+ * make the 44px circle 50 wide (the old 40px circle was 50 wide for the same reason). Open on
+ * phones: calc(100cqw-3.5rem), see NAV_SESSION_SLOT (no cqw support, e.g. iOS 15: it stays a
+ * 44px field while focused, still usable). sm:pr-2: the 16px mono placeholder
+ * "Search anime…" (125px) fits the 176px field. The edge is /55: ≈ 3.9:1 against the bar, 3.2:1
+ * at worst (under the sage aurora, the desktop field's top right); /45 was 2.5–3.1:1.
+ * indent-12 pushes the closed circle's text (a prefilled query, the placeholder) past its edge:
+ * forced colors repaints text-transparent in the system color, which would print "Searc" over
+ * the magnifier.
+ */
+export const NAV_SEARCH_INPUT =
+  "peer absolute right-0 top-0 z-10 h-11 w-11 rounded-full border border-[#95ccff]/55 bg-[#050915] px-0 indent-12 font-mono text-base text-transparent shadow-[inset_0_1px_8px_rgba(0,0,0,.55)] transition-[width] duration-200 [color-scheme:dark] placeholder:text-transparent hover:border-[#95ccff]/80 focus:w-[calc(100cqw-3.5rem)] focus:border-[#95ccff] focus:pl-4 focus:indent-0 focus:pr-10 focus:text-[#e6f3ff] focus:shadow-[inset_0_1px_8px_rgba(0,0,0,.55),0_0_22px_-6px_rgba(149,204,255,.65)] focus:placeholder:text-[rgb(130,140,160)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]/40 sm:static sm:h-10 sm:w-full sm:pl-9 sm:indent-0 sm:pr-2 sm:text-[#e6f3ff] sm:placeholder:text-[rgb(130,140,160)] sm:focus:w-full sm:focus:pl-9 sm:focus:pr-2 laptop:text-sm [&::-webkit-search-cancel-button]:hidden";
+/** The magnifier: must come AFTER the input (peer-focus). Centered in the phone circle, at the open field's right end. */
+export const NAV_SEARCH_ICON =
+  "pointer-events-none absolute left-3.5 top-1/2 z-20 h-4 w-4 -translate-y-1/2 text-[#95ccff]/75 peer-focus:text-[#95ccff] sm:left-3 forced-colors:text-[color:CanvasText] forced-colors:peer-focus:text-[color:CanvasText]";
+
+/**
+ * The account menu: a small, opaque Great Sage console (it floats over cards: no glass, no blur).
+ * One fade per open. The scanlines are its own background (bg-local: they scroll with the content),
+ * not a SCANLINES span, which would cover only the first screenful when max-h makes it scroll.
+ */
+export const MENU_PANEL =
+  "absolute right-0 top-full z-30 mt-2 max-h-[calc(100svh-5rem)] w-60 max-w-[calc(100vw-1rem)] animate-[fade-in_150ms_ease-out_both] overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border border-[#95ccff]/30 bg-[#0a1528] bg-[repeating-linear-gradient(0deg,rgba(255,255,255,.04)_0_1px,transparent_1px_3px)] bg-local shadow-[inset_0_0_40px_-20px_rgba(149,204,255,.35),0_24px_60px_-20px_rgba(0,0,0,.9),0_0_32px_-12px_rgba(93,174,241,.5)]";
+/** The header box (padding lives here, not on the clamped line, so a third line can't peek into it). */
+export const MENU_HEADER = "border-b border-[#95ccff]/15 px-4 pb-2.5 pt-3";
+/** "《Notice》 Signed in as <full name>.": two lines at most, typed in once per open. */
+export const MENU_NOTICE =
+  "line-clamp-2 animate-sage-scan font-mono text-xs leading-5 text-[#cfe8ff] [overflow-wrap:anywhere]";
+export const MENU_ITEM = `flex h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-[#e6f3ff] transition-colors hover:bg-[#5daef1]/15 hover:text-white focus-visible:bg-[#5daef1]/15 focus-visible:text-white aria-[current=page]:text-[#95ccff] md:h-10 ${FOCUS_RING_NAV}`;
+/** The current page's item: a trailing ● (a glyph, so forced colors keeps it). aria-hidden. */
+export const MENU_CURRENT_DOT = "ml-auto text-[10px] leading-none text-[#95ccff]";
+/** Lift Tracker's trailing ↗ (it leaves the site). aria-hidden; its aria-label adds ", external site". */
+export const MENU_EXTERNAL_GLYPH = "ml-auto text-[#95ccff]/70";
+/** Sign out's row: a hairline above it (a border, so forced colors keeps it). */
+export const MENU_SIGN_OUT_ROW = "mt-1.5 border-t border-[#95ccff]/15 pt-1.5";
+
+/** The ring on the footer's forest floor (#081020). */
+export const FOCUS_RING_FOOTER =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#081020]";
+/** <footer>: must stay a direct child of <body> (the landing's StickyCta observes `body > footer`). */
+export const FOOTER = "relative mt-8 min-w-0 [contain:inline-size]";
+/** The navy horizon behind the treeline (the banner sky's last stop, reversed). Decor: hidden in forced colors. */
+export const FOOTER_HORIZON =
+  "pointer-events-none relative h-14 bg-[linear-gradient(180deg,rgb(18,18,18)_0%,#0e1d33_100%)] sm:h-20 forced-colors:hidden";
+/** NightSky's Treeline, at the banners' forest height, on the horizon's floor. */
+export const FOOTER_TREELINE = "absolute inset-x-0 bottom-0 h-11 sm:h-16";
+/** The content column (FOOTER_ROW's box) at the horizon's floor, so the slime stands above the links' end. */
+export const FOOTER_SLIME_TRACK = "absolute inset-x-4 bottom-0 mx-auto max-w-screen-2xl sm:inset-x-6";
+export const FOOTER_SLIME = "absolute bottom-0 right-0";
+/** The forest floor: the near ridge's color, so trees and ground are one shape. border-transparent = its edge in forced colors. */
+export const FOOTER_BODY =
+  "border-t border-transparent bg-[#081020] px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 text-sm text-[rgb(164,164,164)] sm:px-6";
+export const FOOTER_ROW =
+  "mx-auto flex max-w-screen-2xl flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4";
+export const FOOTER_CREDITS = "min-w-0 leading-6";
+/** AniList / MyAnimeList inside the credit sentence (inline links: exempt from target size). */
+export const FOOTER_CREDIT_LINK = `rounded text-[#95ccff] underline-offset-2 hover:text-white hover:underline ${FOCUS_RING_FOOTER}`;
+/** "Top anime", "Search": 44px targets on phones; -mx-2 on the list lines their text up with the credits. */
+/** shrink-0: at 640–735px the credits wrap, never the links. */
+export const FOOTER_NAV = "shrink-0";
+export const FOOTER_LINKS = "-mx-2 flex gap-1";
+export const FOOTER_LINK = `inline-flex h-11 items-center whitespace-nowrap rounded-lg px-2 text-[rgb(200,206,218)] underline-offset-2 hover:text-white hover:underline md:h-9 ${FOCUS_RING_FOOTER}`;

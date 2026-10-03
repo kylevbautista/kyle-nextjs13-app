@@ -14,9 +14,9 @@ export default function AboutRanking() {
         About this ranking
       </h2>
       <p className="text-sm leading-6 text-[rgb(200,206,218)]">
-        Ranks, scores and member counts come from MyAnimeList via Jikan. Jikan refreshes each show
-        on its own schedule, so a rank can repeat or be skipped here even though MyAnimeList&apos;s
-        own ranking doesn&apos;t. This page refreshes at most once an hour.
+        Ranks, scores and member counts come from MyAnimeList&apos;s API. This page refreshes at
+        most once an hour, and the pages Show more adds are cached too, so a show can shift between
+        pages.
       </p>
       <p className="text-sm leading-6 text-[rgb(200,206,218)]">
         <SageTag kind="Notice" />

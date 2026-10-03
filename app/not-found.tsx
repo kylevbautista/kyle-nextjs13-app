@@ -32,6 +32,9 @@ export default function NotFound() {
           </Link>
           <Link
             href="/search"
+            // Never prefetch bare /search (its "Search anime" <title> leaks into later
+            // /search?q= navigations: Next 16.3, app/search/SearchTitle.tsx).
+            prefetch={false}
             className={`${buttonBase} border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] hover:bg-[rgb(53,53,53)]`}
           >
             Search

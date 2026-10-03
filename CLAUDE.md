@@ -9,8 +9,10 @@ tracker demo and a post-sign-in Quest Log. Production: https://kylevb.com (Verce
 - **Stack:** Next.js 16.3 App Router (Turbopack) · React 19 · TypeScript · Tailwind 3.4 · NextAuth v4
   (database sessions) · MongoDB native driver 4.x · SWR · react-hot-toast · Vitest
 - **Data sources:** [AniList GraphQL](https://graphql.anilist.co): seasons, search, list refresh.
-  **Rate limit ≈ 30 req/min** (read `x-ratelimit-remaining`). [Jikan v4](https://api.jikan.moe/v4):
-  MyAnimeList "Top Anime" only (~3 req/s, 60/min).
+  **Rate limit ≈ 30 req/min** (read `x-ratelimit-remaining`).
+  [MyAnimeList API v2](https://myanimelist.net/apiconfig/references/api/v2): the "Top Anime" ranking
+  only, server-side with the app's Client ID (no published rate limit). It replaced Jikan, which
+  shut down in October 2026.
 - **Checks:** `npm run check` (typecheck + lint + unit tests). There is no CI build.
 - **Design:** every page redesign uses the landing's "Tempest" theme. Load the `tempest-theme`
   skill (`.claude/skills/tempest-theme/SKILL.md`) first; shared pieces live in `components/theme/`.
@@ -22,7 +24,7 @@ tracker demo and a post-sign-in Quest Log. Production: https://kylevb.com (Verce
 ```bash
 npm ci               # install exactly what package-lock.json pins
 npm run dev          # next dev on :3000 (also re-adds the Next.js agent-rules block at the end of this file)
-npm run build        # prerenders 28 season pages, /topanime and / by calling AniList/Jikan (needs network)
+npm run build        # prerenders 28 season pages, /topanime and / by calling AniList/MyAnimeList (needs network)
 npm start            # serve the production build
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint . (flat config; includes React Compiler rules, see §9)
@@ -40,7 +42,9 @@ npm run check        # all three
 | `GOOGLE_CLIENT_ID/SECRET` | sign-in | The only provider shown in the UI |
 | `GITHUB_ID/SECRET`, `TWITTER_CLIENT_ID/SECRET` | optional | Registered only when both values are set; no UI buttons |
 | `GRAPHQL_ANILIST`, `NEXT_PUBLIC_GRAPHQL_ANILIST` | AniList (server / browser) | Fall back to `https://graphql.anilist.co` |
-| `JINKANV4_URL`, `NEXT_PUBLIC_JINKANV4_URL` | Jikan (server / browser) | Fall back to `https://api.jikan.moe/v4` |
+| `MAL_CLIENT_ID` | `/topanime` and `/api/top-anime` (and so the build) | Server-only, sent as `X-MAL-CLIENT-ID`; never `NEXT_PUBLIC_`. Missing → the ranking throws (the build fails) |
+| `MAL_CLIENT_SECRET` | – | Set, but unused: public data needs only the Client ID (the secret is for user OAuth) |
+| `MAL_API_URL` | optional | Falls back to `https://api.myanimelist.net/v2` (the test rig points it at a stub) |
 
 ### Testing signed-in flows without OAuth
 Sessions use the NextAuth **database** strategy, so you can fake a login. Point `MONGODB_URI` at a
@@ -57,13 +61,14 @@ throwaway DB (e.g. `mongodb-memory-server`). Insert a `users` doc and a
    │                       proxy.ts ............ request-time season redirects (/anime → current season)
    │                       / (landing) ......... ISR 600s ── server/lib/landing ─ ≤ 2 req (1 h data cache) ─► AniList
    │                       /anime/[...anime] ... ISR 300s ── getAniListData ─────────────► AniList
-   │                       /topanime ........... ISR 3600s ─ getTopAnimeJinkan ──────────► Jikan
+   │                       /topanime ........... ISR 3600s ─ server/lib/myanimelist ─────► MyAnimeList
+   │                       /api/top-anime ...... route handler (CDN 1 h) ────────────────► MyAnimeList
    │                       /search ............. dynamic ─── server/lib/anilist ─────────► AniList
    │                       /user/<id>, /mylist/<id> dynamic ─ server/lib/userList ──┬────► AniList (stale refresh)
    │                       /api/anime-list/* ... route handlers ────────────────────┤
    │                       /api/auth/* ......... NextAuth (MongoDBAdapter) ─────────┴────► MongoDB
    ├─ pages 2+ of a season ───────────────────────────────────────────────────────────────► AniList
-   └─ Top Anime "Show more" ───────────────────────────────────────────────────────────────► Jikan
+   └─ Top Anime "Show more" ──────────────────────────────────────────────────► /api/top-anime
 ```
 
 **The watchlist is a denormalized snapshot.** Each `users.following[]` entry is a sanitized AniList
@@ -84,7 +89,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/anime`, `/anime/<year>` | `proxy.ts` (fallback: `app/anime/page.tsx`, force-dynamic) | 307 | – | → current season, computed **per request** |
 | `/anime/<year>/<season>` | `app/anime/layout.tsx` (`<main>` + `HeaderProvider` only), `app/anime/[...anime]/{page,Boundary,error}.tsx`, `components/animev3/{PageBase,season/*}`, `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeDetailsDialog}.ts(x)` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4); no `loading.tsx` (§9.15) | – | Season browser (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
 | `/search?q=&page=` | `app/search/{layout,page,SearchBanner,SearchResults,SearchPagination,SearchPanels,SearchPending,SearchPendingStatus,SearchArrival,SearchStatus,SearchTitle}.tsx`, `components/theme/{SearchConsole,ConsoleFrame,SageDoorway}.tsx`, `lib/search.ts`, `lib/anime/searchCopy.ts` | dynamic; deliberately no `loading.tsx` (§5.4) | – | Search (Skill 04 · Great Sage): AniList title search, 30/page, up to page 50 (§5.4) |
-| `/topanime` | `app/topanime/{page,TopAnimeShell,TopAnimeBanner,GlanceStats,CrownConsole,AboutRanking,TopAnimeList,TopAnimeRow,ranking,rankingStore,error}.ts(x)` | **ISR 3600s**; no `loading.tsx` (§9.15) | – | MAL ranking via Jikan: the Octagram (ranks 1–8) + the ranking; "Show more" appends; Back restores loaded pages; "Track" → `/search?q=` |
+| `/topanime` | `app/topanime/{page,TopAnimeShell,TopAnimeBanner,GlanceStats,CrownConsole,AboutRanking,TopAnimeList,TopAnimeRow,ranking,rankingStore,loadTopAnimePage,error}.ts(x)`, `lib/topAnime.ts`, `server/lib/myanimelist.ts` | **ISR 3600s**; no `loading.tsx` (§9.15) | – | MyAnimeList's ranking (official API): the Octagram (ranks 1–8) + the ranking; "Show more" appends; Back restores loaded pages; "Track" → `/search?q=` |
 | `/auth` | `app/auth/page.tsx` | dynamic | – | Account panel, or → `/auth/signin` when signed out |
 | `/auth/signin` | `app/auth/signin/page.tsx`, `components/auth/signIn/PageBase.tsx` | static shell | – | Custom NextAuth sign-in page (Google). Honors same-origin `?callbackUrl`, explains `?error=` |
 | `/user` | `app/user/page.tsx` | dynamic | – | → `/user/<your id>` or sign-in |
@@ -95,6 +100,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/api/anime-list/ids` | `app/api/anime-list/ids/route.ts` | – | session | `GET` → `{ids}` on the caller's list (401 signed out) |
 | `/api/anime-list/<animeId>/user-data` | `app/api/anime-list/[animeId]/user-data/route.ts` | – | session | `PATCH {userData}` → `{message, userData}` (validated, normalized) |
 | `/api/anime-list/user/<userId>` | `app/api/anime-list/user/[userParam]/route.ts` | – | public | `GET` → `{list}` (refreshes stale airing data) |
+| `/api/top-anime?page=` | `app/api/top-anime/route.ts` | – | public | `GET` → `{page}`: one 25-show page of MAL's ranking for "Show more" (the browser can't call MAL: no CORS, and the Client ID stays server-side). Cached 1 h at the CDN only (Next's data cache would serve a stale page of any age); one MAL attempt per request, and the instance pauses after a failure; 400 bad page, 429 (MAL's wait in Retry-After), 502 |
 | `/api/auth/*` | `app/api/auth/[...nextauth]/route.ts` | – | – | NextAuth |
 
 `app/robots.ts` keeps crawlers off `/search` (each hit costs an AniList request), list pages, `/api`
@@ -104,9 +110,21 @@ and `/auth`.
 **only for their signed-in owner**, who is redirected to the id URL. Everyone else gets a 404, so
 emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner`).
 
-**Nav** (`components/common/NavBar.tsx`, `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`): Home ·
-カイル and Seasons (→ `/anime`) · Top Anime · search box (GET `/search`) · Log in **or** avatar menu
-{My List, Airing Schedule, Lift Tracker (external), Sign out}.
+**Nav** (`components/common/NavBar.tsx` (server), `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`;
+classes in the "Site chrome" section of `components/theme/tokens.ts`): Home · カイル and Seasons
+(→ `/anime`) · Top Anime · search box (GET `/search`, landmark "Site search") · Log in **or** avatar
+menu {My List, Airing Schedule, Lift Tracker (external), Sign out}. Tempest look: the top edge of
+the night sky (it ends in `#050915`, the banners' first color), static stars in the empty middle
+from 1024px, a moonlit hairline. The owner's full-height pills fill with slime gel on hover; the
+current page gets a sage underline (a border, so forced colors keeps it; the brand is never
+current). A static 20px slime marks カイル at 360–639px and from 820px (the 640–819 bar has no room
+for it); on phones the brand's name is "カイル Seasons". The loading placeholder (a static ring),
+Log in (a round gel pill) and the avatar share one box (48×48, 63×63 from 640), so the bar never
+shifts when the session resolves. The menu is a Great Sage console ("《Notice》 Signed in as <full
+name>.") that marks the item for the current page (● + `aria-current`). The nav is `z-40`, above
+the landing's StickyCta. **Footer** (`components/common/SiteFooter.tsx`, server, a direct child of
+`<body>`): the forest floor (NightSky's `Treeline` + a static slime), the AniList / MyAnimeList
+credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 
 ---
 
@@ -126,13 +144,14 @@ emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner
 | Tracker rules | +1 on Plan to Watch/Paused moves the show to Watching; auto-complete at the last episode; dates auto-filled; score rounded | Enforced on the server | `lib/anime/normalize.ts#normalizeUserData` |
 | Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows ("The whole week" on the Next-episodes card opens All); countdown rows with list status/progress and the "N new" chip (visitors see whose, and get + Add); a day-aware Great Sage line ("Now airing…", "Today: 2 episodes left, the next at 7:30 AM PT."); share strip and "Not airing right now" in a side column for the owner, below the panel for visitors | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" and the banner line until the per-minute clock (`useMinuteNow`) hydrates; the selected tab lives in `?day=` | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
-| Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. Jikan can repeat or skip a rank (it refreshes shows separately; MAL itself has one show per rank), so nothing on the page calls a repeat a tie | Page 1 server-rendered (throws on failure); later pages from the browser one at a time (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `getTopAnimeJinkan.ts`, `components/theme/{StatGrid,icons}.tsx` |
+| Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. MAL's ranking has one show per rank; its list ends where the unranked entries begin (about #22,900), and Rx (adult) entries are left out. Pages are cached separately, so a show that crosses a page boundary is deduped and nothing on the page calls two shows at one rank a tie | Page 1 server-rendered from MAL's API (`server/lib/myanimelist.ts`; fresh in every ISR render, but `next build` may reuse a copy cached by a build up to 1 h earlier, so the banner's "fetched" time is MAL's own Date header; throws on failure); later pages from the browser one at a time through `/api/top-anime` (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status; errors say whether MAL or the reader's connection failed, with MAL's Retry-After); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. MAL's response is parsed in `lib/topAnime.ts` (ranking position, not the show's lagging `rank` field; WebP covers; tested). Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `app/api/top-anime/route.ts`, `lib/topAnime.ts`, `server/lib/myanimelist.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 5 live countdown cards (the season page's card via `CARD_LAYOUT`, opening the same details sheet; 7 in the poster layout) with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the "N new" chip and countdown line use the real show's schedule | `components/home/TrackerDemo.tsx` |
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Friendly error/404 pages with retry; the season page's is themed (its banner, "《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime, both Next 16.3's `retry()`). Retry must refetch the server render: `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
+| Site chrome | The nav as the top of the night sky (gel hover pills, a sage underline on the current page, the slime mark on カイル, a console search field, a fixed-size Log in / avatar slot) and the account menu as a Great Sage console ("《Notice》 Signed in as Kyle Bautista.", ● on the current page's item, Lift Tracker ↗); the footer as a forest floor with the 《Report》 credits | Static, paint-only chrome with a fixed box (§9.22); current-page logic in `lib/routes.ts#isCurrentPath` (tested); every class in `tokens.ts`'s "Site chrome" section; the brand slime is server-rendered and passed to `AnimeBar` as `brandMark`, and both chrome slimes take a fixed `idScope` | `components/common/*`, `components/theme/tokens.ts`, `components/home/NightSky.tsx#Treeline` |
 
 ---
 
@@ -376,7 +395,8 @@ drops duplicates, re-sanitizes, and bounds dates.
 | Layer | Where | Notes |
 |---|---|---|
 | ISR | season pages 300 s, `/topanime` 3600 s, `/` 600 s | Season/Top Anime: upstream failure **throws** → last good page kept. `/` throws only for the season request (the build renders fallbacks) |
-| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached |
+| Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s · `next build`'s implicit copy of `/topanime`'s page 1 (the segment's 3600 s) | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached. A build within an hour of the last reuses page 1, so its banner time comes from MAL's Date header |
+| CDN | `/api/top-anime?page=N`: `s-maxage=3600, stale-while-revalidate=300` | The only cache for "Show more" pages (errors are `no-store`) |
 | Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode + continuing toggle), under `app/anime/layout.tsx` | |
@@ -398,7 +418,10 @@ lib/                        pure, shared by server + client (unit-tested)
   season.ts                   season math: current season, valid years, route validation, shiftSeason, landingSeason
   landing.ts                  landing constants/types + pure helpers (airing candidates, extras parsing, Tempest,
                               tiers, schedule grouping, add-intent parse/serialize)
-  routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath
+  routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath, isCurrentPath (nav + menu current page)
+  topAnime.ts                 /topanime's data: TopAnimeItem/Page, MAL ranking → slim page (toTopAnimePage: ends at the first
+                              unranked entry, drops Rx, WebP covers), dedupeByMalId, parseTopAnimePage (?page bound),
+                              readTopAnimePage (the browser re-reading /api/top-anime)
   search.ts                   /search's rules: normalizeQuery/Page, searchResultsPath, resultWindow (exact totals only on
                               the last page), searchView, the h1/h2 ids
   anime/types.ts              AnimeMedia, ListEntry, UserAnimeData, LIST_STATUSES(+labels), displayTitle
@@ -420,26 +443,30 @@ server/                     server-only
   lib/mongodb.ts              the only MongoClient (cached on globalThis, retries, failed connects not cached)
   lib/anilist.ts              anilistQuery (throws AniListError with status + retryAfterSeconds, 429 retry), fetchMediaByIds,
                               searchAnime (→ {media, hasNextPage, page}; no total, §5.4)
+  lib/myanimelist.ts          fetchTopAnimePage → {page, fetchedAt (MAL's Date)} (MAL API v2 ranking with X-MAL-CLIENT-ID; one
+                              deadline for headers + body; retries 429/5xx/network, then throws MyAnimeListError and pauses
+                              the instance: MAL's Retry-After after a 429, 15 s otherwise)
   lib/userList.ts             resolveListOwner, readEntries, loadListEntries, refreshEntriesIfStale, getListIds
   lib/listRoute.ts            lookupListOwner (React cache) + requireListOwner (layout guard)
   lib/landing.ts              loadLandingData (≤ 2 AniList requests; throws only at runtime when the season fails), fetchLandingExtras
 app/
-  layout.tsx, providers.tsx   metadata/footer; SessionProvider > {children, Toaster (themed), Analytics}
+  layout.tsx, providers.tsx   metadata, NavBar + SiteFooter; SessionProvider > {children, Toaster (themed), Analytics}
   error.tsx, global-error.tsx, not-found.tsx
   (home)/  anime/  search/  topanime/  auth/  user/  mylist/   see §3
-  api/anime-list/             route handlers (see §3)
+  api/anime-list/, api/top-anime/, api/auth/   route handlers (see §3)
 components/
   animev3/                    season browser: PageBase (the page's client root), layoutSelector/HeaderProvider (sort +
-                              continuing context), utils/ (getAniListData, useLazyLoad, seasonFreshness, jinkanData/)
+                              continuing context), utils/ (getAniListData, useLazyLoad, seasonFreshness)
     season/                     SeasonBanner (minute-clock leaf) → SeasonHeader (PageBanner + SeasonNav, also error.tsx),
                                 SeasonNav + SeasonLink (intent prefetch, focus token), SeasonControls (+ SortHint),
                                 SeasonGridNotices (OrderDivider, LoadMoreError, SeasonEndCard), SeasonEmpty, useSeasonPhase
   mylist/                     Airing Schedule UI (week panel, NextEpisodes card) + schedule.ts (grouping)
-  common/                     NavBar, AnimeBar (nav links), NavSearch, LogInBox (account menu)
+  common/                     the site chrome: NavBar (server: box, stars, hairline, link strip), AnimeBar (NavLink + the
+                              brand), NavSearch, LogInBox (session slot + account menu), SiteFooter (server: the forest floor)
   animev3/ListToggle.tsx      the shared add/remove toggle (every card); ListToggleAction = AnimeCard's full-width version
   theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
     tokens.ts                   class tokens (focus rings, containers, ANIME_GRID / INFO_GRID + cover sizes, the classic card's INFO_*,
-                                type, panels, cards, buttons, fields, shelves)
+                                type, panels, cards, buttons, fields, shelves, the site chrome's NAV_* / MENU_* / FOOTER_*)
     cardLayout.ts               ANIME_CARD_LAYOUT ("classic" | "poster"): the one switch for the season page, /search and
                                 the landing's Magic Sense (CARD_LAYOUT bundles card, skeleton, action, grid, sizes, spans)
     AnimeInfoCard, AnimeInfoCardSkeleton  the classic card (owner's layout, gel surface, Magic Sense HUD, readout, synopsis well,
@@ -471,7 +498,8 @@ components/
     QuestSection, QuestLog      #quests: sign-up pitch or Quest Log + AddIntentHandler; questStore (flags)
     Hero, HeroSlime, HeroNextUp, NightSky, AiringNext, AiringGrid, CountdownText, TrackerDemo,
     ScheduleDemo, SageSearch, TempestArchive, TempestShelf, Faq, PostCredits, Reveal
-                                the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines)
+                                the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines);
+                                NightSky also exports MagicCircle and Treeline (the footer's static forest)
     analytics.ts                typed Vercel Analytics events (trackLanding, trackOnce)
   auth/                       sign-in page, SignOutButton, GoogleIcon
   utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
@@ -495,10 +523,11 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
    hydrated.
 3. **Never** `dangerouslySetInnerHTML` an anime description without `sanitizeDescription()`. Stored
    legacy data may be hostile, and AniList itself sometimes leaves tags unclosed.
-4. **Entries are keyed by AniList `id`.** Jikan (`/topanime`) only has MAL ids, so never send those
+4. **Entries are keyed by AniList `id`.** MyAnimeList (`/topanime`) only has MAL ids, so never send those
    to `/api/anime-list`. Use the "Track" → search flow instead.
 5. **The AniList budget is shared** (~30/min per server IP). Don't prefetch links to search results
-   (or to `/search` from its own forms: §5.4.5).
+   (or to `/search` from its own forms: §5.4.5); links to bare `/search` (the footer, the 404 page)
+   use `prefetch={false}`.
    Avoid new server-side AniList calls on hot paths, and keep `getAniListData`'s queue.
 6. **Redirects/404s must happen before streaming.** A `redirect()`/`notFound()` under a `loading.tsx`
    boundary is sent as a 200 with a client-side redirect. Use `proxy.ts` or a layout (see
@@ -519,7 +548,12 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     the whole page; the landing's `main` has `min-w-0` and its sections `[contain:inline-size]`.
     List layouts also need `min-w-0` through their grids/flex containers. The Airing Schedule's week
     panel keeps its 8 tab columns down to 320px; its rows wrap titles (2 lines) and status lines
-    instead of truncating. Keep metadata columns shrinkable.
+    instead of truncating. Keep metadata columns shrinkable. The nav can't widen the column
+    (`[container-type:inline-size]`); its links need 312px at 320 (no brand slime), 338 at 360–639
+    and 620 at 640 (no brand slime at 640–819) in the widest fonts (`tokens.ts` "Site chrome" has the
+    arithmetic). The 640 row must fit 625, not 640: desktop browsers with a classic 15px scrollbar
+    still match `sm:` at 640–654px. When the links can't fit (large default fonts, zoom, a 280px
+    screen) the link strip scrolls sideways. Re-measure before adding to the bar.
 14. **Never use `server/lib/anilist.ts#anilistQuery` on static or ISR pages.** Its `cache: "no-store"`
     makes the route dynamic, and every view would call AniList. Use `getAniListData` (default fetch
     cache) or a `force-cache` fetch through `enqueueAniListRequest`, as `server/lib/landing.ts` does.
@@ -563,6 +597,22 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 21. **Class strings a server component renders come from a non-client module** (`tokens.ts`). A
     string imported from a `"use client"` file is a client reference on the server, so its classes
     break (the server-rendered `/search` pending skeleton uses the classic card's tokens).
+22. **The site chrome's box is load-bearing, and the nav is paint-only.** The nav is `h-16` + `mb-2`,
+    `sticky top-0 z-40`: PageBanner, Hero and both list skeletons use `-mt-2`, Hero's
+    `calc(100svh-4rem)`, every `scroll-mt-20` and AboutRanking's `lg:top-20` assume it, so change them
+    together. It sits over every scroll frame: static gradients, stars and shadows only, no infinite
+    animation, `filter`, `backdrop-filter` or scroll listeners; its only motion is hover/focus color,
+    the phone search's 200 ms width, the menu's one-shot fade + Notice typing, and Pepe while
+    hovered/focused. The phone search's open width is `calc(100cqw-3.5rem)` against the nav (a
+    size container), so a classic scrollbar can't push it off-screen; closed, the input has no
+    padding (border-box can't shrink below padding + border) and `indent-12` hides its text (forced
+    colors repaints `text-transparent`). The link strip scrolls, so its controls use `FOCUS_RING_NAV`
+    (`-outline-offset-2`: forced colors paints the outline, and an outer one would be clipped) and a
+    focused link scrolls only the strip into view. `<footer>` must stay a direct child of `<body>`
+    (StickyCta observes `body > footer`), and its classes come from `tokens.ts` (§9.21). A `Slime`
+    a root-layout server component renders needs a fixed `idScope`: server `useId` values restart at
+    `_S_1_` in every RSC render, so the first slime of a segment reached by client navigation would
+    otherwise paint from the layout's (possibly hidden) gradient defs.
 
 ---
 
@@ -574,15 +624,28 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
   needs a code change for new franchise entries.
 - A stale ISR season page is corrected in the browser about a second after load (§5.1). Visitors
   without JavaScript still get the cached copy until Next's background rebuild lands.
-- `SessionProvider` has no server session, so the nav avatar and card toggles show a loading pill
-  for a moment on full page loads.
+- `SessionProvider` has no server session, so on full page loads the nav shows a static
+  placeholder ring for a moment (the same 48/63px box as Log in and the avatar, so nothing shifts)
+  and card toggles a loading pill. Without JavaScript the placeholder stays.
+- No skip link yet. It needs one shared, non-focusable-by-default target across the route
+  `<main>`s (§9.15) and a router-safe jump (§9.18); do it as its own change.
+- The sticky nav can cover a focused element when tabbing backwards (Shift+Tab scrolls it to the
+  very top, under the 64px bar: WCAG 2.4.11). `html { scroll-padding-top }` is not the fix: it makes
+  the page jump ≈ 460px whenever a nav link gets focus while scrolled. A focusin nudge (scroll by
+  the overlap, skipping the nav and open dialogs) would be.
+- The plain pages (404, `/auth/signin`, `/auth`) keep their rgb(38) cards under the themed nav.
+- Browsers without container query units (iOS 15) keep the phone search a 44px field while it is
+  focused (still usable).
+- The banners' 64px forest band turns width-scaled past ≈ 1370px, so on very wide screens their
+  tallest pines are cut flat at the top. The footer's `Treeline` avoids it with a 7000-unit viewBox.
 - `+1` sends `current + 1`. A stale tab could still overwrite a newer value; an atomic increment
   endpoint would fix it.
 - No per-user rate limiting on the write APIs. Lists are capped at 2,000 shows.
 - GitHub auto-disabled the cache-warm and health-check crons; re-enable them or use Vercel Cron and
   an uptime monitor.
-- `next build` fails if AniList or Jikan stays down past the prerender retries. This is deliberate:
-  pages throw rather than cache an empty page. Redeploy once the API is back.
+- `next build` fails if AniList or MyAnimeList stays down past the prerender retries, or if
+  `MAL_CLIENT_ID` is missing. This is deliberate: pages throw rather than cache an empty page.
+  Redeploy once the API is back.
 - `useMyList`'s add/remove toasts render dimmed behind an open details sheet and aren't spoken
   (the sheet says "Couldn't add it to your list. Try again." itself; a specific reason such as
   "list is full" is only in that toast). A top-layer or visual-only toaster would fix it site-wide.

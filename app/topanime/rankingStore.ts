@@ -2,7 +2,7 @@ import {
   dedupeByMalId,
   type TopAnimeItem,
   type TopAnimePage,
-} from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+} from "@/lib/topAnime";
 
 /**
  * The ranking pages loaded in this tab, kept in module memory so going Back

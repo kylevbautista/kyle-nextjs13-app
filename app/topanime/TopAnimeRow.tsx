@@ -1,7 +1,7 @@
 import { memo, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { TopAnimeItem } from "@/components/animev3/utils/jinkanData/getTopAnimeJinkan";
+import type { TopAnimeItem } from "@/lib/topAnime";
 import Slime from "@/components/home/Slime";
 import { CrownIcon, StarIcon } from "@/components/theme/icons";
 import { CARD, FOCUS_RING_PANEL } from "@/components/theme/tokens";
