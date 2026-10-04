@@ -12,6 +12,8 @@ interface UserListPageProps {
 export async function generateMetadata({ params }: UserListPageProps): Promise<Metadata> {
   const { user = [] } = await params;
   const lookup = await lookupListOwner(user[0]);
+  // An unknown list renders the 404 (requireListOwner): say so in the title too.
+  if (lookup.kind === "not-found") return { title: "Page not found" };
   if (lookup.kind !== "found") return { title: "Anime list" };
 
   // Metadata is what link previews show, so it never includes the full name.

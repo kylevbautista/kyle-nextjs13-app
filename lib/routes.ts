@@ -3,7 +3,7 @@
 /** The full tracker: statuses, progress, score, dates. */
 export const myListPath = (userId: string) => `/user/${userId}`;
 
-/** This season's shows from a user's list, by weekday, with countdowns. */
+/** Upcoming episodes from a user's list (not dropped or completed), by weekday (PT), with countdowns. */
 export const airingSchedulePath = (userId: string) => `/mylist/${userId}`;
 
 export const searchPath = (query?: string) =>

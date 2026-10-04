@@ -90,8 +90,8 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/anime/<year>/<season>` | `app/anime/layout.tsx` (`<main>` + `HeaderProvider` only), `app/anime/[...anime]/{page,Boundary,error}.tsx`, `components/animev3/{PageBase,season/*}`, `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeDetailsDialog}.ts(x)` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4); no `loading.tsx` (§9.15) | – | Season browser (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
 | `/search?q=&page=` | `app/search/{layout,page,SearchBanner,SearchResults,SearchPagination,SearchPanels,SearchPending,SearchPendingStatus,SearchArrival,SearchStatus,SearchTitle}.tsx`, `components/theme/{SearchConsole,ConsoleFrame,SageDoorway}.tsx`, `lib/search.ts`, `lib/anime/searchCopy.ts` | dynamic; deliberately no `loading.tsx` (§5.4) | – | Search (Skill 04 · Great Sage): AniList title search, 30/page, up to page 50 (§5.4) |
 | `/topanime` | `app/topanime/{page,TopAnimeShell,TopAnimeBanner,GlanceStats,CrownConsole,AboutRanking,TopAnimeList,TopAnimeRow,ranking,rankingStore,loadTopAnimePage,error}.ts(x)`, `lib/topAnime.ts`, `server/lib/myanimelist.ts` | **ISR 3600s**; no `loading.tsx` (§9.15) | – | MyAnimeList's ranking (official API): the Octagram (ranks 1–8) + the ranking; "Show more" appends; Back restores loaded pages; "Track" → `/search?q=` |
-| `/auth` | `app/auth/page.tsx` | dynamic | – | Account panel, or → `/auth/signin` when signed out |
-| `/auth/signin` | `app/auth/signin/page.tsx`, `components/auth/signIn/PageBase.tsx` | static shell | – | Custom NextAuth sign-in page (Google). Honors same-origin `?callbackUrl`, explains `?error=` |
+| `/auth` | `app/auth/page.tsx`, `components/auth/SignOutButton.tsx`, `components/theme/CardPage.tsx` | dynamic; no `loading.tsx` in `app/auth` (§9.6, §9.15) | session | Account card (a Tempest card page): avatar (the photo over the owner's initial), 《Notice》 Signed in as + name, "Your lists" link cards (My List, Airing Schedule), Sign out (without JavaScript: NextAuth's own sign-out page). Signed out → `/auth/signin` (307, before streaming) |
+| `/auth/signin` | `app/auth/signin/page.tsx`, `components/auth/signIn/{SignInActions,SignInSlime}.tsx`, `components/auth/{GoogleButton,GoogleIcon}.tsx`, `lib/signIn.ts` | **static** (○); no `loading.tsx` (§9.15) | – | Custom NextAuth sign-in page ("Naming"): the slime, h1 and subhead are server HTML, the action slot is the only client island. Honors same-origin `?callbackUrl`; explains `?error=` (a 《Warning》 box and a worried slime; SessionRequired a 《Notice》); already signed in: the Named Slime and "Naming complete.", then the redirect |
 | `/user` | `app/user/page.tsx` | dynamic | – | → `/user/<your id>` or sign-in |
 | `/user/<userId>` | `app/user/[...user]/*`, `app/user/_client/*` | dynamic | **public read, owner edits** | **My List**: the full tracker (§5.3) |
 | `/mylist` | `app/mylist/page.tsx` | dynamic | – | → `/mylist/<your id>` or sign-in |
@@ -150,7 +150,8 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates; nothing is saved | Local state that calls the real `normalizeUserData` in handlers; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the "N new" chip and countdown line use the real show's schedule | `components/home/TrackerDemo.tsx` |
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
-| Errors | Friendly error/404 pages with retry; the season page's is themed (its banner, "《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | `app/error.tsx`, `global-error.tsx`, `not-found.tsx`, per-route `error.tsx` (season, top anime, both Next 16.3's `retry()`). Retry must refetch the server render: `retry()`, or `router.refresh()` + `reset()` (`reset()` alone re-shows the error) | |
+| Errors | Card pages on the night sky (`CardPage`: the owner's centered card as a Great Sage console): the 404 (a worried slime perched on "404", "This page got isekai'd", 《Warning》, This season / Search / Home); the error page (the worried slime over the owner's table flip, 《Warning》, Error ID, Try again / Home, its own `<title>`); the fatal error (a self-contained night-sky document: worried slime, 《Warning》, Error ID, Try again, Home as a full load). The season and Top Anime errors are themed inside their banners ("《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | Retry is Next 16.3's `retry()` (`reset()` alone re-shows the error; or `router.refresh()` + `reset()`). `RetryButton` ("Try again" / "Trying again…", `aria-disabled`) returns focus after a failed retry (a 10 s module token). `error.tsx` and `global-error.tsx` ship on every page: the error page's sky and slime load lazily (`ErrorDecor`; a failed import renders nothing), and global-error inlines its CSS and slime (slimeArt). Both render in the browser only (the server sends an empty `__next_error__` shell). The error page keeps its `<title>` first in `<head>` while mounted (React hoists the newest title first, and a client navigation's metadata title mounts after it). The list routes title their 404 "Page not found" | `app/{not-found,error,global-error}.tsx`, `components/theme/{CardPage,RetryButton,ErrorDecor}.tsx`, per-route `error.tsx` (season, top anime) |
+| Sign-in & account | `/auth/signin`: the owner's card on the night sky: the slime (worried next to a 《Warning》, the Named Slime with "Naming complete." when already signed in), "Sign in", Google's light pill button, `?error=` as a rose 《Warning》 box (SessionRequired: a sage 《Notice》), and "《Report》 Signing in needs JavaScript on this site." without JS. `/auth`: the avatar (photo, or the initial on slime gel), 《Notice》 Signed in as, the name, the My List / Airing Schedule link cards, Sign out | A static sign-in page with one island (`SignInActions`): the three slimes are server HTML switched by CSS `:has([data-slime])` (no client JS); rules and lines in `lib/signIn.ts` (tested: the Map lookup, same-origin callback paths); one spoken channel (a persistent `role="status"` or the alert); `aria-disabled` + guards keep focus while pending; no `next/image` on either page (plain `<img>`; the photo stacks over the initial, so a broken photo needs no JS). `GoogleButton` is also the landing dialog's; `GoogleIcon` is a client leaf with a statically imported PNG (a server-rendered `<img>` becomes an RSC preload hint, and the nav's prefetch of sign-in would make every signed-out page fetch it) | `app/auth/*`, `components/auth/*`, `components/theme/CardPage.tsx`, `lib/signIn.ts` |
 | Site chrome | The nav as the top of the night sky (gel hover pills, a sage underline on the current page, the slime mark on カイル, a console search field, a fixed-size Log in / avatar slot) and the account menu as a Great Sage console ("《Notice》 Signed in as Kyle Bautista.", ● on the current page's item, Lift Tracker ↗); the footer as a forest floor with the 《Report》 credits | Static, paint-only chrome with a fixed box (§9.22); current-page logic in `lib/routes.ts#isCurrentPath` (tested); every class in `tokens.ts`'s "Site chrome" section; the brand slime is server-rendered and passed to `AnimeBar` as `brandMark`, and both chrome slimes take a fixed `idScope` | `components/common/*`, `components/theme/tokens.ts`, `components/home/NightSky.tsx#Treeline` |
 
 ---
@@ -321,7 +322,8 @@ On every list read (both list pages and `GET /api/anime-list/user/<id>`):
 `accounts`, `sessions` docs (**database** strategy, cookie `next-auth.session-token`, or
 `__Secure-…` on https). `callbacks.session` sets `session.objectId = user.id`. **Every write is scoped by
 it and list URLs use it.** Switching to JWT sessions breaks both. `authOptions.adapter` is a getter
-that rebuilds the adapter after a failed Mongo connection (`server/auth/index.ts`).
+that rebuilds the adapter after a failed Mongo connection (`server/auth/index.ts`). The callback path
+is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no `//` or `/\` paths).
 
 ### 5.7 Landing `/` (`server/lib/landing.ts#loadLandingData`, ISR 600 s)
 1. **Season.** `landingSeason()` (`lib/season.ts`): the current UTC season, or the next one when it
@@ -401,7 +403,7 @@ drops duplicates, re-sanitizes, and bounds dates.
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
 | React context | `HeaderContext` (season sort mode + continuing toggle), under `app/anime/layout.tsx` | |
 | Local state | My List (`MyList.tsx`), Top Anime list, season `PageBase` (pins, cursor, refresh state), the details sheet (`useAnimeDetails`) | |
-| Module memory | `app/topanime/rankingStore.ts` · `components/animev3/utils/seasonFreshness.ts` · `components/animev3/season/seasonFocus.ts` · `components/utils/searchArrival.ts` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) · a season's browser refresh, so Back/Forward doesn't refresh again · a one-shot focus token for season navigation (10 s) · /search's one-shot arrival token (30 s, query + page, dropped on popstate) and its status line's text |
+| Module memory | `app/topanime/rankingStore.ts` · `components/animev3/utils/seasonFreshness.ts` · `components/animev3/season/seasonFocus.ts` · `components/utils/searchArrival.ts` · `components/theme/RetryButton.tsx` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) · a season's browser refresh, so Back/Forward doesn't refresh again · a one-shot focus token for season navigation (10 s) · /search's one-shot arrival token (30 s, query + page, dropped on popstate) and its status line's text · the error pages' focus-return token after a failed retry (`retryFocusAt`, 10 s) |
 | Shared clocks | `useNow()` (1 s, countdown leaves only) · `useMinuteNow()` (per minute: "today", season phase) | `useSyncExternalStore`; one interval each for the page. `useMinuteNow` reads null again once nothing subscribes, so a later mount renders its fallback first |
 | Mongo | `listRefreshedAt` | Refresh lock/throttle |
 | sessionStorage | `kv:add-intent` | Landing sign-in intent `{id, status?, at, media}`; auto-add only within 15 min, consumed once |
@@ -424,6 +426,9 @@ lib/                        pure, shared by server + client (unit-tested)
                               readTopAnimePage (the browser re-reading /api/top-anime)
   search.ts                   /search's rules: normalizeQuery/Page, searchResultsPath, resultWindow (exact totals only on
                               the last page), searchView, the h1/h2 ids
+  signIn.ts                   /auth/signin's rules and lines: signInMessage (?error= → {kind, text}; a Map, unknown → the
+                              default), safeCallbackPath (same-origin, never /auth/signin, no // or /\ paths), SIGNED_IN_LINE,
+                              SIGN_IN_NOSCRIPT
   anime/types.ts              AnimeMedia, ListEntry, UserAnimeData, LIST_STATUSES(+labels), displayTitle
   anime/normalize.ts          normalizeMedia/Entry/UserData — whitelist, coercion, tracker rules
   anime/sanitize.ts           sanitizeDescription (allow-list <br><i><b><em><strong>, balanced), descriptionToText
@@ -478,6 +483,10 @@ components/
     dialog.ts                   isBackdropEvent (EditEntryDialog, the details sheet)
     PageBanner                  night-sky app-page header (eyebrow, lead, SageLine or a streamed sageSlot, h1, actions, aside;
                                 asideClassName)
+    CardPage, RetryButton       the card pages' frame (404, error, sign-in, account: a night-sky <main data-card-page> with a
+                                sky slot, a glow, a ConsoleFrame card, the owner's <section>) and "Try again" with the
+                                focus-return token (error.tsx, global-error)
+    ErrorDecor                  app/error.tsx's lazy sky + worried slime (its own chunk: error.tsx ships on every page)
     SearchConsole, SearchChips  the Great Sage search console (GET /search via next/form, never prefetched, leaves the
                                 arrival token) + "Try:" chips: /search and the landing's chapter
     ConsoleFrame, SageDoorway   the console frame (scanlines, corner brackets) and a 《Kind》 doorway row: the same two places
@@ -499,9 +508,12 @@ components/
     Hero, HeroSlime, HeroNextUp, NightSky, AiringNext, AiringGrid, CountdownText, TrackerDemo,
     ScheduleDemo, SageSearch, TempestArchive, TempestShelf, Faq, PostCredits, Reveal
                                 the chapters; Slime + slimeArt (original mascot SVG), SageLine (《Notice》 lines);
-                                NightSky also exports MagicCircle and Treeline (the footer's static forest)
+                                NightSky also exports MagicCircle and Treeline (the footer's static forest); `forest={false}`
+                                drops the forest band and runs the sky down to the horizon's navy (the card pages)
     analytics.ts                typed Vercel Analytics events (trackLanding, trackOnce)
-  auth/                       sign-in page, SignOutButton, GoogleIcon
+  auth/                       sign-in (signIn/SignInActions: the client island; signIn/SignInSlime: the CSS-switched slime),
+                              GoogleButton (Google's light pill; also the landing's sign-in dialog), GoogleIcon (the kit's G,
+                              a client leaf importing ./google-g.png), SignOutButton
   utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
                               useMyList, useNow (1 s), useMinuteNow (per minute: "today" labels), searchArrival (/search's
                               focus token + status store)
@@ -566,6 +578,11 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     no `loading.tsx` there either (`npm run build`, then every `.next/server/app/anime/*/*.html` has
     one `<h1>`, no `<div hidden id="S:` and no `<!--$?-->`). Their client roots render the whole
     page, and a root element that Next would focus after a navigation must stay non-focusable.
+    `/auth/signin` is the same: a static shell whose only Suspense boundary is the action slot
+    (`useSearchParams`). It has no `loading.tsx`: one shipped "Loading…" as the static HTML and hid
+    the card in `<div hidden>`. `app/auth` has none either: it would also wrap `/auth`'s redirect
+    (§9.6). Check: `.next/server/app/auth/signin.html` has one `<h1>`, no `<div hidden id="S:` and
+    no `<!--$?-->`.
 16. Tailwind scans `app/`, `components/` and `lib/` (`tailwind.config.js` `content`). Class maps
     shared from elsewhere (e.g. `lib/anime/statusBadge.ts`) are silently dropped from the CSS unless
     their folder is listed there.
@@ -598,7 +615,7 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     string imported from a `"use client"` file is a client reference on the server, so its classes
     break (the server-rendered `/search` pending skeleton uses the classic card's tokens).
 22. **The site chrome's box is load-bearing, and the nav is paint-only.** The nav is `h-16` + `mb-2`,
-    `sticky top-0 z-40`: PageBanner, Hero and both list skeletons use `-mt-2`, Hero's
+    `sticky top-0 z-40`: PageBanner, Hero, CardPage and both list skeletons use `-mt-2`, Hero's
     `calc(100svh-4rem)`, every `scroll-mt-20` and AboutRanking's `lg:top-20` assume it, so change them
     together. It sits over every scroll frame: static gradients, stars and shadows only, no infinite
     animation, `filter`, `backdrop-filter` or scroll listeners; its only motion is hover/focus color,
@@ -612,7 +629,11 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     (StickyCta observes `body > footer`), and its classes come from `tokens.ts` (§9.21). A `Slime`
     a root-layout server component renders needs a fixed `idScope`: server `useId` values restart at
     `_S_1_` in every RSC render, so the first slime of a segment reached by client navigation would
-    otherwise paint from the layout's (possibly hidden) gradient defs.
+    otherwise paint from the layout's (possibly hidden) gradient defs. CardPage's `-mb-8` cancels the
+    footer's `mt-8` (the card pages' sky runs to the footer's horizon): change `FOOTER` and `CARD_PAGE`
+    together. On those pages (`main[data-card-page]`) `FOOTER_HORIZON` turns flat navy through a
+    `body:has()` variant, so the forest-less sky meets the treeline with no dark band; below 640px the
+    card's drop shadow is shortened (`CARD_PAGE_FRAME`) so the 24px bottom padding doesn't cut it flat.
 
 ---
 
@@ -633,7 +654,34 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
   very top, under the 64px bar: WCAG 2.4.11). `html { scroll-padding-top }` is not the fix: it makes
   the page jump ≈ 460px whenever a nav link gets focus while scrolled. A focusin nudge (scroll by
   the overlap, skipping the nav and open dialogs) would be.
-- The plain pages (404, `/auth/signin`, `/auth`) keep their rgb(38) cards under the themed nav.
+- Root `error.tsx` and `global-error.tsx` render only in the browser (a render error above every
+  Suspense boundary ships Next's empty `__next_error__` shell), so visitors without JavaScript get a
+  blank page. A root layout that throws during server rendering shows Next's built-in, unthemed 500
+  page. A successful Try again on the fatal error page is silent and drops focus to `<body>` (as
+  before the redesign): Next's route announcer remounts with the root layout and never announces its
+  first title.
+- The nav's fallback avatar is `/rimuru.png`; `/auth` shows the owner's initial (two different
+  no-photo looks). The photo stacks over the initial with no JavaScript, so a photo with
+  transparency shows the gel disc through it, and a broken photo shows the initial with Chromium's
+  small broken-image glyph in the disc's top-left corner (a client `onError`/`onLoad` leaf would fix
+  both).
+- A 404 from a list layout (`notFound()` for an unknown `/user` or `/mylist` id) also renders in the
+  browser only: without JavaScript the page is blank (Next's empty shell). On `/mylist` its server
+  title lacks " · kylevb" and its description/og tags are the layout's ("Airing Schedule"): the
+  layout's plain-string `title` resets the root template. Hydration corrects the title.
+- The Google button names Google Sans first but doesn't download it (system Roboto/Arial
+  otherwise); loading it with `next/font` would add a build-time Google Fonts fetch.
+- NextAuth's `pages.error` is unset: Configuration and Verification errors land on NextAuth's own
+  unthemed `/api/auth/error`. Without JavaScript, Sign out goes to NextAuth's unthemed confirmation
+  page.
+- `/auth/signin` is static, so its `?error=` box appears after hydration (the button moves down
+  once; the card is top-anchored, so the header stays). If `signIn()` fails (network), the button
+  just resets; there's no message yet.
+- The landing's no-JS "Start my list" links (`SessionCta`, `QuestLog`) lead to `/auth/signin`.
+  Without JavaScript that page can only say "Signing in needs JavaScript on this site." (Before the
+  redesign they led to a page stuck on "Loading…".)
+- The card pages' sky meets the footer's flat-navy horizon through `body:has()`; browsers without
+  `:has()` (and the sign-in slime's switch) keep the generic horizon's dark dip and the idle slime.
 - Browsers without container query units (iOS 15) keep the phone search a 44px field while it is
   focused (still usable).
 - The banners' 64px forest band turns width-scaled past ≈ 1370px, so on very wide screens their

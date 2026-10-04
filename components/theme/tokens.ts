@@ -156,12 +156,142 @@ export const HAIRLINE = "h-px bg-gradient-to-r from-transparent via-[#95ccff]/30
 export const DAY_TINTS = ["#95ccff", "#a5b4fc", "#c4b5fd", "#f0abfc", "#fda4af", "#fcd34d", "#86efac"];
 
 /* ------------------------------------------------------------------------- */
+/* Card pages: the 404, the error page, sign-in and account (CardPage). The    */
+/* owner's centered card, themed: a Great Sage console (ConsoleFrame) on the   */
+/* night sky. Server pages and app/error.tsx render these, so they live here   */
+/* (CLAUDE.md §9.21).                                                          */
+/*                                                                             */
+/* The <main> is the body grid's 1fr row. -mt-2 cancels the nav's mb-2 (see    */
+/* NAV_BAR's box comment); -mb-8 cancels FOOTER's mt-8, so the sky runs from   */
+/* the nav to the footer's horizon. Change them together. Top-anchored, never  */
+/* vertically centered: sign-in's ?error= box arrives after hydration, and a   */
+/* centered card would move as a whole (slime and h1 included).                */
+
+/**
+ * The stage (CardPage renders it with data-card-page). It paints the sky's gradient itself
+ * (NightSky's forest-less sky, down to the horizon's #0e1d33), so the error page is themed before
+ * its lazy sky arrives (or if it never does). On these pages the footer's horizon turns the same
+ * navy (FOOTER_HORIZON), so the sky runs straight into the footer's treeline with no dark band.
+ * Never focusable (§9.15).
+ * pt: 32px on phones. From 640 it is 7svh, clamped to 48–136px: the owner's py-16 (64px) on a
+ * 900px-tall laptop, ≈83px on a tall tablet, so the card never glues to the nav.
+ */
+export const CARD_PAGE =
+  "relative isolate -mb-8 -mt-2 flex min-w-0 flex-col items-center overflow-hidden bg-[linear-gradient(180deg,#050915_0%,#0a1428_50%,#0e1d33_100%)] px-4 pb-6 pt-8 text-white [contain:inline-size] sm:pb-16 sm:pt-[clamp(3rem,7svh,8.5rem)]";
+/** The sky slot's wrapper (NightSky inside). Decor: hidden in forced colors, like FOOTER_HORIZON. */
+export const CARD_PAGE_SKY = "pointer-events-none absolute inset-0 -z-10 forced-colors:hidden";
+/** The card's column; CardPage adds the owner's width (max-w-md: 404, error; max-w-sm: sign-in, account). */
+export const CARD_PAGE_SLOT = "relative w-full";
+/** One moonlit glow behind the card (a gradient, never a blur); the stage clips it on phones. */
+export const CARD_PAGE_GLOW =
+  "pointer-events-none absolute -inset-x-16 -inset-y-12 -z-10 bg-[radial-gradient(closest-side,rgba(93,174,241,.16),rgba(93,174,241,.05)_55%,transparent)]";
+/**
+ * ConsoleFrame's padding: the owner's p-6 sm:p-8 (it clears the 12px corner brackets). Below 640 the
+ * stage's bottom padding is only 24px, so the console's 80px drop shadow (SAGE_CONSOLE) would be cut
+ * flat at the footer seam: phones keep its inset glow and a short halo that fades out inside pb-6.
+ */
+export const CARD_PAGE_FRAME =
+  "p-6 sm:p-8 max-sm:shadow-[inset_0_0_60px_-20px_rgba(149,204,255,.35),0_12px_32px_-20px_rgba(93,174,241,.45)]";
+/**
+ * The card's <section> (the owner's): a centered column; CardPage adds gap-5 (md) / gap-6 (sm), his
+ * gaps. group/card: sign-in's server-rendered slime reacts to its island through :has() (SIGN_IN_SLIME_*).
+ */
+export const CARD_STACK = "group/card flex flex-col items-center text-center";
+/** A card's h1: PAGE_TITLE_CLASS's moonlit gradient at card size (.hero-title = the solid fallback; forced colors repaints it). */
+export const CARD_TITLE_CLASS =
+  "hero-title max-w-full bg-gradient-to-b from-white to-[#cfe8ff] bg-clip-text pb-0.5 text-2xl font-black leading-tight tracking-tight text-transparent [overflow-wrap:anywhere] sm:text-3xl";
+/** Body copy with an inline SageTag (SagePanel's sizing). */
+export const CARD_TEXT =
+  "max-w-full text-sm leading-6 text-[rgb(200,206,218)] [overflow-wrap:anywhere] sm:text-base sm:leading-7";
+/** The worried slime perched on the 404's numeral (ERROR_SLIME_BOX is the error page's same box). */
+export const STATUS_SLIME = "relative z-10 -mb-1";
+/** "404": the owner's sage text-6xl, black weight, a moonlit glow (a text-shadow: forced colors drops it). */
+export const STATUS_NUMERAL =
+  "text-6xl font-black leading-none tracking-tight text-[#95ccff] [text-shadow:0_0_28px_rgba(149,204,255,.45)]";
+/**
+ * The error page's table flip (the owner's emblem, nowrap and size, in sage). Render it aria-hidden.
+ * Below 320px (a 280px Fold cover leaves a 200px content box) it steps down to text-2xl (≈175px wide),
+ * so it never reaches ConsoleFrame's clipped edge whatever the device's fallback glyph widths.
+ */
+export const STATUS_KAOMOJI = "whitespace-nowrap text-3xl text-[#95ccff] max-[319px]:text-2xl sm:text-4xl";
+/**
+ * The error page's lazy slime box (64 × 54, reserved so its arrival shifts nothing), perched like
+ * STATUS_SLIME. The kaomoji has no flat top (its raised arm runs the full line height), so the slime
+ * is lifted 8px (a transform: the card doesn't grow) to sit just clear of the arm.
+ */
+export const ERROR_SLIME_BOX = "relative z-10 -mb-1 block h-[54px] w-16 -translate-y-2";
+/** "Error ID: <digest>": mono, wraps anywhere. */
+export const ERROR_ID = "max-w-full font-mono text-xs leading-5 text-[rgb(164,164,164)] [overflow-wrap:anywhere]";
+/** A card's button row: the owner's centered wrap (2 + 1 on phones, one row from 640). */
+export const CARD_ACTIONS = "flex flex-wrap justify-center gap-3";
+/** The two buttons on a Great Sage console (#0a1528): the ring offset matches the console. */
+export const PRIMARY_BUTTON_CONSOLE = `${PRIMARY_BASE} ${FOCUS_RING_CONSOLE}`;
+export const GHOST_BUTTON_CONSOLE = `${GHOST_BASE} ${FOCUS_RING_CONSOLE}`;
+/** A standalone text link on a console with a 44px box ("Go to your account"). */
+export const TEXT_LINK_CONSOLE = `inline-flex min-h-11 items-center rounded px-2 text-[#95ccff] underline-offset-2 hover:text-white hover:underline ${FOCUS_RING_CONSOLE}`;
+/** Account: the owner's "Your lists" link cards. text-[#95ccff] colors LinkPendingGlyph's arrow; the border is the forced-colors edge. */
+export const CARD_LINK = `flex min-h-11 w-full items-center gap-3 rounded-xl border border-[#95ccff]/20 bg-white/[.03] px-4 py-3 text-left text-[#95ccff] transition-colors hover:border-[#95ccff]/50 hover:bg-[#5daef1]/10 ${FOCUS_RING_CONSOLE}`;
+export const CARD_LINK_TITLE = "font-semibold text-[#95ccff]";
+export const CARD_LINK_TEXT = "text-sm leading-5 text-[rgb(164,164,164)]";
+/**
+ * Account avatar: the owner's 96px at every width. The initial is always rendered and the photo (if
+ * any) covers it, so a broken photo (alt="") shows the initial with no JavaScript.
+ */
+export const ACCOUNT_AVATAR = "relative h-24 w-24 shrink-0";
+/** The nav avatar's "Named" sage ring and glow, at 96px. */
+const ACCOUNT_RING = "shadow-[0_0_0_2px_rgba(149,204,255,.5),0_0_28px_-4px_rgba(149,204,255,.6)]";
+/**
+ * The owner's white initial on blue, as darker slime gel (the theme's slime-600 → slime-800). The
+ * highlight sits at the top-left, off the glyph, so the white letter keeps ≥ 3:1 under every stroke
+ * without counting its text-shadow (modelled ≈ 3.6:1 at worst, ≈ 4.6:1 at the center; his blue-600
+ * was 5.2:1). bg-[#2a7fd4] = the no-gradient fallback (4.1:1). border-transparent = its edge in
+ * forced colors (which drops the gel); bg-origin-border spans the gel under it (the default
+ * padding-box origin would tile the gradient into the border as flat seams).
+ */
+export const ACCOUNT_INITIAL = `flex h-full w-full items-center justify-center rounded-full border-2 border-transparent bg-[#2a7fd4] bg-[radial-gradient(circle_at_25%_15%,#7cc4f7,#2a7fd4_26%,#1b4f91)] bg-origin-border text-4xl font-black uppercase text-white [text-shadow:0_1px_2px_rgba(15,36,66,.5)] ${ACCOUNT_RING}`;
+export const ACCOUNT_PHOTO = `absolute inset-0 h-full w-full rounded-full object-cover ${ACCOUNT_RING}`;
+/** "《Notice》 Signed in as": the account menu's console voice. */
+export const ACCOUNT_SIGNED_IN_AS = "font-mono text-xs leading-5 text-[#cfe8ff]";
+/**
+ * Sign-in's emblem (the owner's 100px image slot): three server-rendered slimes; CSS shows one,
+ * picked by what the client island renders (data-slime on its message), so the slime reacts with no
+ * client JS and no remount. Browsers without :has() keep the idle one.
+ */
+export const SIGN_IN_SLIME_BOX = "h-[85px] w-[100px]";
+export const SIGN_IN_SLIME_IDLE = "block group-has-[[data-slime]]/card:hidden";
+export const SIGN_IN_SLIME_WORRIED = "hidden group-has-[[data-slime=worried]]/card:block";
+export const SIGN_IN_SLIME_NAMED = "hidden group-has-[[data-slime=named]]/card:block";
+/**
+ * The action slot: the static fallback and the client island share this box, so hydration moves
+ * nothing. No gap: its first child is the persistent status line, empty in most states.
+ */
+export const SIGN_IN_ACTIONS = "flex w-full flex-col items-center";
+/** The owner's red ?error= box as a rose 《Warning》, and a sage box for the 《Notice》 (SessionRequired). Borders = forced-colors edges. */
+export const SIGN_IN_ALERT =
+  "mb-4 w-full rounded-xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100 [overflow-wrap:anywhere]";
+export const SIGN_IN_NOTICE =
+  "mb-4 w-full rounded-xl border border-[#95ccff]/30 bg-[#95ccff]/10 px-4 py-3 text-sm leading-6 text-[#e6f3ff] [overflow-wrap:anywhere]";
+/**
+ * Google's light "Sign in with Google" button (developers.google.com/identity/branding-guidelines,
+ * 2026): #FFFFFF fill, 1px #747775 stroke (also its edge in forced colors), #1F1F1F medium 14/20
+ * (Google Sans where installed: not downloaded), 12px before the G, 10px after it, pill. 44px = our
+ * touch target (Google's 40px, scaled); min-h + py so a huge font wraps instead of clipping.
+ */
+const GOOGLE_BUTTON_BASE =
+  "inline-flex min-h-11 w-full items-center justify-center gap-2.5 rounded-full border border-[#747775] bg-white px-3 py-[11px] font-['Google_Sans',Roboto,Arial,sans-serif] text-sm font-medium leading-5 text-[#1f1f1f] transition-colors hover:bg-[#f2f2f2] disabled:cursor-wait disabled:opacity-60 aria-disabled:cursor-wait aria-disabled:opacity-60";
+/** On a console (the sign-in card). */
+export const GOOGLE_BUTTON = `${GOOGLE_BUTTON_BASE} ${FOCUS_RING_CONSOLE}`;
+/** On an rgb-30 panel (the landing's "Sign in to add" dialog). */
+export const GOOGLE_BUTTON_PANEL = `${GOOGLE_BUTTON_BASE} ${FOCUS_RING_PANEL}`;
+
+/* ------------------------------------------------------------------------- */
 /* Site chrome: NavBar, AnimeBar, NavSearch, LogInBox and SiteFooter          */
 /* (components/common). NavBar and SiteFooter are server components, so their */
 /* classes must live here (CLAUDE.md §9.21); the client parts use them too.   */
 /*                                                                             */
 /* The nav's BOX is load-bearing and stays the owner's: h-16 + mb-2, sticky    */
-/* top-0. PageBanner, Hero and both list skeletons cancel mb-2 with -mt-2,     */
+/* top-0. PageBanner, Hero, CardPage (CARD_PAGE) and both list skeletons       */
+/* cancel mb-2 with -mt-2,                                                     */
 /* Hero's laptop min-height is calc(100svh-4rem), every scroll-mt-20 is        */
 /* 64 + 16, AboutRanking is lg:top-20. Change them together.                   */
 /* The nav is sticky over every page, so it is PAINT ONLY: static gradients,  */
@@ -295,11 +425,18 @@ export const MENU_SIGN_OUT_ROW = "mt-1.5 border-t border-[#95ccff]/15 pt-1.5";
 /** The ring on the footer's forest floor (#081020). */
 export const FOCUS_RING_FOOTER =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#081020]";
-/** <footer>: must stay a direct child of <body> (the landing's StickyCta observes `body > footer`). */
+/**
+ * <footer>: must stay a direct child of <body> (the landing's StickyCta observes `body > footer`).
+ * CARD_PAGE's -mb-8 cancels this mt-8 (the card pages' sky runs to the horizon); change them together.
+ */
 export const FOOTER = "relative mt-8 min-w-0 [contain:inline-size]";
-/** The navy horizon behind the treeline (the banner sky's last stop, reversed). Decor: hidden in forced colors. */
+/**
+ * The navy horizon behind the treeline (the banner sky's last stop, reversed). Decor: hidden in forced
+ * colors. Under a card page's sky (CARD_PAGE: `main[data-card-page]`) it is that sky's flat navy, so
+ * the sky reaches the trees without dipping to the page color (browsers without :has() keep the dip).
+ */
 export const FOOTER_HORIZON =
-  "pointer-events-none relative h-14 bg-[linear-gradient(180deg,rgb(18,18,18)_0%,#0e1d33_100%)] sm:h-20 forced-colors:hidden";
+  "pointer-events-none relative h-14 bg-[linear-gradient(180deg,rgb(18,18,18)_0%,#0e1d33_100%)] sm:h-20 forced-colors:hidden [body:has(main[data-card-page])_&]:bg-[#0e1d33] [body:has(main[data-card-page])_&]:bg-none";
 /** NightSky's Treeline, at the banners' forest height, on the horizon's floor. */
 export const FOOTER_TREELINE = "absolute inset-x-0 bottom-0 h-11 sm:h-16";
 /** The content column (FOOTER_ROW's box) at the horizon's floor, so the slime stands above the links' end. */

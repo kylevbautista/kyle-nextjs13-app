@@ -79,12 +79,15 @@ export function Skill({ children }: { children: ReactNode }) {
   );
 }
 
-/** Great Sage tag for inline text: read as "Great Sage notice:", shown as 《Notice》. */
-export function SageTag({ kind }: { kind: SageKind }) {
+/**
+ * Great Sage tag for inline text: read as "Great Sage notice:", shown as 《Notice》. `className`
+ * colors the glyphs (default sage; sign-in's rose 《Warning》 box passes text-rose-300).
+ */
+export function SageTag({ kind, className = "text-[#95ccff]" }: { kind: SageKind; className?: string }) {
   return (
     <>
       <span className="sr-only">{`Great Sage ${kind.toLowerCase()}: `}</span>
-      <span aria-hidden="true" className="font-mono text-[#95ccff]">
+      <span aria-hidden="true" className={`font-mono ${className}`}>
         {`《${kind}》`}
       </span>{" "}
     </>

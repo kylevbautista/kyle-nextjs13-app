@@ -11,8 +11,9 @@ the **Great Sage** speaking in system messages (`《Notice》 …`), and an orig
 that **evolves as your list grows**. It is playful in its framing and exact in its content.
 
 My List (`/user/<id>`), the Airing Schedule (`/mylist/<id>`), Top Anime (`/topanime`), the
-season browser (`/anime/<year>/<season>`), Search (`/search`) and the site chrome (nav, account
-menu, footer) were redesigned with this kit.
+season browser (`/anime/<year>/<season>`), Search (`/search`), the site chrome (nav, account
+menu, footer) and the card pages (404, error, fatal error, sign-in, account) were redesigned with
+this kit.
 Read one of them before starting a new page: `app/user/_client/MyList.tsx` and
 `components/mylist/AiringSchedule.tsx` for dynamic, signed-in pages; `app/topanime/` for a static
 ISR page (server-rendered banner and asides, one client island, pure `ranking.ts` helpers with
@@ -20,7 +21,8 @@ tests); `components/animev3/PageBase.tsx` + `components/animev3/season/` for a s
 whose client root renders everything, with every line in a tested copy module
 (`lib/anime/seasonCopy.ts`); `app/search/` for a dynamic server page that streams its data into a
 stable banner (keyed Suspense boundaries instead of `loading.tsx`, one status line in its layout,
-`lib/anime/searchCopy.ts`).
+`lib/anime/searchCopy.ts`); `components/theme/CardPage.tsx` + `app/not-found.tsx` / `app/auth/signin/`
+for a one-card page (a static sign-in with one client island, its slime switched by CSS `:has()`).
 
 ## The rules
 
@@ -119,8 +121,8 @@ name everywhere:
 | Search (`/search`) | `Skill 04 · Great Sage` | done |
 | Top Anime (`/topanime`) | `Rankings · The Octagram` (the eight Demon Lords = ranks 1–8) | done |
 | Sharing a list | `Thought Communication` | landing quest 3, share strip |
-| Signing in | "Naming" (`Naming complete.`); tiers in `lib/landing.ts` | landing |
-| Suggestions | season pages → `Skill 01 · Magic Sense` · errors and 404 → `《Warning》` with a worried slime | not built |
+| Signing in | "Naming" (`Naming complete.`); tiers in `lib/landing.ts` | the sign-in page (already signed in: the Named Slime + `Naming complete.`), landing |
+| Suggestions | season pages → `Skill 01 · Magic Sense` · errors and 404 → `《Warning》` with a worried slime | errors and 404: done (CardPage pages, season and Top Anime errors); season pages: done |
 
 Keep each line under about 90 characters. One joke per screen is plenty. Running bits that
 already exist: "Recommend: predation." for an empty list, "Every legend starts as a slime.",
@@ -138,6 +140,9 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `TrophyIcon`, `CrownIcon`, `StarIcon` | `components/theme/icons.tsx` | Gold theme icons, aria-hidden. The crown is the Demon Lord slime's |
 | `EvolutionCard` | `components/theme/EvolutionCard.tsx` | `layout="banner"` (row on phones, slime on a magic circle from 1024px) or `"stack"` (Quest Log). `gulpKey` replays the gulp when it grows |
 | `SagePanel` | `components/theme/SagePanel.tsx` | Empty, error and no-match states: slime (mood) + title + `《Kind》` line + actions |
+| `CardPage` | `components/theme/CardPage.tsx` | The owner's one-card pages (404, errors, sign-in, account): a top-anchored Great Sage console card on the night sky. `titleId` (the section's label), `size` ("md" = max-w-md, gap-5; "sm" = max-w-sm, gap-6), `sky` slot (server pages pass `<NightSky variant="page" forest={false} />`; app/error.tsx passes a lazy one). `-mt-2 -mb-8` meet the nav and the footer's horizon, which turns flat navy under a `main[data-card-page]` so the sky runs into the treeline. Tokens: `CARD_*`, `STATUS_*`, `*_BUTTON_CONSOLE`, `TEXT_LINK_CONSOLE` |
+| `RetryButton` | `components/theme/RetryButton.tsx` | "Try again" on an error page: `retry()` in a transition, `aria-disabled` while pending, focus returns after a failed retry (10 s module token). Plain `className` (global-error has no Tailwind) |
+| `GoogleButton`, `GoogleIcon` | `components/auth/` | Google's light pill (#FFFFFF, #747775 stroke, #1F1F1F, 14/20, 44px) with the kit's gradient G as a PNG (a client leaf, statically imported). Every Google sign-in button uses it; `surface="panel"` on rgb-30 dialogs, `busy` = aria-disabled |
 | `ShareLink`, `useCopyListLink` | `components/theme/ShareLink.tsx` | Share strip / copy handler (the Airing Schedule and the landing's schedule chapter). `userId={null}` shows a placeholder link; `onCopy` reports the click. Also clears the landing's Quest 3 |
 | `AniListCover` | `components/theme/AniListCover.tsx` | **New AniList covers shown wider than ~100px.** A `srcset` of AniList's files (100/230/460px), so each screen gets the sharpest it needs, up to AniList's largest upload (some new shows only have 230px); `next/image` can't (images are unoptimized). Pass all the cover URLs and a real `sizes`; `fetchPriority="high"` for the likely LCP image |
 | `AnimeInfoCard`, `AnimeInfoCardSkeleton` | `components/theme/AnimeInfoCard.tsx` | **The season card (default, "classic").** The owner's original layout in the theme: gel surface warmed by the cover color (`coverTint`), title over genre chips, the cover with the Magic Sense HUD (`CountdownText mode="hud"`: violet premiere, amber last hour, emerald airing) + badge + "★ 8.2 · TV" pill + a perched slime on listed shows (gulps on your own add: `ListToggle`'s `data-in-list` / `data-just-added`), a Great Sage readout (Studio / Premiere / Source / Episodes), the synopsis well (swipe to scroll on touch, hover-scroll with a mouse), a pill add button and the MAL / AniList / Crunchyroll glyphs. Class strings in `tokens.ts` (`INFO_*`), CSS in the "Classic anime card" section of `globals.css`. Labels from `lib/anime/cardLabels.ts`: unknown fields are left out |
@@ -151,7 +156,7 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `NextEpisodeLine` | `components/theme/NextEpisodeLine.tsx` | A tracker card's live countdown, or the release status ("Finished airing · 12 eps"). ListCard and TrackerDemo both use it |
 | `useMinuteNow` | `components/utils/useMinuteNow.ts` | A per-minute clock for "today"-style labels; keep `useNow()` (1 s) for the countdown leaves only, or whole panels re-render every second |
 | `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component). `short` shows "Pause timers" below 420px, for a tight controls row (the season page) |
-| `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky. `Treeline` is the forest alone, static (the site footer's; a wider viewBox, so it is another stretch of the woods than a banner's and its pines never get cut flat) |
+| `NightSky` | `components/home/NightSky.tsx` | `variant="page"` for banners (`hero` and `finale` belong to the landing). `MagicCircle` lives here too: it spins, so put `<PauseParentWhenOffscreen />` (`components/home/Reveal`) in its wrapper outside NightSky. `Treeline` is the forest alone, static (the site footer's; a wider viewBox, so it is another stretch of the woods than a banner's and its pines never get cut flat). `forest={false}` drops the forest band and runs the sky down to the horizon's navy (card pages: the footer's treeline is right below) |
 | `SageLine`, `SageTag`, `sageText`, `Skill` | `components/home/SageLine.tsx` | `scan="load"` types the line in; `scan="reveal"` needs a `data-reveal` ancestor (landing only) |
 | `Slime` | `components/home/Slime.tsx` | `mood`: idle, happy, worried, sage. `tier`: slime, named, demon, lord. Always aria-hidden. Use `size` px, and CSS width for responsive sizes. A slime the root layout renders (the chrome's) takes a fixed `idScope`, or a page slime reached by client navigation reuses its gradient ids |
 | `CountdownText` | `components/home/CountdownText.tsx` | Every countdown. `chip` (cards), `row` ("EP 5 in 2h 14m 03s"), `compact` (time only, right-aligned in rows). SSR-safe |
@@ -167,7 +172,7 @@ The landing-only pieces stay in `components/home` and are not for other pages: `
 
 Anatomy, top to bottom: a full-width wrapper → `PageBanner` → `APP_CONTAINER` content
 (controls `PANEL` → sections with `SECTION_TITLE_CLASS` → cards or rows) → `SagePanel` for
-every empty or error branch. **Dynamic** pages add a `loading.tsx` that draws the same banner with
+every empty or error branch. **Dynamic** pages (except the one-card pages, below) add a `loading.tsx` that draws the same banner with
 skeleton bars, so the sky doesn't flash when the data arrives, unless the banner depends on the
 URL's query: `loading.tsx` can't read it (its server fallback paints first on full loads) and Next
 doesn't show it for `?query` navigations within the page. /search instead renders its banner at
@@ -175,6 +180,13 @@ once and streams the data through `<Suspense key={query…}>` boundaries (CLAUDE
 or ISR pages with async data (`/`, `/topanime`, the season pages) must not**: the cached HTML would
 ship the skeleton and hide the real page in a `<div hidden>` until JavaScript swaps it in
 (CLAUDE.md §9.15).
+
+One-card pages (the 404, errors, sign-in, account) use `CardPage` instead of a banner: the owner's
+centered card, top-anchored on the night sky, an inline `SageTag` on his own sentence (never an
+added Sage line), a worried slime over the emblem on errors. `error.tsx` ships on every page, so its
+decor is lazy (`ErrorDecor`). `/auth` is dynamic but has no `loading.tsx`: its signed-out redirect
+must happen before streaming (CLAUDE.md §9.6), and after the session check there's no data to wait
+for. `/auth/signin` is static with one client island and no `loading.tsx` (§9.15).
 
 ```tsx
 // app/<route>/layout.tsx: full width, the page draws its own containers.
