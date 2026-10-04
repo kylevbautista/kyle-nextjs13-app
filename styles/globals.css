@@ -215,11 +215,24 @@
   animation-play-state: paused !important;
 }
 
-/* Keeps the landing's fixed CTA bar off focused content and the footer. */
+/* Keeps the landing's fixed CTA bar off focused content and the footer. From 1024px it is a
+   floating pill (bottom-6, ≈ 62px tall: its top sits ≈ 86px above the viewport's bottom). */
 @media (max-width: 1023px) {
   html:has(#landing) {
     scroll-padding-bottom: 5rem;
   }
+}
+@media (min-width: 1024px) {
+  html:has(#landing) {
+    scroll-padding-bottom: 6rem;
+  }
+}
+
+/* The skip link focuses a page's <main> (or its fallback target) with a temporary tabindex: the
+   landmark isn't a control, and the skip link itself showed focus (components/common/SkipLink.tsx). */
+main[tabindex="-1"]:focus,
+#main-content:focus {
+  outline: none;
 }
 
 /* Gradient headline with a solid fallback. */

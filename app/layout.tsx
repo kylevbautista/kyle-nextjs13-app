@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import NavBar from "../components/common/NavBar";
 import SiteFooter from "../components/common/SiteFooter";
 import Providers from "./providers";
+import { MAIN_CONTENT_ID, SKIP_TARGET } from "../components/theme/tokens";
 
 const SITE_DESCRIPTION =
   "Track every anime airing this season — live episode countdowns, your list, your progress.";
@@ -47,6 +48,8 @@ export default function RootLayout({
       <body className="grid min-h-screen grid-rows-[auto_1fr_auto] bg-[rgb(18,18,18)]">
         <Providers>
           <NavBar />
+          {/* The skip link's target (no-JS fragment, JS fallback): out of flow, so not a row of the body grid. */}
+          <span id={MAIN_CONTENT_ID} className={SKIP_TARGET} />
           {children}
         </Providers>
         {/* A direct child of <body>: the landing's StickyCta observes `body > footer`. */}

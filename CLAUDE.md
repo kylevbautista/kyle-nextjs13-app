@@ -110,8 +110,9 @@ and `/auth`.
 **only for their signed-in owner**, who is redirected to the id URL. Everyone else gets a 404, so
 emails are never exposed or enumerable (`server/lib/userList.ts#resolveListOwner`).
 
-**Nav** (`components/common/NavBar.tsx` (server), `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`;
-classes in the "Site chrome" section of `components/theme/tokens.ts`): Home · カイル and Seasons
+**Nav** (`components/common/NavBar.tsx` (server), `AnimeBar.tsx`, `NavSearch.tsx`, `LogInBox.tsx`,
+`SkipLink.tsx`, `FocusNudge.tsx`; classes in the "Site chrome" section of `components/theme/tokens.ts`):
+"Skip to content" (the first Tab stop, visible only on focus) · Home · カイル and Seasons
 (→ `/anime`) · Top Anime · search box (GET `/search`, landmark "Site search") · Log in **or** avatar
 menu {My List, Airing Schedule, Lift Tracker (external), Sign out}. Tempest look: the top edge of
 the night sky (it ends in `#050915`, the banners' first color), static stars in the empty middle
@@ -122,8 +123,10 @@ for it); on phones the brand's name is "カイル Seasons". The loading placehol
 Log in (a round gel pill) and the avatar share one box (48×48, 63×63 from 640), so the bar never
 shifts when the session resolves. The menu is a Great Sage console ("《Notice》 Signed in as <full
 name>.") that marks the item for the current page (● + `aria-current`). The nav is `z-40`, above
-the landing's StickyCta. **Footer** (`components/common/SiteFooter.tsx`, server, a direct child of
-`<body>`): the forest floor (NightSky's `Treeline` + a static slime), the AniList / MyAnimeList
+the landing's StickyCta. Keyboard focus never ends up under it: `FocusNudge` scrolls the window by
+the overlap (WCAG 2.4.11, §9.22). **Footer** (`components/common/SiteFooter.tsx`, server, a direct child of
+`<body>`): the forest floor (NightSky's `Treeline`, mirrored so it never repeats a banner's forest
+tree for tree, + a static slime), the AniList / MyAnimeList
 credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 
 ---
@@ -152,7 +155,7 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Card pages on the night sky (`CardPage`: the owner's centered card as a Great Sage console): the 404 (a worried slime perched on "404", "This page got isekai'd", 《Warning》, This season / Search / Home); the error page (the worried slime over the owner's table flip, 《Warning》, Error ID, Try again / Home, its own `<title>`); the fatal error (a self-contained night-sky document: worried slime, 《Warning》, Error ID, Try again, Home as a full load). The season and Top Anime errors are themed inside their banners ("《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | Retry is Next 16.3's `retry()` (`reset()` alone re-shows the error; or `router.refresh()` + `reset()`). `RetryButton` ("Try again" / "Trying again…", `aria-disabled`) returns focus after a failed retry (a 10 s module token). `error.tsx` and `global-error.tsx` ship on every page: the error page's sky and slime load lazily (`ErrorDecor`; a failed import renders nothing), and global-error inlines its CSS and slime (slimeArt). Both render in the browser only (the server sends an empty `__next_error__` shell). The error page keeps its `<title>` first in `<head>` while mounted (React hoists the newest title first, and a client navigation's metadata title mounts after it). The list routes title their 404 "Page not found" | `app/{not-found,error,global-error}.tsx`, `components/theme/{CardPage,RetryButton,ErrorDecor}.tsx`, per-route `error.tsx` (season, top anime) |
 | Sign-in & account | `/auth/signin`: the owner's card on the night sky: the slime (worried next to a 《Warning》, the Named Slime with "Naming complete." when already signed in), "Sign in", Google's light pill button, `?error=` as a rose 《Warning》 box (SessionRequired: a sage 《Notice》), and "《Report》 Signing in needs JavaScript on this site." without JS. `/auth`: the avatar (photo, or the initial on slime gel), 《Notice》 Signed in as, the name, the My List / Airing Schedule link cards, Sign out | A static sign-in page with one island (`SignInActions`): the three slimes are server HTML switched by CSS `:has([data-slime])` (no client JS); rules and lines in `lib/signIn.ts` (tested: the Map lookup, same-origin callback paths); one spoken channel (a persistent `role="status"` or the alert); `aria-disabled` + guards keep focus while pending; no `next/image` on either page (plain `<img>`; the photo stacks over the initial, so a broken photo needs no JS). `GoogleButton` is also the landing dialog's; `GoogleIcon` is a client leaf with a statically imported PNG (a server-rendered `<img>` becomes an RSC preload hint, and the nav's prefetch of sign-in would make every signed-out page fetch it) | `app/auth/*`, `components/auth/*`, `components/theme/CardPage.tsx`, `lib/signIn.ts` |
-| Site chrome | The nav as the top of the night sky (gel hover pills, a sage underline on the current page, the slime mark on カイル, a console search field, a fixed-size Log in / avatar slot) and the account menu as a Great Sage console ("《Notice》 Signed in as Kyle Bautista.", ● on the current page's item, Lift Tracker ↗); the footer as a forest floor with the 《Report》 credits | Static, paint-only chrome with a fixed box (§9.22); current-page logic in `lib/routes.ts#isCurrentPath` (tested); every class in `tokens.ts`'s "Site chrome" section; the brand slime is server-rendered and passed to `AnimeBar` as `brandMark`, and both chrome slimes take a fixed `idScope` | `components/common/*`, `components/theme/tokens.ts`, `components/home/NightSky.tsx#Treeline` |
+| Site chrome | The nav as the top of the night sky (gel hover pills, a sage underline on the current page, the slime mark on カイル, a console search field, a fixed-size Log in / avatar slot) and the account menu as a Great Sage console ("《Notice》 Signed in as Kyle Bautista.", ● on the current page's item, Lift Tracker ↗); "Skip to content" as a console chip over the bar's left end on the first Tab (the link strip fades behind it); keyboard focus never hidden under the bar; the footer as a forest floor with the 《Report》 credits | Static, paint-only chrome with a fixed box (§9.22); current-page logic in `lib/routes.ts#isCurrentPath` (tested); every class in `tokens.ts`'s "Site chrome" section; the brand slime is server-rendered and passed to `AnimeBar` as `brandMark`, and both chrome slimes take a fixed `idScope`. `SkipLink`: with JS it focuses the page's `<main>` (a temporary tabindex) without touching the URL; without JS it is a fragment link to the `#main-content` span after the nav. `FocusNudge`: a `focusin` leaf that scrolls by the overlap, keyboard only | `components/common/*`, `components/theme/tokens.ts`, `components/home/NightSky.tsx#Treeline`, `app/layout.tsx` (the skip target) |
 
 ---
 
@@ -467,7 +470,9 @@ components/
                                 SeasonGridNotices (OrderDivider, LoadMoreError, SeasonEndCard), SeasonEmpty, useSeasonPhase
   mylist/                     Airing Schedule UI (week panel, NextEpisodes card) + schedule.ts (grouping)
   common/                     the site chrome: NavBar (server: box, stars, hairline, link strip), AnimeBar (NavLink + the
-                              brand), NavSearch, LogInBox (session slot + account menu), SiteFooter (server: the forest floor)
+                              brand), NavSearch, LogInBox (session slot + account menu), SiteFooter (server: the forest floor),
+                              SkipLink ("Skip to content", the nav's first child), FocusNudge (keeps keyboard focus out from
+                              under the sticky nav; renders nothing)
   animev3/ListToggle.tsx      the shared add/remove toggle (every card); ListToggleAction = AnimeCard's full-width version
   theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
     tokens.ts                   class tokens (focus rings, containers, ANIME_GRID / INFO_GRID + cover sizes, the classic card's INFO_*,
@@ -634,6 +639,19 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     together. On those pages (`main[data-card-page]`) `FOOTER_HORIZON` turns flat navy through a
     `body:has()` variant, so the forest-less sky meets the treeline with no dark band; below 640px the
     card's drop shadow is shortened (`CARD_PAGE_FRAME`) so the 24px bottom padding doesn't cut it flat.
+    "Skip to content" (`SkipLink`) is the nav's first child, absolute (`sr-only` until focused), so it
+    takes no room in the bar; it is the strip's `peer` (the strip fades while it shows). Its target
+    is the `#main-content` span `app/layout.tsx` renders after the nav: absolute, so it is not a row of
+    the body grid. With JavaScript a plain activation never navigates (no history entry, §9.18): it
+    focuses the page's `<main>` with a temporary `tabindex="-1"` (removed on its blur or the next
+    pointer press: a permanent one would make Next focus it after every navigation, §9.15). Keep
+    exactly one `<main>` per page, in a layout that persists across the loading skeleton where the
+    route has one (`/user`, `/mylist`), so a skip during loading still lands on it.
+    Focus under the sticky nav (WCAG 2.4.11) is fixed by `FocusNudge` (keyboard `focusin` only:
+    not after a pointer, not on a window regaining focus, never inside the nav, a dialog or a fixed
+    element), never by `html { scroll-padding-top }`, which makes the page jump ≈ 460px
+    when a nav link gets focus while scrolled. The landing's fixed StickyCta is kept off focused
+    content by `scroll-padding-bottom` (globals.css: 5rem below 1024px, 6rem for the pill above).
 
 ---
 
@@ -648,12 +666,11 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 - `SessionProvider` has no server session, so on full page loads the nav shows a static
   placeholder ring for a moment (the same 48/63px box as Log in and the avatar, so nothing shifts)
   and card toggles a loading pill. Without JavaScript the placeholder stays.
-- No skip link yet. It needs one shared, non-focusable-by-default target across the route
-  `<main>`s (§9.15) and a router-safe jump (§9.18); do it as its own change.
-- The sticky nav can cover a focused element when tabbing backwards (Shift+Tab scrolls it to the
-  very top, under the 64px bar: WCAG 2.4.11). `html { scroll-padding-top }` is not the fix: it makes
-  the page jump ≈ 460px whenever a nav link gets focus while scrolled. A focusin nudge (scroll by
-  the overlap, skipping the nav and open dialogs) would be.
+- Without JavaScript, pages whose `<main>` has no links without JS (`/user`, `/mylist`,
+  `/auth/signin`) send the Tab after the skip link to the footer.
+- `FocusNudge` scrolls after the browser's own focus scroll (next frame, before paint): a keyboard
+  user may see one instant correction on a slow device. It only knows the nav and the landing's
+  StickyCta (via `scroll-padding-bottom`); a new fixed or sticky overlay needs the same care.
 - Root `error.tsx` and `global-error.tsx` render only in the browser (a render error above every
   Suspense boundary ships Next's empty `__next_error__` shell), so visitors without JavaScript get a
   blank page. A root layout that throws during server rendering shows Next's built-in, unthemed 500
@@ -684,8 +701,9 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
   `:has()` (and the sign-in slime's switch) keep the generic horizon's dark dip and the idle slime.
 - Browsers without container query units (iOS 15) keep the phone search a 44px field while it is
   focused (still usable).
-- The banners' 64px forest band turns width-scaled past ≈ 1370px, so on very wide screens their
-  tallest pines are cut flat at the top. The footer's `Treeline` avoids it with a 7000-unit viewBox.
+- Treelines are drawn on wide viewBoxes (banners and the finale 7360, the footer 7000, the hero
+  3000), so their tallest pines stay pointed up to ≈ 4400px wide (the finale ≈ 6600px, the footer
+  ≈ 4200px, the hero ≈ 3900px); past that they are cut flat.
 - `+1` sends `current + 1`. A stale tab could still overwrite a newer value; an atomic increment
   endpoint would fix it.
 - No per-user rate limiting on the write APIs. Lists are capped at 2,000 shows.

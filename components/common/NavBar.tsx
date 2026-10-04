@@ -9,7 +9,9 @@ import {
 } from "@/components/theme/tokens";
 import LoginBox from "./LogInBox";
 import { AnimeBar, NavLink } from "./AnimeBar";
+import FocusNudge from "./FocusNudge";
 import NavSearch from "./NavSearch";
+import SkipLink from "./SkipLink";
 
 /**
  * The site nav, the top edge of the night sky. The owner's layout: links left, search and the
@@ -19,7 +21,11 @@ import NavSearch from "./NavSearch";
 export default function NavBar() {
   return (
     <nav id="main-nav" aria-label="Main" className={NAV_BAR}>
-      {/* First child: the links (relative, later in the DOM) paint over the stars. Static: 1024px+ only, in the empty middle band. */}
+      {/* The first Tab stop on every page; absolute, so it takes no room in the bar. Before the link strip: it is its `peer`. */}
+      <SkipLink />
+      {/* Keeps keyboard focus out from under this sticky bar (renders nothing). */}
+      <FocusNudge />
+      {/* Before the links: they (relative, later in the DOM) paint over the stars. Static: 1024px+ only, in the empty middle band. */}
       <span aria-hidden="true" className={NAV_STAR_FIELD} style={{ boxShadow: NAV_STARS }} />
       {/* The link strip: if large fonts, zoom or a 280px screen overflow it, it scrolls sideways instead of sliding
           under the search. Its overflow clips focus outlines too: the links use FOCUS_RING_NAV's inset outline. */}
