@@ -323,6 +323,23 @@ export const GOOGLE_BUTTON_PANEL = `${GOOGLE_BUTTON_BASE} ${FOCUS_RING_PANEL}`;
 export const FOCUS_RING_NAV = `${FOCUS_RING_INSET} focus-visible:-outline-offset-2`;
 
 /**
+ * The skip link's shared target (WCAG 2.4.1): a span right after the nav in app/layout.tsx, before every page.
+ * Without JavaScript the skip link is a native fragment link to it (the browser moves the sequential focus
+ * starting point there, so the next Tab is the page's first control); with JavaScript SkipLink focuses the
+ * page's <main> instead and never changes the URL.
+ */
+export const MAIN_CONTENT_ID = "main-content";
+/** Out of flow (absolute), so it is never a grid item of the body; at the document's top, so the fragment scroll is y=0. */
+export const SKIP_TARGET = "pointer-events-none absolute left-0 top-0 h-px w-px";
+/**
+ * "Skip to content": the nav's first child and first Tab stop, invisible until focused, then a Great Sage console chip
+ * over the nav's left end (absolute: it never takes space in the bar's width budget). `peer`: the link strip fades
+ * while it shows (NAV_LINK_STRIP), so no clipped labels peek out beside it. z-30: above the phone search circle (z-10)
+ * and its icon (z-20) when large text widens the chip; still inside the nav (z-40). The border is its forced-colors edge.
+ */
+export const NAV_SKIP_LINK = `peer sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2.5 focus:z-30 focus:inline-flex focus:h-11 focus:items-center focus:whitespace-nowrap focus:rounded-xl focus:border focus:border-[#95ccff]/60 focus:bg-[#0a1528] focus:px-4 focus:text-sm focus:font-semibold focus:text-[#e6f3ff] focus:shadow-[0_0_24px_-6px_rgba(149,204,255,.65)] ${FOCUS_RING_NAV}`;
+
+/**
  * The bar: the night sky's top edge, ending in #050915 (NightSky's first stop), so a banner
  * continues it. z-40: the account menu sits above the landing's StickyCta (z-30).
  * container-type: the phone search's open width is measured against the bar (100cqw), not the
@@ -347,10 +364,11 @@ export const NAV_STARS =
 /**
  * The left group (Home · カイル · Seasons · Top Anime). Normally everything fits; when it can't
  * (large default fonts, zoom, a 280px screen) it scrolls sideways instead of hiding Top Anime
- * (swipe, or NavLink scrolls a focused link into view), with no visible scrollbar.
+ * (swipe, or NavLink scrolls a focused link into view), with no visible scrollbar. It fades out while the skip
+ * link (NAV_SKIP_LINK, its earlier sibling) has focus: opacity, not visibility, so Home stays the next Tab stop.
  */
 export const NAV_LINK_STRIP =
-  "flex min-w-0 items-center overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+  "flex min-w-0 items-center overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden peer-focus:opacity-0";
 /** The gel pill (nav links, Log in), filled with slime gel on hover and keyboard focus. No height, shape or padding. */
 const NAV_PILL = `relative flex shrink-0 items-center text-sm text-[#e6f3ff] hover:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] hover:text-white hover:shadow-[inset_0_1px_0_rgba(191,230,255,.35),inset_0_0_0_1px_rgba(149,204,255,.28)] focus-visible:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] aria-[current=page]:text-[#95ccff] aria-[current=page]:hover:text-white sm:text-base ${FOCUS_RING_NAV}`;
 /** Nav links: the owner's full-height rounded-2xl pill; px-2 on phones (the 320 budget; px-1.5 below 320), px-3 at 640–819 (the 640 budget), his px-4 from 820. */
@@ -437,8 +455,12 @@ export const FOOTER = "relative mt-8 min-w-0 [contain:inline-size]";
  */
 export const FOOTER_HORIZON =
   "pointer-events-none relative h-14 bg-[linear-gradient(180deg,rgb(18,18,18)_0%,#0e1d33_100%)] sm:h-20 forced-colors:hidden [body:has(main[data-card-page])_&]:bg-[#0e1d33] [body:has(main[data-card-page])_&]:bg-none";
-/** NightSky's Treeline, at the banners' forest height, on the horizon's floor. */
-export const FOOTER_TREELINE = "absolute inset-x-0 bottom-0 h-11 sm:h-16";
+/**
+ * NightSky's Treeline, at the banners' forest height, on the horizon's floor. Mirrored: a banner band is the same
+ * height, and a different viewBox width only slides the whole picture, so unmirrored the footer would be the banner's
+ * forest moved sideways, tree for tree, on a short page. The pines and hills are symmetric; the slime is a sibling.
+ */
+export const FOOTER_TREELINE = "absolute inset-x-0 bottom-0 h-11 -scale-x-100 sm:h-16";
 /** The content column (FOOTER_ROW's box) at the horizon's floor, so the slime stands above the links' end. */
 export const FOOTER_SLIME_TRACK = "absolute inset-x-4 bottom-0 mx-auto max-w-screen-2xl sm:inset-x-6";
 export const FOOTER_SLIME = "absolute bottom-0 right-0";

@@ -539,7 +539,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
 
   if (items.length === 0) {
     return (
-      <main className="min-w-0 pb-8 text-white">
+      <div className="min-w-0 pb-8 text-white">
         {banner}
         <div className={APP_CONTAINER}>
           {isOwner ? (
@@ -575,12 +575,12 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
             </SagePanel>
           )}
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-w-0 pb-8 text-white">
+    <div className="min-w-0 pb-8 text-white">
       {banner}
 
       <div className={`${APP_CONTAINER} flex flex-col gap-8`}>
@@ -813,6 +813,6 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
           fallbackFocusId={HEADING_ID}
         />
       )}
-    </main>
+    </div>
   );
 }

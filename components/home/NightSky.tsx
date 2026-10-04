@@ -150,6 +150,23 @@ const FOREST_BAND: Record<SkyVariant, string> = {
   page: "h-[44px] sm:h-[64px]",
 };
 
+/**
+ * The viewBox width per band. "xMidYMax slice" scales a ridge by the larger of width / viewBox and
+ * height / 140; once it scales by width, the top of the viewBox is cut off, and past the tallest pine's
+ * headroom (it reaches y = 33) their tops turn flat. The hero's 140px band is height-scaled up to 3000px.
+ * The banners' 64px band and the finale's 96px one use 7360: height-scaled up to ≈ 3365px and ≈ 5047px,
+ * flat tops only past ≈ 4400px and ≈ 6600px (with 3000 the banners' cut flat past ≈ 1800px).
+ * A different width doesn't make the footer's treeline differ from a banner's: two bands of the same
+ * height (44 / 64px) are scaled alike, so another width only slides all three ridges together. The
+ * footer's treeline is mirrored instead (FOOTER_TREELINE in components/theme/tokens.ts).
+ */
+const BANNER_FOREST_WIDTH = 7360;
+const FOREST_VIEWBOX: Record<SkyVariant, number> = {
+  hero: FOREST_WIDTH,
+  finale: BANNER_FOREST_WIDTH,
+  page: BANNER_FOREST_WIDTH,
+};
+
 function Forest({ variant }: { variant: SkyVariant }) {
   const hero = variant === "hero";
   return (
@@ -158,15 +175,15 @@ function Forest({ variant }: { variant: SkyVariant }) {
     // timeline is the page scroll's first 100vh, which the others never see).
     <div className={`absolute inset-x-0 bottom-0 ${FOREST_BAND[variant]}`}>
       <div className={`${hero ? "forest-far " : ""}absolute inset-0`}>
-        <Ridge name="far" variant={variant} />
+        <Ridge name="far" variant={variant} width={FOREST_VIEWBOX[variant]} />
       </div>
       <div className="absolute inset-0">
-        <Ridge name="mid" variant={variant} />
+        <Ridge name="mid" variant={variant} width={FOREST_VIEWBOX[variant]} />
       </div>
       {/* The near layer extends below the band so parallax never opens a gap. */}
       <div className={`${hero ? "forest-near " : ""}absolute inset-x-0 -bottom-10 top-0`}>
         <div className="absolute inset-x-0 bottom-10 top-0">
-          <Ridge name="near" variant={variant} />
+          <Ridge name="near" variant={variant} width={FOREST_VIEWBOX[variant]} />
         </div>
         <div className="absolute inset-x-0 bottom-0 h-10 bg-[#081020]" />
       </div>
@@ -177,11 +194,9 @@ function Forest({ variant }: { variant: SkyVariant }) {
 
 /**
  * The footer's viewBox width. "xMidYMax slice" scales a ridge by the larger of width / viewBox and
- * height / 140, so with the banners' 3000 a 64px band turns width-scaled past ≈ 1370px and its
- * tallest pines are cut flat at the top on wide screens. At 7000 the band stays height-scaled up to
- * ≈ 3200px. Centering a wider box also lines the tiles up differently (0.45, 0.71 and 0.65 of a tile
- * for far, mid and near), so on a short page the footer is another stretch of the woods, not a
- * copy of the banner's treeline above it.
+ * height / 140: at 7000 the 64px band stays height-scaled up to ≈ 3200px, and its tallest pines stay
+ * pointed up to ≈ 4200px. On a short page it is not a copy of the banner's treeline above it because
+ * SiteFooter mirrors it (FOOTER_TREELINE), not because of this width.
  */
 const TREELINE_WIDTH = 7000;
 
