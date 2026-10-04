@@ -15,7 +15,7 @@ import {
 } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import GoogleIcon from "@/components/auth/GoogleIcon";
+import GoogleButton from "@/components/auth/GoogleButton";
 import { LIST_STATUS_LABELS, displayTitle } from "@/lib/anime/types";
 import type { AnimeMedia, ListStatus } from "@/lib/anime/types";
 import {
@@ -161,8 +161,9 @@ export default function LandingProvider({
   );
 }
 
+/** "Not now": the Google pill's box (44px, 14/20, rounded-full), so the two stacked buttons match. */
 const DIALOG_BUTTON =
-  "flex h-12 w-full items-center justify-center gap-3 rounded-xl px-4 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)]";
+  "flex min-h-11 w-full items-center justify-center rounded-full px-4 py-3 text-sm font-medium leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)]";
 
 /**
  * "Sign in to add {title}": one native modal <dialog> for the whole page
@@ -275,16 +276,13 @@ function SignInIntentDialog({
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <button
+            <GoogleButton
               ref={continueRef}
-              type="button"
+              surface="panel"
+              label={pending ? "Opening Google…" : "Continue with Google"}
+              busy={pending}
               onClick={handleContinue}
-              aria-disabled={pending || undefined}
-              className={`${DIALOG_BUTTON} bg-white text-[rgb(30,30,30)] hover:bg-gray-200 aria-disabled:cursor-wait aria-disabled:opacity-70`}
-            >
-              <GoogleIcon />
-              {pending ? "Opening Google…" : "Continue with Google"}
-            </button>
+            />
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}

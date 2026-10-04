@@ -212,18 +212,28 @@ const SKY: Record<SkyVariant, string> = {
 };
 
 /**
+ * Without a forest band the sky runs down to the horizon's navy instead of fading into the page:
+ * the card pages, whose forest is the footer's Treeline right below (its horizon turns the same
+ * navy on those pages: FOOTER_HORIZON in components/theme/tokens.ts). CARD_PAGE paints it too.
+ */
+const HORIZON_SKY = "linear-gradient(180deg,#050915 0%,#0a1428 50%,#0e1d33 100%)";
+
+/**
  * `hero`: the landing's first screen (moon, pointer glow, parallax forest).
  * `finale`: the #quests bookend. `page`: an app page's banner, a shorter band
  * with the same stars, aurora and magicules. Everything but the hero pauses
  * itself offscreen (the hero pauses via HeroSlime's observer).
+ * `forest={false}`: no forest band, and the sky runs down to the horizon's navy
+ * (the card pages: the footer's `Treeline` is right below, and two treelines on
+ * one short screen read as a glitch).
  */
-export default function NightSky({ variant }: { variant: SkyVariant }) {
+export default function NightSky({ variant, forest = true }: { variant: SkyVariant; forest?: boolean }) {
   const hero = variant === "hero";
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-      style={{ backgroundImage: SKY[variant] }}
+      style={{ backgroundImage: forest ? SKY[variant] : HORIZON_SKY }}
     >
       {/* The hero pauses via HeroSlime's observer; the finale pauses itself. */}
       {!hero && <PauseParentWhenOffscreen />}
@@ -276,7 +286,7 @@ export default function NightSky({ variant }: { variant: SkyVariant }) {
         />
       ))}
 
-      <Forest variant={variant} />
+      {forest && <Forest variant={variant} />}
     </div>
   );
 }

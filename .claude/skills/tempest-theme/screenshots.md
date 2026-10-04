@@ -153,3 +153,20 @@ Two Playwright notes: `waitUntil: "networkidle"` can hang after a full-document 
 use `"load"` plus a short wait there; and `next dev` neither prefetches nor shows production
 streaming, so re-check budgets, titles and no-JS on `next build && next start`. Kill the servers by
 PID (`ss -ltnp`), never `pkill -f` (it matches your own shell).
+
+## Error pages (temporary probes, never committed)
+
+`app/error.tsx` and `app/global-error.tsx` render only after a real failure. To shoot and script
+them, add two throwaway probes, build, verify, then delete them and rebuild before committing
+(`git grep -n "error-probe\|ge-probe"` must come back empty):
+
+- `app/error-probe/page.tsx`: an async page that throws when the `error-probe=1` cookie is set
+  (`(await cookies()).get(...)`) and renders "Recovered" otherwise. Clearing the cookie makes the
+  next Try again succeed, so failed and successful retries are both deterministic.
+- `app/GlobalErrorProbe.tsx`: a client leaf rendered in `app/layout.tsx` (inside `<Providers>`,
+  before `<NavBar />`) that throws once hydrated when `document.cookie` has `ge-probe=1`
+  (`useSyncExternalStore` with a `false` server snapshot). A server-side throw in the root layout
+  would show Next's built-in 500 page instead.
+
+The cheaper alternative for `error.tsx` alone: stop the rig's mongod and load `/user/<id>` (the list
+layout throws after the driver's server-selection timeout); re-seed afterwards.

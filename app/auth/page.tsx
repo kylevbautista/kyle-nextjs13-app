@@ -1,78 +1,88 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../server/auth";
-import { airingSchedulePath, myListPath } from "../../lib/routes";
-import SignOutButton from "../../components/auth/SignOutButton";
+import SignOutButton from "@/components/auth/SignOutButton";
+import NightSky from "@/components/home/NightSky";
+import { SageTag } from "@/components/home/SageLine";
+import CardPage from "@/components/theme/CardPage";
+import LinkPendingGlyph from "@/components/theme/LinkPendingGlyph";
+import {
+  ACCOUNT_AVATAR,
+  ACCOUNT_INITIAL,
+  ACCOUNT_PHOTO,
+  ACCOUNT_SIGNED_IN_AS,
+  CARD_LINK,
+  CARD_LINK_TEXT,
+  CARD_LINK_TITLE,
+  CARD_TITLE_CLASS,
+} from "@/components/theme/tokens";
+import { airingSchedulePath, myListPath } from "@/lib/routes";
+import { authOptions } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Account",
   robots: { index: false },
 };
 
-const listLink =
-  "flex flex-col gap-1 rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] px-4 py-3 text-left transition-colors hover:border-blue-500 hover:bg-[rgb(53,53,53)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff]";
-
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
+  // Before any streaming: no loading.tsx in app/auth (§9.6, §9.15).
   if (!session) redirect("/auth/signin");
 
   const name = session.user?.name?.trim() || "Anime fan";
   const image = session.user?.image;
   const userId = session.objectId;
+  // A code point, not charAt(0): a name that starts with an emoji isn't half a surrogate pair.
+  const initial = Array.from(name)[0];
 
   return (
-    <main className="flex justify-center px-4 py-10 text-white sm:py-16">
-      <section
-        aria-labelledby="account-title"
-        className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-[rgb(53,53,53)] bg-[rgb(38,38,38)] p-6 sm:p-8"
-      >
-        {image ? (
-          <Image
+    <CardPage titleId="account-title" size="sm" sky={<NightSky variant="page" forest={false} />}>
+      <div className={ACCOUNT_AVATAR}>
+        <span aria-hidden="true" className={ACCOUNT_INITIAL}>
+          {initial}
+        </span>
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element -- OAuth avatars come from arbitrary hosts and need referrerPolicy; alt="": the h1 names you, and a broken photo must paint nothing over the initial
+          <img
             src={image}
-            alt={`${name}'s avatar`}
+            alt=""
             width={96}
             height={96}
-            unoptimized
             referrerPolicy="no-referrer"
-            className="h-24 w-24 rounded-full border-2 border-[rgb(53,53,53)] object-cover"
+            decoding="async"
+            className={ACCOUNT_PHOTO}
           />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-4xl font-bold uppercase"
-          >
-            {name.charAt(0)}
-          </div>
         )}
-        <div className="text-center">
-          <p className="text-sm text-[rgb(164,164,164)]">Signed in as</p>
-          <h1 id="account-title" className="break-words text-2xl font-bold">
-            {name}
-          </h1>
-        </div>
-        {userId && (
-          <nav aria-label="Your lists" className="flex w-full flex-col gap-3">
-            <Link href={myListPath(userId)} className={listLink}>
-              <span className="font-medium text-[#95ccff]">My List</span>
-              <span className="text-sm text-[rgb(164,164,164)]">
-                Statuses, episode progress, scores and dates
-              </span>
-            </Link>
-            <Link href={airingSchedulePath(userId)} className={listLink}>
-              <span className="font-medium text-[#95ccff]">
-                Airing Schedule
-              </span>
-              <span className="text-sm text-[rgb(164,164,164)]">
-                This season&apos;s shows from your list, with countdowns
-              </span>
-            </Link>
-          </nav>
-        )}
-        <SignOutButton />
-      </section>
-    </main>
+      </div>
+      <div className="flex max-w-full flex-col items-center gap-1">
+        <p className={ACCOUNT_SIGNED_IN_AS}>
+          <SageTag kind="Notice" />
+          Signed in as
+        </p>
+        <h1 id="account-title" className={CARD_TITLE_CLASS}>
+          {name}
+        </h1>
+      </div>
+      {userId && (
+        <nav aria-label="Your lists" className="flex w-full flex-col gap-3">
+          <Link href={myListPath(userId)} className={CARD_LINK}>
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className={CARD_LINK_TITLE}>My List</span>
+              <span className={CARD_LINK_TEXT}>Statuses, episode progress, scores and dates</span>
+            </span>
+            <LinkPendingGlyph glyph="→" />
+          </Link>
+          <Link href={airingSchedulePath(userId)} className={CARD_LINK}>
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className={CARD_LINK_TITLE}>Airing Schedule</span>
+              <span className={CARD_LINK_TEXT}>Upcoming episodes from your list, with countdowns</span>
+            </span>
+            <LinkPendingGlyph glyph="→" />
+          </Link>
+        </nav>
+      )}
+      <SignOutButton />
+    </CardPage>
   );
 }
