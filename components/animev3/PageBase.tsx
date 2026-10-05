@@ -4,6 +4,7 @@ import { flushSync, preconnect } from "react-dom";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
 import SeasonBanner from "./season/SeasonBanner";
 import SeasonControls from "./season/SeasonControls";
+import { setSeasonSort, useSeasonSort } from "./season/seasonSortStore";
 import {
   ContinuingHiddenPanel,
   EmptySeasonPanel,
@@ -57,6 +58,8 @@ import type { SeasonName } from "@/lib/season";
 interface PageBaseProps {
   year: number;
   season: SeasonName;
+  /** The order this static variant was rendered in (the reader's remembered sort, lib/seasonSort.ts). */
+  initialSort: SortMode;
   /** Page 1 from AniList (server-fetched), most popular first. */
   initialMedia: AnimeMedia[];
   initialHasNextPage: boolean;
@@ -123,6 +126,7 @@ const focusById = (id: string) => {
 export default function PageBase({
   year,
   season,
+  initialSort,
   initialMedia,
   initialHasNextPage,
   initialCarryOver,
@@ -133,8 +137,9 @@ export default function PageBase({
   preconnect("https://s4.anilist.co");
   preconnect(BROWSER_ANILIST_URL, { crossOrigin: "anonymous" });
 
-  const { sort, setSort, showContinuing, setShowContinuing, hiddenFormats, toggleFormat, showAllFormats } =
-    useContext(HeaderContext);
+  const { showContinuing, setShowContinuing, hiddenFormats, toggleFormat, showAllFormats } = useContext(HeaderContext);
+  // This session's pick, else the remembered cookie, else the order the server rendered.
+  const sort = useSeasonSort(initialSort);
   const label = seasonLabelOf(year, season);
   const win = useMemo(() => seasonWindow(year, season), [year, season]);
   const compareCountdown = useMemo(() => countdownComparator(win), [win]);
@@ -390,7 +395,7 @@ export default function PageBase({
 
   const onSort = (mode: SortMode) => {
     if (mode === sort) return;
-    setSort(mode);
+    setSeasonSort(mode);
     announce(STATUS.sorted(mode));
   };
   /** A format chip: the status line says what's listed after it (computed now, not from the next render). */
@@ -530,6 +535,7 @@ export default function PageBase({
             <SeasonControls
               year={year}
               season={season}
+              sort={sort}
               clockFallback={seed.at}
               continuingCount={c}
               continuingCapped={carryOverCapped}

@@ -29,14 +29,16 @@ const BLOCKED_CHIP = `${SHELF} cursor-default border-dashed border-[#95ccff]/40 
  * The season page's controls (JavaScript only): sort by countdown or
  * popularity, the continuing-series toggle with its count, "Pause live
  * timers", a line saying what the current order means, and the format chips
- * (every AniList format, each an on/off toggle with its count). Sort, toggle
+ * (every AniList format, each an on/off toggle with its count). The toggle
  * and hidden formats live in HeaderContext (app/anime/layout.tsx), so they
- * survive season navigation; the handlers come from PageBase, which speaks
- * the change.
+ * survive season navigation; the sort is remembered per browser
+ * (seasonSortStore.ts) and comes in resolved. The handlers come from
+ * PageBase, which speaks the change.
  */
 export default function SeasonControls({
   year,
   season,
+  sort,
   clockFallback,
   continuingCount,
   continuingCapped,
@@ -53,6 +55,8 @@ export default function SeasonControls({
 }: {
   year: number;
   season: SeasonName;
+  /** The resolved sort (PageBase: this tab's pick, else the order the page was rendered in). */
+  sort: SortMode;
   clockFallback: number;
   /** Continuing series known to the page (0 when they didn't load). */
   continuingCount: number;
@@ -73,7 +77,7 @@ export default function SeasonControls({
   onContinuingNeedsTv: () => void;
   onFormat: (key: FormatKey) => void;
 }) {
-  const { sort, showContinuing, hiddenFormats } = useContext(HeaderContext);
+  const { showContinuing, hiddenFormats } = useContext(HeaderContext);
   const chip = (on: boolean) => `${SHELF} ${on ? SHELF_ON : SHELF_OFF} ${FOCUS_RING_PANEL}`;
   const chips = formats ? chipFormats(formats.counts, hiddenFormats) : [];
   // Other, once shown, stays for the page's life: no chip unmounts under its own press.
