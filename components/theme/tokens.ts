@@ -148,6 +148,28 @@ export const SHELF_ON = "bg-blue-600/20 font-semibold text-white ring-1 ring-blu
 export const SHELF_OFF = "text-[rgb(164,164,164)] hover:bg-white/5 hover:text-white";
 
 /* ------------------------------------------------------------------------- */
+/* Tracker card (My List's ListCard and the landing's TrackerDemo)             */
+
+/** +1 while a save is in flight: a small aria-hidden dot (the button is never disabled or pulsing). */
+export const PLUS_ONE_SAVING_DOT =
+  "pointer-events-none absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-white/90 animate-dot-flow forced-colors:bg-[color:CanvasText]";
+/**
+ * The owner's "Log N new" chip: the sage chip with a border (its edge in forced colors), 20px tall so
+ * the row keeps its height, with a 44px hit area (32px from md: the ::after insets count from inside
+ * the 1px border, hence 13px / 7px). z-[1]: the positioned bar track below would otherwise paint over
+ * (and catch) the hit area's lower part.
+ */
+export const CATCH_UP_CHIP = `relative z-[1] inline-flex h-5 shrink-0 items-center whitespace-nowrap rounded-full border border-[#95ccff]/50 bg-[#95ccff]/10 px-2 text-[11px] font-semibold leading-none tabular-nums text-[#cfe8ff] transition-colors after:absolute after:-inset-x-[5px] after:-inset-y-[13px] after:content-[''] hover:bg-[linear-gradient(180deg,rgba(93,174,241,.34),rgba(42,127,212,.20))] hover:text-white md:after:-inset-y-[7px] ${FOCUS_RING_PANEL}`;
+/** Undo on a tracker card (in place of the date · score line): console navy, Edit's height. */
+export const UNDO_BUTTON = `relative inline-flex h-11 shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-lg border border-[#95ccff]/40 bg-[#0a1528] px-3 text-xs font-semibold text-[#e6f3ff] transition-colors animate-fade-in hover:bg-[#0e1d33] aria-disabled:cursor-default md:h-9 ${FOCUS_RING_PANEL}`;
+/** Undo's time left: a 2px line that drains over 10 s (UNDO_MS); paused with data-paused. */
+export const UNDO_DRAIN =
+  "pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left bg-[#95ccff]/80 animate-undo-drain data-[paused]:[animation-play-state:paused] forced-colors:bg-[color:CanvasText]";
+/** One sheen across the progress bar when a tap completes the show (parked off the bar before and after). */
+export const BAR_SHEEN =
+  "pointer-events-none absolute inset-y-0 left-0 w-1/2 -translate-x-[130%] bg-gradient-to-r from-transparent via-white/50 to-transparent animate-sheen [animation-fill-mode:both]";
+
+/* ------------------------------------------------------------------------- */
 /* Decor                                                                       */
 
 /** Horizontal glow divider between chapters. */

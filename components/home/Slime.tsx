@@ -118,7 +118,8 @@ export default function Slime({
         <ellipse key={b.cx} cx={b.cx} cy={b.cy} rx={b.rx} ry={b.ry} fill={c.blush} fillOpacity={blush} />
       ))}
 
-      {/* Evolution accessories ride on the body, so they squash with it. */}
+      {/* Evolution accessories ride on the body, so they squash with it.
+          Tier styles: keep in sync with slimeArt.ts#slimeSvgMarkup (the share images). */}
       {(tier === "named" || tier === "demon") && (
         <g className="animate-fade-in">
           <path

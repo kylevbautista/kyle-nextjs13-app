@@ -1,5 +1,17 @@
 import type { CSSProperties } from "react";
 import { PauseParentWhenOffscreen } from "./Reveal";
+import {
+  FOREST_HEIGHT,
+  HEXAGRAM,
+  MAGIC_CIRCLE_HEXAGRAM,
+  MAGIC_CIRCLE_INNER,
+  MAGIC_CIRCLE_OUTER,
+  MAGIC_CIRCLE_RUNE,
+  RIDGES,
+  RUNES,
+  mulberry32,
+  runeTransform,
+} from "./skyArt";
 
 /**
  * The Jura forest at night: layered, server-rendered decor for the hero, the
@@ -11,17 +23,6 @@ import { PauseParentWhenOffscreen } from "./Reveal";
  * seeded PRNG, so every render (and every regeneration) is identical and
  * nothing random happens during render.
  */
-
-/** mulberry32: a tiny deterministic PRNG. */
-function mulberry32(seed: number) {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 const rand = mulberry32(1234);
 
@@ -48,68 +49,7 @@ const MAGICULES = Array.from({ length: 18 }, (_, index) => ({
 /* ------------------------------------------------------------------------- */
 /* Forest: three pine ridgelines, each a seamless repeating tile.            */
 
-const FOREST_HEIGHT = 140;
 const FOREST_WIDTH = 3000;
-
-interface RidgeSpec {
-  seed: number;
-  tile: number;
-  /** Height of the hill's base line above the bottom edge. */
-  base: number;
-  /** Amplitude of the rolling hill. */
-  amp: number;
-  minTree: number;
-  maxTree: number;
-  gap: [number, number];
-}
-
-/** One tile: a periodic hill (its ends meet with matching slopes) plus pines. */
-function ridgePath({ seed, tile, base, amp, minTree, maxTree, gap }: RidgeSpec) {
-  const r = mulberry32(seed);
-  const b0 = FOREST_HEIGHT - base;
-  // y on the cubic hill below (x is linear in u because the controls sit at thirds).
-  const hillY = (x: number) => {
-    const u = x / tile;
-    return b0 + 3 * amp * u * (1 - u) * (2 * u - 1);
-  };
-  let d = `M0 ${FOREST_HEIGHT}L0 ${b0}C${Math.round(tile / 3)} ${b0 - amp} ${Math.round(
-    (2 * tile) / 3
-  )} ${b0 + amp} ${tile} ${b0}L${tile} ${FOREST_HEIGHT}Z`;
-
-  let x = 10 + r() * gap[0];
-  while (true) {
-    const h = minTree + r() * (maxTree - minTree);
-    const w = h * 0.44;
-    if (x + w / 2 > tile - 2) break;
-    if (x - w / 2 >= 2) {
-      const b = hillY(x) + 4;
-      const p = (dx: number, dy: number) => `${Math.round(x + dx)} ${Math.round(b - dy)}`;
-      d +=
-        `M${p(-w / 2, 0)}L${p(-w * 0.16, h * 0.5)}L${p(-w * 0.34, h * 0.48)}` +
-        `L${p(0, h)}L${p(w * 0.34, h * 0.48)}L${p(w * 0.16, h * 0.5)}L${p(w / 2, 0)}Z`;
-    }
-    x += gap[0] + r() * (gap[1] - gap[0]);
-  }
-  return d;
-}
-
-const RIDGES = {
-  far: {
-    color: "#0f1c31",
-    tile: 310,
-    d: ridgePath({ seed: 11, tile: 310, base: 62, amp: 10, minTree: 16, maxTree: 38, gap: [12, 24] }),
-  },
-  mid: {
-    color: "#0b1526",
-    tile: 350,
-    d: ridgePath({ seed: 23, tile: 350, base: 38, amp: 9, minTree: 22, maxTree: 54, gap: [16, 32] }),
-  },
-  near: {
-    color: "#081020",
-    tile: 430,
-    d: ridgePath({ seed: 37, tile: 430, base: 14, amp: 6, minTree: 34, maxTree: 96, gap: [26, 58] }),
-  },
-} as const;
 
 type RidgeName = keyof typeof RIDGES;
 
@@ -309,19 +249,6 @@ export default function NightSky({ variant, forest = true }: { variant: SkyVaria
 /* ------------------------------------------------------------------------- */
 /* Magic circle: original geometry (rings, ticks, hexagram, rune marks).     */
 
-/** Six original three-stroke geometric marks, drawn in a 12 × 12 box. */
-const RUNES = [
-  "M0 -6L0 6M-5 -2L0 -6M0 2L5 6",
-  "M-5 -6L5 -6M0 -6L0 6M-4 3L4 6",
-  "M-5 6L0 -6M0 -6L5 6M-2 2L2 6",
-  "M-5 -5L5 5M-5 5L0 0M2 -6L6 -2",
-  "M-6 0L6 0M-3 -6L-3 0M3 0L3 6",
-  "M-4 -6L4 -6M-4 -6L-4 6M-4 1L4 6",
-];
-
-const HEXAGRAM =
-  "M0 -120L103.92 60L-103.92 60Z M0 120L-103.92 -60L103.92 -60Z";
-
 const CENTER: CSSProperties = { transformBox: "fill-box", transformOrigin: "center" };
 
 /**
@@ -349,20 +276,30 @@ export function MagicCircle({
         fill="none"
         stroke="#95ccff"
       >
-        <circle r="150" strokeOpacity={0.35} strokeWidth={1.5} />
-        {/* 48 ticks as dashes (circumference / 48), every 4th longer. */}
-        <circle r="145" strokeOpacity={0.35} strokeWidth={6} strokeDasharray="1.2 17.78" />
-        <circle r="143" strokeOpacity={0.3} strokeWidth={10} strokeDasharray="1.4 73.47" />
+        {/* The outer ring, then 48 ticks as dashes (circumference / 48), every 4th longer (skyArt.ts). */}
+        {MAGIC_CIRCLE_OUTER.map((ring) => (
+          <circle key={ring.r} r={ring.r} strokeOpacity={ring.opacity} strokeWidth={ring.width} strokeDasharray={ring.dash} />
+        ))}
         {full && (
           <>
-            <path d={HEXAGRAM} strokeOpacity={0.18} strokeWidth={1.25} strokeLinejoin="round" />
+            <path
+              d={HEXAGRAM}
+              strokeOpacity={MAGIC_CIRCLE_HEXAGRAM.opacity}
+              strokeWidth={MAGIC_CIRCLE_HEXAGRAM.width}
+              strokeLinejoin="round"
+            />
             {RUNES.map((d, index) => (
-              <g key={d} transform={`rotate(${30 + index * 60}) translate(0 -132)`}>
-                <path d={d} strokeOpacity={0.4} strokeWidth={1.5} strokeLinecap="round" />
+              <g key={d} transform={runeTransform(index)}>
+                <path d={d} strokeOpacity={MAGIC_CIRCLE_RUNE.opacity} strokeWidth={MAGIC_CIRCLE_RUNE.width} strokeLinecap="round" />
               </g>
             ))}
             <g className="animate-spin-slower-reverse" style={CENTER}>
-              <circle r="120" strokeOpacity={0.5} strokeWidth={1.25} strokeDasharray="2 7" />
+              <circle
+                r={MAGIC_CIRCLE_INNER.r}
+                strokeOpacity={MAGIC_CIRCLE_INNER.opacity}
+                strokeWidth={MAGIC_CIRCLE_INNER.width}
+                strokeDasharray={MAGIC_CIRCLE_INNER.dash}
+              />
             </g>
           </>
         )}

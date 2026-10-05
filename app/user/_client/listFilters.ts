@@ -7,7 +7,8 @@ import { isSeasonName, type SeasonName } from "@/lib/season";
 import { WEEKDAYS, airingWeekday, compareByNextAiring, unloggedAired } from "@/lib/anime/airing";
 import type { Weekday } from "@/lib/anime/airing";
 import { LIST_STATUSES, displayTitle } from "@/lib/anime/types";
-import type { ListEntry, ListStatus } from "@/lib/anime/types";
+import type { ListEntry, ListStatus, UserAnimeData } from "@/lib/anime/types";
+import { isReleaseStatus, type ReleaseStatus } from "@/lib/anime/releaseStatus";
 
 /**
  * The fields of a list entry this page renders. Entries are trimmed to this
@@ -51,25 +52,12 @@ export const toMyListEntry = (entry: ListEntry): MyListEntry => ({
 
 export type StatusTab = "all" | ListStatus;
 
-export const RELEASE_STATUSES = [
-  "RELEASING",
-  "FINISHED",
-  "NOT_YET_RELEASED",
-  "HIATUS",
-  "CANCELLED",
-] as const;
-export type ReleaseStatus = (typeof RELEASE_STATUSES)[number];
-
-export const RELEASE_STATUS_LABELS: Record<ReleaseStatus, string> = {
-  RELEASING: "Airing",
-  FINISHED: "Finished",
-  NOT_YET_RELEASED: "Not yet aired",
-  HIATUS: "On hiatus",
-  CANCELLED: "Cancelled",
-};
-
-export const isReleaseStatus = (value: unknown): value is ReleaseStatus =>
-  typeof value === "string" && (RELEASE_STATUSES as readonly string[]).includes(value);
+export {
+  RELEASE_STATUSES,
+  RELEASE_STATUS_LABELS,
+  isReleaseStatus,
+  type ReleaseStatus,
+} from "@/lib/anime/releaseStatus";
 
 export const isWeekday = (value: unknown): value is Weekday =>
   typeof value === "string" && (WEEKDAYS as readonly string[]).includes(value);
@@ -226,14 +214,51 @@ export function countByStatus(entries: MyListEntry[]): Record<StatusTab, number>
   return counts;
 }
 
+export interface ListSection {
+  status: ListStatus;
+  entries: MyListEntry[];
+}
+
 /** Non-empty status sections, in LIST_STATUSES order, preserving entry order. */
-export function groupByStatus(
-  entries: MyListEntry[]
-): { status: ListStatus; entries: MyListEntry[] }[] {
+export function groupByStatus(entries: MyListEntry[]): ListSection[] {
   return LIST_STATUSES.map((status) => ({
     status,
     entries: entries.filter((entry) => entry.userData.listType === status),
   })).filter((section) => section.entries.length > 0);
+}
+
+/**
+ * The cards to render, by section (one section on a status shelf). A held card
+ * (one being tapped: +1, catch-up, Undo) is sorted and filed by its held
+ * userData, so it stays where it was while its live values change; the live
+ * entry is returned (live values, and the same object for ListCard's memo).
+ * With nothing held this is the plain sort + grouping.
+ */
+export function placeHeld(
+  entries: MyListEntry[],
+  held: ReadonlyMap<number, UserAnimeData>,
+  { sort, tab, nowMs }: { sort: SortKey; tab: StatusTab; nowMs: number | null }
+): ListSection[] {
+  const live = new Map(entries.map((entry) => [entry.id, entry]));
+  const placed = held.size
+    ? entries.map((entry) => {
+        const userData = held.get(entry.id);
+        return userData ? { ...entry, userData } : entry;
+      })
+    : entries;
+  const sorted = sortEntries(placed, sort, nowMs);
+  const sections =
+    tab === "all"
+      ? groupByStatus(sorted)
+      : (() => {
+          const inTab = sorted.filter((entry) => entry.userData.listType === tab);
+          return inTab.length ? [{ status: tab, entries: inTab }] : [];
+        })();
+  if (!held.size) return sections;
+  return sections.map((section) => ({
+    status: section.status,
+    entries: section.entries.map((entry) => live.get(entry.id) ?? entry),
+  }));
 }
 
 /**

@@ -16,6 +16,9 @@ import {
   formatWeekdayTime,
   groupByWeekday,
   nextTier,
+  evolutionProgress,
+  evolutionRemainingLine,
+  FINAL_FORM_LINE,
   parseAddIntent,
   parseLandingExtras,
   pickAiringCandidates,
@@ -493,5 +496,19 @@ describe("add intent", () => {
   it("builds the OAuth callback URL", () => {
     expect(addIntentCallbackUrl(42)).toBe("/?add=42#quests");
     expect(addIntentCallbackUrl(42, "planning")).toBe("/?add=42&as=planning#quests");
+  });
+});
+
+describe("evolutionProgress", () => {
+  it("measures from this tier's threshold to the next", () => {
+    expect(evolutionProgress("named", 0)).toEqual({ ratio: 0, remaining: 3, next: "demon" });
+    expect(evolutionProgress("named", 2)?.ratio).toBeCloseTo(2 / 3);
+    expect(evolutionProgress("demon", 3)).toEqual({ ratio: 0, remaining: 7, next: "lord" });
+    expect(evolutionProgress("demon", 9)).toEqual({ ratio: 6 / 7, remaining: 1, next: "lord" });
+    expect(evolutionProgress("lord", 10)).toBeNull();
+    // Signed out → Named at 0: a zero span is a full bar, never NaN.
+    expect(evolutionProgress("slime", 0)).toEqual({ ratio: 1, remaining: 0, next: "named" });
+    expect(evolutionRemainingLine({ remaining: 2, next: "lord" })).toBe("2 more to Demon Lord");
+    expect(FINAL_FORM_LINE).toBe("Final form reached. For now.");
   });
 });

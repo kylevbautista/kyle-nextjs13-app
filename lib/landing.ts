@@ -641,6 +641,29 @@ export function nextTier(tier: EvolutionTier): { tier: EvolutionTier; at: number
   }
 }
 
+/** The evolution bar: progress from this tier's threshold to the next; null at the top (Demon Lord). */
+export function evolutionProgress(
+  tier: EvolutionTier,
+  count: number
+): { ratio: number; remaining: number; next: EvolutionTier } | null {
+  const next = nextTier(tier);
+  if (!next) return null;
+  const from = tier === "demon" ? TIER_THRESHOLDS.demon : 0;
+  const span = next.at - from;
+  return {
+    ratio: span > 0 ? Math.min(1, Math.max(0, (count - from) / span)) : 1,
+    remaining: Math.max(0, next.at - count),
+    next: next.tier,
+  };
+}
+
+/** "2 more to Demon Lord" (EvolutionCard and the share images). */
+export const evolutionRemainingLine = (progress: { remaining: number; next: EvolutionTier }) =>
+  `${progress.remaining} more to ${TIER_LABELS[progress.next]}`;
+
+/** The top tier's line (EvolutionCard and the share images): the one joke. */
+export const FINAL_FORM_LINE = "Final form reached. For now.";
+
 /** First whitespace-separated token of a display name, at most 24 characters. */
 export function firstName(name: string | null | undefined): string | null {
   const first = typeof name === "string" ? name.trim().split(/\s+/)[0] : "";

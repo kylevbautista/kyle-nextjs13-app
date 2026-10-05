@@ -1,8 +1,10 @@
 import { Collection, ObjectId } from "mongodb";
 import { after } from "next/server";
+import { cache } from "react";
 import type { Session } from "next-auth";
 import { getDb } from "./mongodb";
 import { fetchMediaByIds } from "./anilist";
+import { publicOwnerName } from "@/lib/anime/listCopy";
 import { MEDIA_SNAPSHOT_FIELDS, normalizeEntry } from "@/lib/anime/normalize";
 import type { AnimeMedia, ListEntry } from "@/lib/anime/types";
 
@@ -108,6 +110,49 @@ export const readEntries = (user: Pick<UserDoc, "following">): ListEntry[] => {
       return true;
     });
 };
+
+/**
+ * readEntries, memoized per user document for one server render (React cache:
+ * by object identity). lookupListOwner is cached, so a list page's
+ * generateMetadata and the page itself get the same doc, and up to 2,000
+ * entries are normalized and sanitized once. Outside a render (route handlers,
+ * tests) it just calls readEntries. Callers must not mutate the result
+ * (refreshEntriesIfStale returns new objects).
+ */
+export const readEntriesCached = cache((user: UserDoc): ListEntry[] => readEntries(user));
+
+/** A canonical list id (what list URLs and share-image URLs use): lower-case ObjectId hex only. */
+export const CANONICAL_ID_RE = /^[a-f0-9]{24}$/;
+
+/** Every field a share image reads (components/og/shareCard.ts), and nothing else: no email, image or refresh lock. */
+export const CARD_PROJECTION = {
+  name: 1,
+  "following.id": 1,
+  "following.status": 1,
+  "following.userData": 1,
+  "following.upComingAirDate": 1,
+} as const;
+
+export interface ListCardOwner {
+  /** publicOwnerName(), or "Anonymous" like both list pages. */
+  name: string;
+  entries: ListEntry[];
+}
+
+/**
+ * The share images' read (/user/og, /mylist/og): one projected findOne by
+ * canonical id, then the pages' own normalization and dedupe. No session (the
+ * routes are static ISR and every viewer gets the same image) and no AniList
+ * refresh (a preview fetch spends no AniList budget, CLAUDE.md §5.5).
+ * Non-canonical ids (upper-case hex, legacy base64 emails) → null without
+ * touching Mongo. A Mongo error propagates (a 500, which ISR doesn't cache).
+ */
+export async function readListCard(id: string): Promise<ListCardOwner | null> {
+  if (!CANONICAL_ID_RE.test(id)) return null;
+  const users = await usersCollection();
+  const doc = await users.findOne({ _id: new ObjectId(id) }, { projection: CARD_PROJECTION });
+  return doc ? { name: publicOwnerName(doc.name) ?? "Anonymous", entries: readEntries(doc) } : null;
+}
 
 /** AniList ids on a user's list (drives the "On my list" state of cards). */
 export async function getListIds(userId: string): Promise<number[]> {
@@ -266,7 +311,15 @@ export async function refreshEntriesIfStale(
   }
 }
 
-/** Normalized entries for a user, refreshed from AniList when stale. */
-export async function loadListEntries(user: UserDoc): Promise<ListEntry[]> {
-  return refreshEntriesIfStale(user, readEntries(user));
+/**
+ * Normalized entries for a user, refreshed from AniList when stale.
+ * `refresh: false` reads the stored snapshot only: a link-preview bot's view of
+ * a list page (lib/previewBots.ts) spends no AniList budget.
+ */
+export async function loadListEntries(
+  user: UserDoc,
+  { refresh = true }: { refresh?: boolean } = {}
+): Promise<ListEntry[]> {
+  const entries = readEntriesCached(user);
+  return refresh ? refreshEntriesIfStale(user, entries) : entries;
 }

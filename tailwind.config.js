@@ -67,6 +67,10 @@ module.exports = {
         "ring-out": "ring-out 900ms ease-out",
         "rise-in": "rise-in 600ms ease-out both",
         "fade-in": "fade-in 300ms ease-out both",
+        // A tracker card's progress number rolling up after a +1.
+        tick: "tick 220ms ease-out",
+        // Undo's time left; keep the duration equal to UNDO_MS (components/theme/UndoButton.tsx).
+        "undo-drain": "undo-drain 10s linear forwards",
       },
       keyframes: {
         slideInFromLeft: {
@@ -172,6 +176,14 @@ module.exports = {
         "fade-in": {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },
+        },
+        tick: {
+          "0%": { transform: "translateY(45%)", opacity: 0.2 },
+          "100%": { transform: "translateY(0)", opacity: 1 },
+        },
+        "undo-drain": {
+          from: { transform: "scaleX(1)" },
+          to: { transform: "scaleX(0)" },
         },
       },
     },

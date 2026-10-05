@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { loadListEntries, type UserDoc } from "@/server/lib/userList";
+import { headers } from "next/headers";
+import { scheduleShareCard, shareVersion } from "@/components/og/shareCard";
+import { isPreviewBot } from "@/lib/previewBots";
+import { airingSchedulePath, scheduleShareImagePath } from "@/lib/routes";
+import { loadListEntries, readEntriesCached, type UserDoc } from "@/server/lib/userList";
 import { lookupListOwner, publicOwnerName, requireListOwner } from "@/server/lib/listRoute";
-import { airingSchedulePath } from "@/lib/routes";
 import AiringSchedule from "@/components/mylist/AiringSchedule";
 
 interface AiringSchedulePageProps {
@@ -22,13 +25,26 @@ export async function generateMetadata({ params }: AiringSchedulePageProps): Pro
   const name = ownerDisplayName(lookup.user);
   const title = `${name}'s airing schedule`;
   const description = `What's airing from ${name}'s anime list, with live episode countdowns.`;
+  // Stored entries only (no AniList refresh), shared with the page's loadListEntries (readEntriesCached).
+  const card = scheduleShareCard(readEntriesCached(lookup.user), name);
   return {
     title,
     description,
     openGraph: {
+      type: "website",
+      siteName: "kylevb",
+      url: airingSchedulePath(lookup.userId),
       title,
       description,
-      images: [{ url: "/rimuru.png", width: 200, height: 141 }],
+      images: [
+        {
+          url: scheduleShareImagePath(lookup.userId, shareVersion(card)),
+          width: 1200,
+          height: 630,
+          type: "image/png",
+          alt: card.alt,
+        },
+      ],
     },
   };
 }
@@ -38,7 +54,9 @@ export default async function AiringSchedulePage({ params }: AiringSchedulePageP
   // Already enforced by layout.tsx (before streaming); cached, so no extra queries.
   const lookup = await requireListOwner(user, airingSchedulePath);
 
-  const entries = await loadListEntries(lookup.user);
+  // A link-preview bot gets the stored snapshot and starts no AniList refresh (CLAUDE.md §5.5, §5.8).
+  const refresh = !isPreviewBot((await headers()).get("user-agent"));
+  const entries = await loadListEntries(lookup.user, { refresh });
   // "Today" for the first render (a dynamic page, so this is per request).
   const renderedAt = new Date().getTime();
 

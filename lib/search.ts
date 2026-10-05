@@ -1,9 +1,12 @@
+import type { ReleaseStatus } from "@/lib/anime/releaseStatus";
 import { searchPath } from "@/lib/routes";
+import type { SeasonName } from "@/lib/season";
+import type { FilterSource, SearchFormat, SearchGenre } from "@/lib/searchFilters";
 
 /**
- * /search's rules and math: query/page normalization, URLs, and what one
- * AniList response proves. Pure; shared by the page, its loading UI, the nav
- * search and the landing's console.
+ * /search's rules and math: query/page/filter normalization, URLs, and what
+ * one AniList response proves. Pure; shared by the page, its loading UI, the
+ * nav search and the landing's console.
  *
  * AniList's pageInfo lies on title search: "gundam" page 1 reports total 5000
  * and lastPage 166 (it has 54 results), and a page past the end reports
@@ -24,9 +27,8 @@ export const SEARCH_TITLE_ID = "search-results-title";
 export const SEARCH_LIST_TITLE_ID = "search-list-title";
 
 export type RawParam = string | string[] | undefined;
-export type SearchPageParams = Promise<{ q?: RawParam; page?: RawParam }>;
 
-const firstValue = (value: RawParam) => (Array.isArray(value) ? value[0] : value);
+export const firstValue = (value: RawParam) => (Array.isArray(value) ? value[0] : value);
 
 /** First `q` value, whitespace-collapsed and trimmed, at most 100 code points; "" when absent. */
 export function normalizeQuery(value: RawParam | null): string {
@@ -46,9 +48,6 @@ export function normalizePage(value: RawParam | null): number {
   if (!raw || !/^\d+$/.test(raw)) return 1;
   return Math.min(MAX_PAGE, Math.max(1, Number(raw)));
 }
-
-export const searchResultsPath = (query: string, page = 1) =>
-  query && page > 1 ? `${searchPath(query)}&page=${page}` : searchPath(query);
 
 /** What one results page proves. */
 export interface ResultWindow {
@@ -100,3 +99,59 @@ export function searchView(outcome: SearchOutcome, page: number): SearchView {
   if (outcome.shown === 0) return page > 1 ? { kind: "pastEnd", page } : { kind: "none" };
   return { kind: "results", window: resultWindow(page, outcome.shown, outcome.hasNextPage) };
 }
+
+/* ------------------------------------------------------------------------- */
+/* Filters: ?format=&genre=&year=&season=&release= (the results box's panel).  */
+/* The tables and normalization live in lib/searchFilters.ts, so the nav       */
+/* search and the landing (which import this module) never ship them.         */
+
+/** Canonical order in URLs and keys. */
+export const FILTER_PARAMS = ["format", "genre", "year", "season", "release"] as const;
+export type FilterParam = (typeof FILTER_PARAMS)[number];
+
+export interface SearchFilters {
+  format: SearchFormat | null;
+  genre: SearchGenre | null;
+  year: number | null;
+  season: SeasonName | null;
+  /** My List's values (?release=RELEASING). */
+  release: ReleaseStatus | null;
+}
+
+export const NO_FILTERS: SearchFilters = Object.freeze({
+  format: null,
+  genre: null,
+  year: null,
+  season: null,
+  release: null,
+});
+
+export type SearchPageParams = Promise<{ q?: RawParam; page?: RawParam } & FilterSource>;
+
+export const activeFilterCount = (filters: SearchFilters) =>
+  FILTER_PARAMS.filter((param) => filters[param] !== null).length;
+export const hasFilters = (filters: SearchFilters) => activeFilterCount(filters) > 0;
+
+/**
+ * "format=tv&genre=slice-of-life&year=2026&season=fall&release=RELEASING"
+ * (canonical order, set filters only); "" for none. Values come from closed
+ * sets, so nothing needs encoding.
+ */
+export function filtersQuery(filters: SearchFilters): string {
+  return FILTER_PARAMS.filter((param) => filters[param] !== null)
+    .map((param) => `${param}=${filters[param]}`)
+    .join("&");
+}
+
+/** A results URL: "/search" without a query, whatever the filters and page. */
+export function searchResultsPath(query: string, page = 1, filters: SearchFilters = NO_FILTERS): string {
+  if (!query) return searchPath();
+  const filtered = filtersQuery(filters);
+  return `${searchPath(query)}${filtered ? `&${filtered}` : ""}${page > 1 ? `&page=${page}` : ""}`;
+}
+
+/**
+ * One string per search: its URL, the page's two Suspense keys, the arrival
+ * token and the "shown search" (components/utils/searchArrival.ts).
+ */
+export const searchKey = searchResultsPath;

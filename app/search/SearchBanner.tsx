@@ -8,30 +8,36 @@ import SageDoorway from "@/components/theme/SageDoorway";
 import { SearchChips, SearchConsole } from "@/components/theme/SearchConsole";
 import { DOORWAY_LINK, HAIRLINE } from "@/components/theme/tokens";
 import {
-  RESULTS_SUB,
   SEARCH_EYEBROW,
   SEARCH_HOME_TITLE,
   SEARCH_QUESTION,
   SEARCH_SUB,
   SEASON_DOORWAY,
+  resultsSub,
 } from "@/lib/anime/searchCopy";
-import { SEARCH_TITLE_ID } from "@/lib/search";
+import { SEARCH_TITLE_ID, searchKey, type SearchFilters } from "@/lib/search";
+import FilteredSearchConsole from "./FilteredSearchConsole";
 
 type SearchBannerProps =
   | { mode: "home" }
-  /** `sage`: the streamed Great Sage line (the page's Suspense boundary). */
-  | { mode: "query"; query: string; sage: ReactNode };
+  /**
+   * `sage`: the streamed Great Sage line (the page's Suspense boundary).
+   * `maxYear`: the server's year bound for the filter panel.
+   */
+  | { mode: "query"; query: string; page: number; filters: SearchFilters; maxYear: number; sage: ReactNode };
 
 /**
  * /search's night-sky banner, in the owner's two orders:
  * - home: eyebrow → 《Question》 → "Search anime" → sub → the landing's framed
  *   console (visible label, Try chips, the "Browse this season" doorway);
- * - query: eyebrow → the compact search box on top → the Great Sage's report
- *   → "Results for “q”" → sub.
+ * - query: eyebrow → the compact search box on top (with the filter toggle
+ *   and panel) → the Great Sage's report → "Results for “q”" → sub (which
+ *   lists the filters).
  * On a query page it sits outside the page's Suspense boundaries, so the sky
  * and the search box stay put while a search loads (text typed into the box
  * meanwhile survives); only the report line streams in. The box is keyed by
- * the query, so a new search resets it to what was searched.
+ * the search without the page, so a new search or new filters reset it to
+ * what was searched, and paging keeps what was typed.
  */
 export default function SearchBanner(props: SearchBannerProps) {
   if (props.mode === "home") {
@@ -64,11 +70,19 @@ export default function SearchBanner(props: SearchBannerProps) {
     );
   }
 
-  const { query, sage } = props;
+  const { query, page, filters, maxYear, sage } = props;
   return (
     <PageBanner
       eyebrow={SEARCH_EYEBROW}
-      lead={<SearchConsole key={query} size="compact" defaultValue={query} className="max-w-3xl" />}
+      lead={
+        <FilteredSearchConsole
+          key={searchKey(query, 1, filters)}
+          query={query}
+          page={page}
+          applied={filters}
+          maxYear={maxYear}
+        />
+      }
       sageSlot={sage}
       title={
         <>
@@ -76,7 +90,7 @@ export default function SearchBanner(props: SearchBannerProps) {
         </>
       }
       titleId={SEARCH_TITLE_ID}
-      sub={RESULTS_SUB}
+      sub={resultsSub(filters)}
     />
   );
 }

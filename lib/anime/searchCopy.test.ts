@@ -1,8 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { searchAnimeQuery } from "@/components/utils/anilist-queries/searchAnimeQuery";
-import { MAX_PAGE, SEARCH_PAGE_SIZE, normalizeQuery, searchView, type SearchView } from "@/lib/search";
+import {
+  MAX_PAGE,
+  NO_FILTERS,
+  SEARCH_PAGE_SIZE,
+  hasFilters,
+  normalizeQuery,
+  searchView,
+  type FilterParam,
+  type SearchFilters,
+  type SearchView,
+} from "@/lib/search";
+import { SEARCH_GENRES, normalizeFilters, searchVariables } from "@/lib/searchFilters";
+import { RELEASE_STATUSES } from "@/lib/anime/releaseStatus";
+import { SEASONS } from "@/lib/season";
 import {
   CAP_NOTE,
+  CAP_NOTE_WORD,
+  SEASON_FILING_NOTE,
+  filterReadout,
+  filterToggleName,
+  resultsSub,
+  searchFilterOptions,
   NOSCRIPT_SAGE,
   NOSCRIPT_TEXT,
   RESULTS_SUB,
@@ -240,9 +259,246 @@ describe("truth sweep", () => {
     const args = searchAnimeQuery.match(/media\(([^)]*)\)/)?.[1] ?? "";
     expect(args).toContain("isAdult: false");
     expect(args).toContain("sort: [SEARCH_MATCH, POPULARITY_DESC]");
-    expect(args).not.toMatch(/format/); // "every format" stays true
+    // Filters are variables, never hard-coded values (an unfiltered search still covers every format).
+    for (const arg of [
+      "format: $format",
+      "genre: $genre",
+      "season: $season",
+      "seasonYear: $seasonYear",
+      "startDate_greater: $startAfter",
+      "startDate_lesser: $startBefore",
+      "status: $status",
+    ]) {
+      expect(args).toContain(arg);
+    }
+    expect(args).not.toMatch(/format: [A-Z]/);
+    expect(args).not.toMatch(/genre_not_in|Hentai/);
     // pageInfo asks only what AniList reports truthfully (fact A); total/lastPage can't be printed again.
     const pageInfo = searchAnimeQuery.match(/pageInfo\s*{([^}]*)}/)?.[1] ?? "";
     expect(pageInfo.trim().split(/\s+/).sort()).toEqual(["currentPage", "hasNextPage"]);
+  });
+});
+
+const FULL: SearchFilters = { format: "tv", genre: "fantasy", year: 2026, season: "fall", release: "RELEASING" };
+const f = (patch: Partial<SearchFilters>): SearchFilters => ({ ...NO_FILTERS, ...patch });
+
+describe("filtered fixtures", () => {
+  it("names every filter in counts and none lines", () => {
+    expect(searchSageLine(results(1, 6, false), FULL).text).toBe(
+      "6 airing Fantasy TV results from Fall 2026, excluding adult titles. All on this page."
+    );
+    expect(searchSageLine(results(1, 1, false), f({ format: "movie", year: 1998 })).text).toBe(
+      "The only movie result that began in 1998, excluding adult titles."
+    );
+    expect(searchSageLine(results(2, 24, false), f({ format: "ova", season: "fall" })).text).toBe(
+      "54 OVA results from Fall seasons, excluding adult titles. This is the last page."
+    );
+    expect(searchSageLine(results(1, 30, true), f({ release: "FINISHED", year: 2026 })).text).toBe(
+      "More than 30 finished results that began in 2026. The closest come first."
+    );
+    expect(searchSageLine(results(1, 0, false), f({ format: "movie", year: 1998 })).text).toBe(
+      "No movie results that began in 1998. This search skips adult titles."
+    );
+    expect(searchStatus(results(2, 24, false), f({ format: "tv", year: 2009 }))).toBe(
+      "Page 2: 31 to 54 of 54 TV results that began in 2009, excluding adult titles. This is the last page."
+    );
+    expect(searchStatus(results(1, 30, true), f({ format: "tv", year: 2026 }))).toBe(
+      "More than 30 TV results that began in 2026. Showing 1 to 30, the closest first."
+    );
+    // A position, not a count: unchanged (the sub carries the filters).
+    expect(searchSageLine(results(2, 30, true), FULL).text).toBe("Page 2: results 31–60. More follow.");
+  });
+
+  it("lists the filters by their labels", () => {
+    expect(filterReadout(FULL)).toBe("TV, Fantasy, Fall 2026, Airing");
+    expect(filterReadout(f({ season: "fall" }))).toBe("Fall seasons");
+    expect(filterReadout(f({ year: 1998 }))).toBe("1998");
+    expect(resultsSub(FULL)).toBe("Best match first, then by popularity. Filters: TV, Fantasy, Fall 2026, Airing.");
+    expect(resultsSub(NO_FILTERS)).toBe(RESULTS_SUB);
+    expect(filterToggleName(0)).toBe("Filters");
+    expect(filterToggleName(2)).toBe("Filters, 2 active");
+  });
+
+  it("loading, panels and the cap note", () => {
+    expect(loadingSageLine(1, FULL).text).toBe(
+      "Searching for airing Fantasy TV results from Fall 2026. The closest come first."
+    );
+    expect(loadingSageLine(3, FULL)).toEqual(loadingSageLine(3));
+    expect(loadingStatus("frieren", 1, f({ format: "tv", year: 2026, season: "fall" }))).toBe(
+      "Searching AniList for “frieren” (TV, Fall 2026)…"
+    );
+    expect(noResultsCopy("frieren", f({ format: "movie", year: 1998 })).text).toBe(
+      "AniList came back empty-handed with these filters (Movie, 1998), and this search skips adult titles. Check the spelling, or clear the filters."
+    );
+    expect(noResultsCopy("frieren", f({ format: "music", season: "fall" })).text.endsWith(SEASON_FILING_NOTE)).toBe(true);
+    expect(pastEndCopy("frieren", 3, FULL).text).toBe("That's past the last page of results for “frieren” with these filters.");
+    const capped = win(results(MAX_PAGE, 30, true));
+    expect(capNote(capped)).toBe(CAP_NOTE);
+    expect(capNote(capped, f({ format: "tv" }))).toBe(CAP_NOTE);
+    const all5: SearchFilters = { format: "music", genre: "slice-of-life", year: 2026, season: "summer", release: "HIATUS" };
+    expect(capNote(capped, all5)).toBe(CAP_NOTE_WORD);
+    expect(searchStatus(results(MAX_PAGE, 30, true), all5).endsWith(CAP_NOTE_WORD)).toBe(true);
+  });
+});
+
+describe("filter truth sweep", () => {
+  const PAGES = [1, 2, 3, 49, MAX_PAGE];
+  const SHOWN = [0, 1, 6, 24, 29, 30];
+  const BANNED = /all of AniList|every anime|any anime|every show|\bTBA\b|AniList (has|lists) no|\bmatches\b|5,?000|\b166\b/i;
+  // An independent oracle: the words a filter must put in a sentence.
+  const FORMAT_WORDS: Record<string, string> = { tv: "TV", "tv-short": "TV short", movie: "movie", special: "special", ova: "OVA", ona: "ONA", music: "music video" };
+  const RELEASE_WORDS: Record<string, string> = { RELEASING: "airing", FINISHED: "finished", NOT_YET_RELEASED: "upcoming", HIATUS: "on-hiatus", CANCELLED: "cancelled" };
+  const SEASON_WORDS: Record<string, string> = { winter: "Winter", spring: "Spring", summer: "Summer", fall: "Fall" };
+  const FILTER_SETS: SearchFilters[] = [
+    NO_FILTERS,
+    ...["tv", "tv-short", "movie", "special", "ova", "ona", "music"].map((format) => f({ format: format as SearchFilters["format"] })),
+    ...SEARCH_GENRES.map(({ slug }) => f({ genre: slug })),
+    ...RELEASE_STATUSES.map((release) => f({ release })),
+    ...SEASONS.map((season) => f({ season })),
+    f({ year: 1998 }),
+    f({ year: 2026, season: "fall" }),
+    f({ format: "movie", year: 1998 }),
+    f({ format: "ova", season: "fall" }),
+    f({ format: "music", year: 2026 }),
+    FULL,
+    { format: "music", genre: "slice-of-life", year: 2026, season: "summer", release: "HIATUS" },
+  ];
+  const phrases = (filters: SearchFilters) => {
+    const out: string[] = [];
+    if (filters.format) out.push(FORMAT_WORDS[filters.format]);
+    if (filters.genre) out.push(SEARCH_GENRES.find((g) => g.slug === filters.genre)!.anilist);
+    if (filters.release) out.push(RELEASE_WORDS[filters.release]);
+    if (filters.season && filters.year !== null) out.push(`from ${SEASON_WORDS[filters.season]} ${filters.year}`);
+    else if (filters.year !== null) out.push(`that began in ${filters.year}`);
+    else if (filters.season) out.push(`from ${SEASON_WORDS[filters.season]} seasons`);
+    return out;
+  };
+  const parts = (filters: SearchFilters) =>
+    [filters.format, filters.genre, filters.release, filters.season ?? filters.year].filter((v) => v !== null).length;
+
+  it("every line names exactly what AniList was asked, and nothing else", () => {
+    for (const filters of FILTER_SETS) {
+      const V = searchVariables("x", 1, filters);
+      const expected = phrases(filters);
+      const longestPage1: number[] = [];
+      for (const page of PAGES) {
+        for (const shown of SHOWN) {
+          for (const hasNextPage of [true, false]) {
+            const view = results(page, shown, hasNextPage);
+            const sage = searchSageLine(view, filters).text;
+            const status = searchStatus(view, filters);
+            const label = `${JSON.stringify(filters)} p${page} n${shown} next=${hasNextPage}`;
+            if (!hasFilters(filters)) {
+              expect(sage).toBe(searchSageLine(view).text);
+              expect(status).toBe(searchStatus(view));
+            }
+            const exact = view.kind === "results" && view.window.total !== null;
+            const page1More = view.kind === "results" && view.window.total === null && page === 1;
+            if (exact || page1More || view.kind === "none") {
+              for (const phrase of expected) {
+                expect(sage, label).toContain(phrase);
+                expect(status, label).toContain(phrase);
+              }
+              // Scope ⇔ variables.
+              const fmtWord = filters.format ? FORMAT_WORDS[filters.format] : null;
+              expect(Boolean(fmtWord && sage.includes(fmtWord)), label).toBe(Boolean(V.format));
+              expect(/ from (Winter|Spring|Summer|Fall) \d{4}/.test(sage), label).toBe(Boolean(V.season && V.seasonYear));
+              expect(/ that began in \d{4}/.test(sage), label).toBe(Boolean(V.startAfter && V.startBefore));
+              expect(/ from (Winter|Spring|Summer|Fall) seasons/.test(sage), label).toBe(Boolean(V.season && !V.seasonYear));
+              if (filters.year !== null && !filters.season) {
+                expect(V.startAfter).toBe((filters.year - 1) * 10000 + 1231);
+                expect(V.startBefore).toBe((filters.year + 1) * 10000);
+              }
+              if (page === 1) longestPage1.push(`《Report》 ${sage}`.length);
+            }
+            if (exact) {
+              expect(sage, label).toContain(SEARCH_EXCLUDING);
+              expect(status, label).toContain(SEARCH_EXCLUDING);
+              const total = (view as { window: { total: number } }).window.total;
+              if (total === 1) {
+                expect(sage.startsWith("The only"), label).toBe(true);
+                expect(sage.split(",")[0], label).not.toMatch(/results/);
+              } else {
+                expect(sage.startsWith(total.toLocaleString("en-US")), label).toBe(true);
+              }
+              expect(sage.startsWith("1 "), label).toBe(false);
+            } else if (page1More) {
+              expect(sage.startsWith("More than 30 "), label).toBe(true);
+            } else if (view.kind === "none") {
+              expect(sage, label).toContain(SEARCH_NOTE);
+              expect(status, label).toContain(SEARCH_NOTE);
+            } else if (view.kind === "results") {
+              // Page > 1 with more: a position; the capped status differs only by the cap note.
+              expect(sage, label).toBe(searchSageLine(view).text);
+              if (!view.window.capped) expect(status, label).toBe(searchStatus(view));
+            } else {
+              expect(sage, label).toBe(searchSageLine(view).text);
+              expect(status, label).toBe(searchStatus(view));
+            }
+            if (page > 1) expect(`${sage} ${status}`, label).not.toMatch(/closest/);
+            expect(status, label).not.toMatch(/[–+·]/);
+            for (const text of [sage, status]) expect(text, label).not.toMatch(BANNED);
+            const cap = parts(filters) <= 1 ? 90 : 125;
+            expect(`《Report》 ${sage}`.length, label).toBeLessThanOrEqual(cap);
+          }
+        }
+      }
+      const loading = loadingSageLine(1, filters).text;
+      expect(`《Analyze》 ${loading}`.length).toBeLessThanOrEqual(parts(filters) <= 1 ? 90 : 125);
+      if (hasFilters(filters)) {
+        // (The unfiltered loading line keeps its old "matches" wording; the filtered one never says it.)
+        expect(loading).not.toMatch(BANNED);
+        for (const phrase of expected) expect(loading).toContain(phrase);
+        // Close to every page-1 report it can turn into, so phones don't jump when results land.
+        for (const shown of [1, 6, 30, 0]) {
+          const report = searchSageLine(results(1, shown, shown === 30), filters).text;
+          expect(Math.abs(`《Analyze》 ${loading}`.length - `《Report》 ${report}`.length), report).toBeLessThanOrEqual(8);
+        }
+        expect(longestPage1.length).toBeGreaterThan(0);
+      }
+      expect(loadingSageLine(3, filters)).toEqual(loadingSageLine(3));
+      for (const page of [1, 3]) expect(loadingStatus("q", page, filters)).not.toMatch(/[–+·]/);
+
+      // Sub, panels, cap note.
+      const sub = resultsSub(filters);
+      expect(sub === RESULTS_SUB).toBe(!hasFilters(filters));
+      if (hasFilters(filters)) {
+        expect(sub.startsWith("Best match first, then by popularity. Filters: ")).toBe(true);
+        expect(sub).not.toMatch(/every format/);
+      }
+      const none = noResultsCopy("q", filters);
+      expect(none.text).toContain("skips adult titles");
+      expect(none.title).toBe(noResultsCopy("q").title);
+      expect(none.text.includes(SEASON_FILING_NOTE)).toBe(filters.season !== null);
+      if (hasFilters(filters)) {
+        expect(none.text).toContain(filterReadout(filters));
+        expect(none.text).toContain("Check the spelling, or clear the filters.");
+        expect(none.text.replace(` ${SEASON_FILING_NOTE}`, "").length).toBeLessThanOrEqual(190);
+      }
+      expect(pastEndCopy("q", 3, filters).text.includes("with these filters")).toBe(hasFilters(filters));
+      const capped = win(results(MAX_PAGE, 30, true));
+      const allFive = Object.values(filters).every((v) => v !== null);
+      expect(capNote(capped, filters)).toBe(allFive ? CAP_NOTE_WORD : CAP_NOTE);
+      expect(capNote(win(results(2, 30, true)), filters)).toBeNull();
+    }
+  });
+
+  it("every option survives normalization", () => {
+    const options = searchFilterOptions(2027);
+    for (const param of Object.keys(options) as FilterParam[]) {
+      expect(options[param][0].value).toBe("");
+      for (const { value } of options[param]) {
+        const normalized = normalizeFilters({ [param]: value }, 2027)[param];
+        expect(normalized === null ? "" : String(normalized)).toBe(value);
+        expect(value).not.toMatch(/hentai/i);
+      }
+    }
+    expect(Object.values(options).map((list) => list[0].label)).toEqual([
+      "All formats",
+      "All genres",
+      "All years",
+      "All seasons",
+      "Any status",
+    ]);
   });
 });

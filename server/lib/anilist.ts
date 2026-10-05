@@ -3,7 +3,8 @@ import { searchAnimeQuery } from "@/components/utils/anilist-queries/searchAnime
 import { fetchWithTimeout } from "@/components/utils/fetchWithTimeout";
 import { normalizeMedia } from "@/lib/anime/normalize";
 import type { AnimeMedia } from "@/lib/anime/types";
-import { SEARCH_PAGE_SIZE } from "@/lib/search";
+import { NO_FILTERS, type SearchFilters } from "@/lib/search";
+import { searchVariables } from "@/lib/searchFilters";
 
 /**
  * Server-side AniList client (search, list refresh). Unlike the isomorphic
@@ -123,16 +124,13 @@ export async function fetchMediaByIds(
   return results;
 }
 
-/** One page of a title search (30 results). No total: AniList's is false here (lib/search.ts). */
+/** One page of a title search (30 results), optionally filtered. No total: AniList's is false here (lib/search.ts). */
 export async function searchAnime(
   search: string,
-  page = 1
+  page = 1,
+  filters: SearchFilters = NO_FILTERS
 ): Promise<{ media: AnimeMedia[]; hasNextPage: boolean; page: number }> {
-  const data = await anilistQuery<PageResult>(searchAnimeQuery, {
-    search,
-    page,
-    perPage: SEARCH_PAGE_SIZE,
-  });
+  const data = await anilistQuery<PageResult>(searchAnimeQuery, searchVariables(search, page, filters));
   const pageInfo = data.page?.pageInfo ?? {};
   return {
     media: normalizeAll(data.page?.media),

@@ -5,7 +5,7 @@ import { TrophyIcon } from "@/components/theme/icons";
 import SageDoorway from "@/components/theme/SageDoorway";
 import { SearchChips, SearchConsole } from "@/components/theme/SearchConsole";
 import { DOORWAY_LINK, HAIRLINE } from "@/components/theme/tokens";
-import { SEARCH_EYEBROW, SEARCH_QUESTION, SEARCH_SUB } from "@/lib/anime/searchCopy";
+import { SEARCH_EYEBROW, SEARCH_QUESTION, SEARCH_SUB } from "@/lib/anime/searchConsoleCopy";
 import { trackLanding } from "./analytics";
 import { CHAPTER_SUB_CLASS, CHAPTER_TITLE_CLASS, EYEBROW_CLASS, SageLine } from "./SageLine";
 

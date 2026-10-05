@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { airingSchedulePath, isCurrentPath, myListPath, searchPath, signInPath } from "./routes";
+import { airingSchedulePath, isCurrentPath, myListPath, searchPath, signInPath, listShareImagePath, scheduleShareImagePath } from "./routes";
 
 describe("isCurrentPath", () => {
   it("exact: only the same path", () => {
@@ -41,5 +41,12 @@ describe("path builders", () => {
     expect(searchPath("sousou no frieren")).toBe("/search?q=sousou%20no%20frieren");
     expect(signInPath()).toBe("/auth/signin");
     expect(signInPath("/search?q=a b")).toBe("/auth/signin?callbackUrl=%2Fsearch%3Fq%3Da%20b");
+  });
+});
+
+describe("share image paths", () => {
+  it("puts the version in the path (ISR ignores the query)", () => {
+    expect(listShareImagePath("65f000000000000000000001", "0abc123")).toBe("/user/og/65f000000000000000000001/0abc123");
+    expect(scheduleShareImagePath("65f000000000000000000001", "0abc123")).toBe("/mylist/og/65f000000000000000000001/0abc123");
   });
 });

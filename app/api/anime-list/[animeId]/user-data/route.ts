@@ -2,12 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/server/auth";
 import { toObjectId, usersCollection } from "@/server/lib/userList";
-import { normalizeEntry, normalizeUserData } from "@/lib/anime/normalize";
+import { writeUserData } from "@/server/lib/userDataWrite";
+import { BUSY_ERROR, CHANGED_ERROR, REQUIRED_ERROR, parseUserDataRequest } from "@/lib/anime/userDataRequest";
 
 /**
- * PATCH { userData: Partial<UserAnimeData> } → update one entry on the caller's list.
+ * PATCH → update one entry on the caller's list. Four bodies
+ * (lib/anime/userDataRequest.ts):
+ * - `{ userData }`: an absolute write (the Edit dialog)
+ * - `{ userData, expect }`: Undo; applies only while the entry still equals `expect`
+ * - `{ increment: 1–100 }`: +1 taps, added to the stored progress
+ * - `{ catchUpTo }`: "Log N new", never past what has aired by the server's clock
  * Validation and tracker rules (auto-complete, start/finish dates) live in
- * lib/anime/normalize.ts#normalizeUserData. Responds with the saved userData.
+ * lib/anime/normalize.ts#normalizeUserData; the write is a compare-and-set on
+ * the stored entry (server/lib/userDataWrite.ts).
+ *
+ * 200 `{ message, userData, previous }`: `previous` is the stored value the
+ * write replaced (equal to `userData` when nothing changed). A catch-up's
+ * response adds `snapshot`, the stored airing fields it counted from, so the
+ * card's "Log N new" agrees with the server. 409 `{ error,
+ * code: "changed", userData }` when an Undo's entry changed (userData = stored),
+ * 409 `{ error, code: "busy" }` after losing the race three times.
  */
 export async function PATCH(
   request: NextRequest,
@@ -21,46 +35,41 @@ export async function PATCH(
   }
 
   const animeId = Number(animeIdParam);
-  let body: any = null;
-  try {
-    body = await request.json();
-  } catch {
-    // handled below
+  const body: unknown = await request.json().catch(() => null);
+  if (!Number.isInteger(animeId) || animeId <= 0) {
+    return NextResponse.json({ error: REQUIRED_ERROR }, { status: 400 });
   }
-  if (!Number.isInteger(animeId) || animeId <= 0 || !body?.userData) {
-    return NextResponse.json(
-      { error: "User data and anime ID are required" },
-      { status: 400 }
-    );
+  const parsed = parseUserDataRequest(body);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
   try {
-    const users = await usersCollection();
-    const doc = await users.findOne(
-      { _id: userId, "following.id": animeId },
-      { projection: { "following.$": 1 } }
-    );
-    const current = normalizeEntry(doc?.following?.[0]);
-    if (!current) {
-      return NextResponse.json({ error: "Anime is not in your list" }, { status: 404 });
-    }
-
-    const result = normalizeUserData(body.userData, {
-      episodes: current.episodes,
-      previous: current.userData,
+    const result = await writeUserData(await usersCollection(), {
+      userId,
+      animeId,
+      request: parsed.request,
     });
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+    switch (result.kind) {
+      case "ok":
+        return NextResponse.json({
+          message: "Successfully Updated User Anime Data",
+          userData: result.userData,
+          previous: result.previous,
+          ...(parsed.request.kind === "catchUp" ? { snapshot: result.snapshot } : {}),
+        });
+      case "not-found":
+        return NextResponse.json({ error: "Anime is not in your list" }, { status: 404 });
+      case "invalid":
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      case "changed":
+        return NextResponse.json(
+          { error: CHANGED_ERROR, code: "changed", userData: result.userData },
+          { status: 409 }
+        );
+      case "busy":
+        return NextResponse.json({ error: BUSY_ERROR, code: "busy" }, { status: 409 });
     }
-
-    await users.updateOne(
-      { _id: userId, "following.id": animeId },
-      { $set: { "following.$.userData": result.value } }
-    );
-    return NextResponse.json({
-      message: "Successfully Updated User Anime Data",
-      userData: result.value,
-    });
   } catch (err) {
     console.error("Error updating user anime data:", err);
     return NextResponse.json({ error: "Error Updating User Anime Data" }, { status: 500 });

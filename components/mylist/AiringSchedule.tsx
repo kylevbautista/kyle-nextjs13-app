@@ -25,6 +25,15 @@ import {
 import { scheduleSwrKey } from "@/components/utils/useMyList";
 import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { compareByNextAiring, nextAiring, type Weekday } from "@/lib/anime/airing";
+import {
+  SCHEDULE_EYEBROW,
+  listOf,
+  noAnimeYetTitle,
+  nothingAiringTitle,
+  scheduleStandingLine,
+  scheduleSub,
+  scheduleTitle,
+} from "@/lib/anime/listCopy";
 import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
 import { LIST_STATUS_LABELS, displayTitle, type ListEntry } from "@/lib/anime/types";
 import { defaultScheduleDay, formatWeekdayTime, showsLabel } from "@/lib/landing";
@@ -96,7 +105,7 @@ export default function AiringSchedule({
     if (isOwner) markQuest(userId, "schedule");
   }, [isOwner, userId]);
 
-  const listName = isOwner ? "your list" : `${ownerName}'s list`;
+  const listName = isOwner ? "your list" : listOf(ownerName);
   const hasEntries = entries.length > 0;
   const airing = schedule.airingCount > 0;
   // The week panel's tab, lifted so the Next-episodes card's "The whole week"
@@ -113,7 +122,7 @@ export default function AiringSchedule({
   // The banner line follows the day ("Today: 2 episodes left…"): the server's
   // render time first (so hydration matches), then a per-minute clock.
   const minute = useMinuteNow();
-  const fallbackLine = `Thought Acceleration: ${isOwner ? "your" : `${ownerName}'s`} week, computed in Pacific Time.`;
+  const fallbackLine = scheduleStandingLine(isOwner ? "your" : `${ownerName}'s`);
   const line = scheduleLine(upcoming, minute ?? renderedAt, fallbackLine);
   const showWholeWeek = useCallback(() => {
     setChoice("all");
@@ -125,16 +134,12 @@ export default function AiringSchedule({
   return (
     <div className="flex min-w-0 flex-col text-white">
       <PageBanner
-        eyebrow="Skill 03 · Thought Acceleration"
+        eyebrow={SCHEDULE_EYEBROW}
         sage={line}
         // Re-type the line only when what it says changes, never on the clock.
         sageKey={line.text}
-        title={`${ownerName}'s airing schedule`}
-        sub={
-          airing
-            ? `${showsLabel(schedule.airingCount)} with an upcoming episode, lined up by the day it airs. Completed and dropped shows stay out of the way.`
-            : "Every show on the list with an upcoming episode, lined up by the day it airs."
-        }
+        title={scheduleTitle(ownerName)}
+        sub={scheduleSub(schedule.airingCount)}
         aside={
           airing ? (
             <NextEpisodes
@@ -242,13 +247,13 @@ function EmptySchedule({
   }
   if (!hasEntries) {
     return (
-      <SagePanel kind="Report" mood="worried" title={`${ownerName} hasn't added any anime yet`} actions={actions}>
+      <SagePanel kind="Report" mood="worried" title={noAnimeYetTitle(ownerName)} actions={actions}>
         Check out what&apos;s airing this season instead.
       </SagePanel>
     );
   }
   return (
-    <SagePanel kind="Report" mood="sage" title={`Nothing on ${listName} is airing right now`} actions={actions}>
+    <SagePanel kind="Report" mood="sage" title={nothingAiringTitle(listName)} actions={actions}>
       {hasNotAiring
         ? "Finished and upcoming shows are listed under “Not airing right now”. Looking for something new to watch?"
         : "Everything on it is marked Dropped. Looking for something new to watch?"}

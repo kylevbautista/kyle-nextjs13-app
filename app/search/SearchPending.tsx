@@ -1,15 +1,16 @@
 import { SageLine } from "@/components/home/SageLine";
 import { CARD_LAYOUT } from "@/components/theme/cardLayout";
 import { SOFT_TEXT, TEXT_LINK } from "@/components/theme/tokens";
-import { NOSCRIPT_SAGE, NOSCRIPT_TEXT, loadingSageLine, noscriptLink } from "@/lib/anime/searchCopy";
+import { NOSCRIPT_SAGE, NOSCRIPT_TEXT, loadingSageLine, loadingStatus, noscriptLink } from "@/lib/anime/searchCopy";
+import type { SearchFilters } from "@/lib/search";
 import SearchPendingStatus from "./SearchPendingStatus";
 
 /** The season page's card skeleton (components/theme/cardLayout.ts). */
 const { Skeleton, grid, searchSkeletons } = CARD_LAYOUT;
 
 /*
- * A search on its way: the page's two Suspense fallbacks (keyed by query and
- * page, so every new search or page shows them at once). No directive, and
+ * A search on its way: the page's two Suspense fallbacks (keyed by the search:
+ * query, filters, page; so every new search or page shows them at once). No directive, and
  * class strings only from tokens.ts / cardLayout.ts and literals here, so the
  * server page renders them (CLAUDE.md §9.21).
  *
@@ -19,8 +20,8 @@ const { Skeleton, grid, searchSkeletons } = CARD_LAYOUT;
  */
 
 /** The banner's report while AniList answers ("《Analyze》 Searching AniList…"). */
-export function SearchPendingSage({ page }: { page: number }) {
-  const line = loadingSageLine(page);
+export function SearchPendingSage({ page, filters }: { page: number; filters: SearchFilters }) {
+  const line = loadingSageLine(page, filters);
   return (
     <>
       <SageLine kind={line.kind} scan="load" className="js-only mt-4">
@@ -36,7 +37,17 @@ export function SearchPendingSage({ page }: { page: number }) {
 }
 
 /** The Results row's box (min-h-11) and skeleton cards, so the first card lands where the first skeleton was. */
-export default function SearchPending({ query, page }: { query: string; page: number }) {
+export default function SearchPending({
+  query,
+  page,
+  filters,
+  searchKey,
+}: {
+  query: string;
+  page: number;
+  filters: SearchFilters;
+  searchKey: string;
+}) {
   const link = noscriptLink(query);
   return (
     <>
@@ -62,7 +73,7 @@ export default function SearchPending({ query, page }: { query: string; page: nu
           </p>
         </noscript>
       </div>
-      <SearchPendingStatus query={query} page={page} />
+      <SearchPendingStatus searchKey={searchKey} line={loadingStatus(query, page, filters)} />
     </>
   );
 }

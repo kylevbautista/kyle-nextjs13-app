@@ -2,9 +2,10 @@ import { MagicCircle } from "@/components/home/NightSky";
 import { PauseParentWhenOffscreen } from "@/components/home/Reveal";
 import Slime from "@/components/home/Slime";
 import {
+  FINAL_FORM_LINE,
   TIER_LABELS,
-  TIER_THRESHOLDS,
-  nextTier,
+  evolutionProgress,
+  evolutionRemainingLine,
   showsLabel,
   type EvolutionTier,
 } from "@/lib/landing";
@@ -37,10 +38,7 @@ export default function EvolutionCard({
   headingLevel?: "h2" | "h3";
 }) {
   const Heading = headingLevel;
-  const next = nextTier(tier);
-  const from = tier === "lord" ? TIER_THRESHOLDS.lord : tier === "demon" ? TIER_THRESHOLDS.demon : 0;
-  const shows = count ?? 0;
-  const ratio = next ? Math.min(1, Math.max(0, (shows - from) / (next.at - from))) : 1;
+  const progress = evolutionProgress(tier, count ?? 0);
   const banner = layout === "banner";
 
   const facts = (
@@ -56,22 +54,18 @@ export default function EvolutionCard({
           </>
         )}
       </p>
-      {next ? (
+      {progress ? (
         <>
           <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <div
               className="h-full rounded-full bg-[#95ccff] transition-[width] duration-500"
-              style={{ width: `${ratio * 100}%` }}
+              style={{ width: `${progress.ratio * 100}%` }}
             />
           </div>
-          {count !== null && (
-            <p className="text-sm text-[rgb(164,164,164)]">
-              {Math.max(0, next.at - shows)} more to {TIER_LABELS[next.tier]}
-            </p>
-          )}
+          {count !== null && <p className="text-sm text-[rgb(164,164,164)]">{evolutionRemainingLine(progress)}</p>}
         </>
       ) : (
-        <p className="text-sm text-[rgb(164,164,164)]">Final form reached. For now.</p>
+        <p className="text-sm text-[rgb(164,164,164)]">{FINAL_FORM_LINE}</p>
       )}
     </>
   );

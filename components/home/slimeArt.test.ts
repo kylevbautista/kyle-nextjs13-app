@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  slimeBaseY,
+  slimeMarkupHeight,
   SLIME_ACCESSORIES,
   SLIME_ASPECT,
   SLIME_BODY_PATH,
@@ -105,5 +108,57 @@ describe("slimeSvgMarkup", () => {
     const opened = (svg.match(/<(?!\/)[a-zA-Z][^>]*[^/]>/g) ?? []).length;
     const closed = (svg.match(/<\/[a-zA-Z]+>/g) ?? []).length;
     expect(opened).toBe(closed);
+  });
+});
+
+describe("slimeSvgMarkup tiers (the share images)", () => {
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+
+  it("keeps the plain slime byte for byte", () => {
+    expect(sha(slimeSvgMarkup()).startsWith("79df9b01702121c0")).toBe(true);
+    expect(sha(slimeSvgMarkup({ size: 380 })).startsWith("20c667c416636eef")).toBe(true);
+    expect(sha(slimeSvgMarkup({ mood: "happy" })).startsWith("920f8057672030b2")).toBe(true);
+    expect(slimeSvgMarkup({ tier: "slime" })).toBe(slimeSvgMarkup());
+  });
+
+  it("draws each tier's accessories", () => {
+    const named = slimeSvgMarkup({ tier: "named" });
+    expect(named).toContain(SLIME_ACCESSORIES.star);
+    expect(named).toContain('stroke="#f5c451" stroke-opacity="0.7"');
+    expect(named).toContain('viewBox="0 0 200 170"');
+    expect(named).not.toContain('r="92"');
+    expect(named).not.toContain(SLIME_ACCESSORIES.crown.path);
+
+    const demon = slimeSvgMarkup({ tier: "demon", size: 150 });
+    expect(demon).toContain('viewBox="0 -4 200 194"');
+    expect(demon).toContain(`height="${Math.round((150 * 194) / 200)}"`);
+    expect(demon).toMatch(/<circle cx="100" cy="94" r="92" [^>]*stroke-dasharray="2 6"/);
+    expect(demon).toContain(SLIME_ACCESSORIES.star);
+    expect(demon).not.toContain(SLIME_ACCESSORIES.crown.path);
+
+    const lord = slimeSvgMarkup({ tier: "lord" });
+    expect(lord).toContain('viewBox="0 -4 200 194"');
+    expect(lord).toContain(SLIME_ACCESSORIES.crown.path);
+    expect(lord.match(/fill="#fff3c4"/g)).toHaveLength(3);
+    expect(lord).not.toContain(SLIME_ACCESSORIES.star);
+  });
+
+  it("places the slime on a line", () => {
+    expect(slimeBaseY(150, "named")).toBe(119);
+    expect(slimeBaseY(150, "lord")).toBe(122);
+    expect(slimeMarkupHeight(150, "lord")).toBe(146);
+    expect(slimeMarkupHeight(150, "named")).toBe(128);
+  });
+
+  it("stays next/og-safe and well-formed in every tier", () => {
+    for (const tier of ["slime", "named", "demon", "lord"] as const) {
+      const svg = slimeSvgMarkup({ tier });
+      expect(svg).not.toMatch(/var\(|class=|style=|animat|@keyframes|<script/i);
+      const defined = new Set([...svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+      for (const [, id] of svg.matchAll(/url\(#([^)]+)\)/g)) expect(defined.has(id)).toBe(true);
+      const opened = (svg.match(/<(?!\/)[a-zA-Z][^>]*[^/]>/g) ?? []).length;
+      const closed = (svg.match(/<\/[a-zA-Z]+>/g) ?? []).length;
+      expect(opened).toBe(closed);
+    }
   });
 });

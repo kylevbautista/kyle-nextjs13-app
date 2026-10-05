@@ -1,15 +1,16 @@
 "use client";
 import Form from "next/form";
 import Link from "next/link";
-import { useId, type FormEvent } from "react";
-import { rememberSearchFocus, repeatSearchArrival } from "@/components/utils/searchArrival";
+import { useRouter } from "next/navigation";
+import { useId, type FormEvent, type ReactNode } from "react";
+import { rememberSearchFocus, rememberSearchKey, repeatSearchArrival } from "@/components/utils/searchArrival";
 import {
   SEARCH_EXAMPLES,
   SEARCH_FORM_NAME,
   SEARCH_INPUT_LABEL,
   SEARCH_PLACEHOLDER,
   SEARCH_SUBMIT,
-} from "@/lib/anime/searchCopy";
+} from "@/lib/anime/searchConsoleCopy";
 import { searchPath } from "@/lib/routes";
 import { MAX_QUERY_LENGTH, normalizeQuery } from "@/lib/search";
 import { FOCUS_RING_CONSOLE, LABEL_CLASS } from "./tokens";
@@ -26,12 +27,13 @@ const SIZES = {
   // The landing demo's layout: stacked on phones, one row from 640px.
   // flex-1 only in the row (in the column it would replace h-14 with a content basis).
   large: { row: "flex flex-col gap-3 sm:flex-row", input: "h-14 px-4 sm:flex-1", button: "h-14 px-6", word: "" },
-  // The owner's compact box above results: one row at every width; icon-only below 360px.
+  // The owner's compact box above results (/search's results box, with the filter toggle in the
+  // row): one row at every width; Analyze is icon-only below 375px, so the field keeps ≥ 140px.
   compact: {
     row: "flex gap-2 sm:gap-3",
     input: "h-12 flex-1 px-3 sm:px-4",
-    button: "h-12 w-12 min-[360px]:w-auto min-[360px]:px-4 sm:px-5",
-    word: "max-[359px]:hidden",
+    button: "h-12 w-12 min-[375px]:w-auto min-[375px]:px-4 sm:px-5",
+    word: "max-[374px]:hidden",
   },
 } as const;
 
@@ -45,13 +47,30 @@ export interface SearchConsoleProps {
   /** Landing analytics. Never preventDefault. */
   onSubmit?: () => void;
   className?: string;
+  /*
+   * /search's results box only (app/search/FilteredSearchConsole.tsx). The home
+   * and the landing pass none of these, so their markup stays identical (rule 1).
+   */
+  /** A control after Analyze, in the row (the filter toggle). */
+  toggle?: ReactNode;
+  /** Inside the form, after the row (the filter panel). */
+  children?: ReactNode;
+  /**
+   * The URL to open, built from the submitted form (canonical: next/form would
+   * append every select, empty ones too). It must be a searchKey
+   * (lib/search.ts): it is also the arrival token. With it, submitting is
+   * preventDefault + router.push.
+   */
+  hrefFor?: (data: FormData) => string;
 }
 
 /**
  * The Great Sage search console: GET /search?q=… (a plain form without JS;
  * next/form makes it a client navigation). The landing's chapter and /search
  * render this same component (skill rule 1). Submitting leaves the arrival
- * token, so /search focuses its results heading when they arrive.
+ * token, so /search focuses its results heading when they arrive. /search's
+ * results box adds its filter toggle, panel and canonical URL through
+ * `toggle`, `children` and `hrefFor` (app/search/FilteredSearchConsole.tsx).
  */
 export function SearchConsole({
   size,
@@ -60,14 +79,28 @@ export function SearchConsole({
   showLabel = false,
   onSubmit,
   className = "",
+  toggle,
+  children,
+  hrefFor,
 }: SearchConsoleProps) {
   const inputId = useId();
+  const router = useRouter();
   const s = SIZES[size];
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    const query = normalizeQuery(String(new FormData(event.currentTarget).get("q") ?? ""));
-    // The same search again (same URL): nothing arrives, so say the outcome again now.
-    if (!rememberSearchFocus("title", query, 1)) repeatSearchArrival();
+    const data = new FormData(event.currentTarget);
+    if (!hrefFor) {
+      const query = normalizeQuery(String(data.get("q") ?? ""));
+      // The same search again (same URL): nothing arrives, so say the outcome again now.
+      if (!rememberSearchFocus("title", query, 1)) repeatSearchArrival();
+      onSubmit?.();
+      return; // next/form navigates
+    }
+    // next/form returns when the caller prevented the default.
+    event.preventDefault();
+    const href = hrefFor(data);
+    if (!rememberSearchKey("title", href)) repeatSearchArrival();
     onSubmit?.();
+    router.push(href);
   };
   return (
     <Form
@@ -107,7 +140,9 @@ export function SearchConsole({
           </svg>
           <span className={s.word}>{SEARCH_SUBMIT.text}</span>
         </button>
+        {toggle}
       </div>
+      {children}
     </Form>
   );
 }
