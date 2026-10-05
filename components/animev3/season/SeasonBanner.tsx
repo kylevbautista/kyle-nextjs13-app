@@ -2,6 +2,7 @@
 import { memo, useMemo, type MouseEvent } from "react";
 import NextEpisodes from "@/components/mylist/NextEpisodes";
 import {
+  NEXT_UP_NONE_IN_FORMATS,
   nextUpResting,
   nextUpRows,
   seasonLabelOf,
@@ -30,6 +31,8 @@ interface SeasonBannerProps {
   empty: boolean;
   /** False when nothing is listed below (continuing-only season, toggle off). */
   showsListed: boolean;
+  /** The format chips list nothing: the Next-episodes card stays (same height) and says so. */
+  nothingInFormats: boolean;
   carryOverIncluded: boolean;
   /** "The whole season ↓": scroll to the grid's heading and focus it. */
   onJumpToShows: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -52,6 +55,7 @@ function SeasonBanner({
   loadFailed,
   empty,
   showsListed,
+  nothingInFormats,
   carryOverIncluded,
   onJumpToShows,
 }: SeasonBannerProps) {
@@ -72,7 +76,7 @@ function SeasonBanner({
         entries={rows}
         loading={!complete && !loadFailed}
         headerNote={loadFailed && !complete ? "Loaded shows only" : undefined}
-        restingText={nextUpResting(phase, label)}
+        restingText={nothingInFormats ? NEXT_UP_NONE_IN_FORMATS : nextUpResting(phase, label)}
         jump={{ href: "#season-shows", label: "The whole season", srLabel: "See the whole season", onClick: onJumpToShows }}
       />
     ) : undefined;

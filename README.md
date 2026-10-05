@@ -7,10 +7,12 @@ list of what you're watching with progress, scores and dates.
 
 ## ✨ Features
 
-- **Seasonal browser** (`/anime/<year>/<season>`): every TV show, movie, OVA and special premiering in a
-  season, with live per-episode countdowns. Sort by countdown or popularity, step between seasons,
-  and infinite scroll through AniList's pages. `/anime` always lands on the current season.
-- **Search** (`/search`): any anime on AniList, including older seasons and ONAs.
+- **Seasonal browser** (`/anime/<year>/<season>`): every anime AniList files under a season (TV, TV
+  shorts, movies, specials, OVAs, ONAs, music videos), adult titles excluded, plus TV series continuing
+  from earlier seasons, with live per-episode countdowns. Sort by countdown or popularity, filter by
+  format, step between seasons, and infinite scroll through AniList's pages. `/anime` always lands on
+  the current season.
+- **Search** (`/search`): any anime on AniList, from any season and in any format.
 - **My List** (`/user/<id>`): a full tracker. Statuses (Watching, Plan to Watch, Completed, Paused,
   Dropped), +1 episode, score, start/finish dates, filters and sorting. Shows auto-complete at the
   final episode. Lists are public by link; only you can edit yours.

@@ -1,11 +1,13 @@
+import { SEASON_LIST_FILTER } from "./allCurrAnimeTag";
 import { mediaFieldsFragment } from "./mediaFields";
 
 /**
  * The landing page's cached extras (one request, Next data cache, 1 h):
  * - tempest: the Tensura franchise, full media snapshots plus banners
  * - mascot:  the Rimuru Tempest character (name, portrait, AniList page)
- * - count1–3: the season's ids with the same filters as /anime (sort: ID keeps
- *   the pages stable), so the landing can state an exact show count.
+ * - count1–3: the season's ids with the season page's filter (SEASON_LIST_FILTER;
+ *   sort: ID keeps the pages stable), so the landing can state an exact show
+ *   count (150 at most, "150+" past that).
  *   pageInfo.total is never used: AniList reports 5000 for most filters.
  *
  * Every root field is wrapped in Page(), so an id that disappears yields an
@@ -37,7 +39,7 @@ query LandingExtras($ids: [Int], $characterId: Int, $season: MediaSeason, $seaso
     pageInfo {
       hasNextPage
     }
-    media(season: $season, seasonYear: $seasonYear, isAdult: false, format_not_in: [TV_SHORT, ONA], sort: ID) {
+    media(season: $season, seasonYear: $seasonYear, ${SEASON_LIST_FILTER}, sort: ID) {
       id
     }
   }
@@ -45,7 +47,7 @@ query LandingExtras($ids: [Int], $characterId: Int, $season: MediaSeason, $seaso
     pageInfo {
       hasNextPage
     }
-    media(season: $season, seasonYear: $seasonYear, isAdult: false, format_not_in: [TV_SHORT, ONA], sort: ID) {
+    media(season: $season, seasonYear: $seasonYear, ${SEASON_LIST_FILTER}, sort: ID) {
       id
     }
   }
@@ -53,7 +55,7 @@ query LandingExtras($ids: [Int], $characterId: Int, $season: MediaSeason, $seaso
     pageInfo {
       hasNextPage
     }
-    media(season: $season, seasonYear: $seasonYear, isAdult: false, format_not_in: [TV_SHORT, ONA], sort: ID) {
+    media(season: $season, seasonYear: $seasonYear, ${SEASON_LIST_FILTER}, sort: ID) {
       id
     }
   }

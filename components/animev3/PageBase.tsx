@@ -4,7 +4,13 @@ import { flushSync, preconnect } from "react-dom";
 import { HeaderContext } from "./layoutSelector/HeaderProvider";
 import SeasonBanner from "./season/SeasonBanner";
 import SeasonControls from "./season/SeasonControls";
-import { ContinuingHiddenPanel, EmptySeasonPanel, OnlyContinuingNote } from "./season/SeasonEmpty";
+import {
+  ContinuingHiddenPanel,
+  EmptySeasonPanel,
+  FormatsHiddenNote,
+  FormatsHiddenPanel,
+  OnlyContinuingNote,
+} from "./season/SeasonEmpty";
 import { LoadMoreError, OrderDivider, SeasonEndCard } from "./season/SeasonGridNotices";
 import useLazyLoad, { REVEAL_CHUNK } from "./utils/useLazyLoad";
 import { isStale, mergeFresh, recallRefresh, rememberRefresh } from "./utils/seasonFreshness";
@@ -22,6 +28,7 @@ import {
   endCardNote,
   endCardText,
   headingSr,
+  hiddenLabel,
   noscriptText,
   seasonLabelOf,
   spokenContinuing,
@@ -37,6 +44,13 @@ import {
   soonerBelow,
   type SortMode,
 } from "@/lib/anime/seasonOrder";
+import {
+  filterByFormat,
+  formatCounts,
+  hiddenWithShows,
+  toggleFormat as toggledFormats,
+  type FormatKey,
+} from "@/lib/anime/seasonFormats";
 import type { AnimeMedia } from "@/lib/anime/types";
 import type { SeasonName } from "@/lib/season";
 
@@ -58,7 +72,7 @@ interface PageBaseProps {
 
 type LoadStatus = "idle" | "loading" | "error";
 
-/** Later pages load right after hydration up to this one (seasons rarely pass 2 pages). */
+/** Later pages load right after hydration up to this one (a season of 101–150 shows takes 3 pages). */
 const MAX_EAGER_PAGE = 6;
 /**
  * Sorts that load the rest of the season right away, not on scroll: the
@@ -119,7 +133,8 @@ export default function PageBase({
   preconnect("https://s4.anilist.co");
   preconnect(BROWSER_ANILIST_URL, { crossOrigin: "anonymous" });
 
-  const { sort, setSort, showContinuing, setShowContinuing } = useContext(HeaderContext);
+  const { sort, setSort, showContinuing, setShowContinuing, hiddenFormats, toggleFormat, showAllFormats } =
+    useContext(HeaderContext);
   const label = seasonLabelOf(year, season);
   const win = useMemo(() => seasonWindow(year, season), [year, season]);
   const compareCountdown = useMemo(() => countdownComparator(win), [win]);
@@ -163,16 +178,21 @@ export default function PageBase({
 
   /** Later pages are still to come (the popularity floor's condition). */
   const floorPending = cursor.hasNextPage && !laterPageFailed;
-  const continuing = useMemo(
+  // Continuing series and the popularity floor come from every loaded show; the format
+  // filter applies after, so hiding a format never holds continuing series back.
+  const continuingAll = useMemo(
     () => selectContinuing({ carryOver, media, showContinuing, sort, hasNextPage: floorPending }),
     [carryOver, media, showContinuing, sort, floorPending]
   );
+  const listedMedia = useMemo(() => filterByFormat(media, hiddenFormats), [media, hiddenFormats]);
+  const continuing = useMemo(() => filterByFormat(continuingAll, hiddenFormats), [continuingAll, hiddenFormats]);
   const continuingIds = useMemo(() => new Set(continuing.map((item) => item.id)), [continuing]);
 
   // Cards on screen keep their place when later pages arrive; those pages are
   // sorted in *behind* them (a strict re-sort would reshuffle the cards being
   // read). Changing the sort or the continuing toggle re-sorts everything.
   const [pinnedIds, setPinnedIds] = useState<number[]>([]);
+  // Format chips reset the pins themselves, and only when a press changes what's listed (onFormat).
   const view = `${sort}|${showContinuing}`;
   const [pinnedForView, setPinnedForView] = useState(view);
   if (pinnedForView !== view) {
@@ -301,8 +321,8 @@ export default function PageBase({
   }, [sort, cursor, status, fetchMore]);
 
   const { list: sorted, pinnedCount } = useMemo(
-    () => orderSeason({ media, continuing, sort, pinnedIds, compareCountdown }),
-    [media, continuing, sort, pinnedIds, compareCountdown]
+    () => orderSeason({ media: listedMedia, continuing, sort, pinnedIds, compareCountdown }),
+    [listedMedia, continuing, sort, pinnedIds, compareCountdown]
   );
 
   const { visibleCount, hasMore, sentinelRef, revealAtLeast } = useLazyLoad({
@@ -318,23 +338,49 @@ export default function PageBase({
 
   const { openDetails, sheet } = useAnimeDetails({ Action: CARD_LAYOUT.Action, fallbackFocusId: "season-shows-title" });
 
-  // Facts about the season (all clock-free).
-  const n = media.length;
+  // Facts about the season (all clock-free). Claims about the season ("no shows here")
+  // use every loaded show; what's listed uses the format filter.
+  /** Season shows loaded, in every format. */
+  const N = media.length;
+  /** Season shows listed (formats not hidden). */
+  const n = listedMedia.length;
+  /** Season shows in hidden formats. */
+  const hidden = N - n;
+  const counts = useMemo(() => formatCounts(media), [media]);
   const carryOverAll = useMemo(() => {
     const seasonIds = new Set(media.map((item) => item.id));
     return carryOver.filter((item) => !seasonIds.has(item.id));
   }, [carryOver, media]);
   /** Continuing series in this season (before the popularity floor); 0 when they didn't load. */
   const c = carryOverIncluded ? carryOverAll.length : 0;
+  /** Of those, the ones in shown formats (all of them, or none while TV is hidden). */
+  const cByFormat = carryOverIncluded ? filterByFormat(carryOverAll, hiddenFormats).length : 0;
+  /** TV is hidden, so the continuing series (all TV) can't be listed whatever their toggle says. */
+  const tvBlocksContinuing = cByFormat < c;
+  /** …and the toggle is on: they'd be listed but for TV. */
+  const continuingHiddenWithTv = showContinuing && tvBlocksContinuing;
   const loaded = useMemo(() => [...media, ...carryOverAll], [media, carryOverAll]);
   const complete = !cursor.hasNextPage;
   const exact = complete && !orderShifted;
-  const empty = complete && n === 0 && c === 0;
-  const onlyContinuing = complete && n === 0 && c > 0;
+  const empty = complete && N === 0 && c === 0;
+  const onlyContinuing = complete && N === 0 && c > 0;
+  /** Shows exist, but the format filter lists none of them: a panel above the (empty) grid. */
+  const formatsHideAll = !empty && sorted.length === 0 && (hidden > 0 || continuingHiddenWithTv);
   /** No season shows and the continuing ones are hidden: the grid is replaced by a panel. */
-  const nothingListed = onlyContinuing && !showContinuing;
-  const hasCountdowns = sorted.some((item) => nextAiring(item) !== null);
-  const anyInSeason = sorted.some((item) => inSeasonAiringAt(item, win) !== Number.POSITIVE_INFINITY);
+  const nothingListed = !formatsHideAll && onlyContinuing && !showContinuing;
+  /** Every season show is in a hidden format, but continuing series are listed. */
+  const formatsOnlyContinuing = N > 0 && n === 0 && continuing.length > 0;
+  // From every loaded show: Pause live timers must not come and go with a format chip.
+  const hasCountdowns = loaded.some((item) => nextAiring(item) !== null);
+  // The format row, once shown, stays for the page's life (no chip unmounts under its own press);
+  // a season with no season shows still gets it while a format is hidden, so TV can be shown again.
+  const [formatRowShown, setFormatRowShown] = useState(false);
+  const wantFormatRow = N > 0 || hiddenFormats.length > 0;
+  if (wantFormatRow && !formatRowShown) setFormatRowShown(true);
+  // With nothing listed (formats hide everything) the hint stays, so the chips under it never move.
+  const anyInSeason = (sorted.length ? sorted : loaded).some(
+    (item) => inSeasonAiringAt(item, win) !== Number.POSITIVE_INFINITY
+  );
   const dividerK = sort === "countdown" && pinnedCount > 0 ? soonerBelow(sorted, pinnedCount, win) : 0;
   const allFetchedVisible = visibleCount >= sorted.length;
   // The error row stays up while its Retry runs (the focused button keeps focus and says "Retrying…").
@@ -346,6 +392,36 @@ export default function PageBase({
     if (mode === sort) return;
     setSort(mode);
     announce(STATUS.sorted(mode));
+  };
+  /** A format chip: the status line says what's listed after it (computed now, not from the next render). */
+  const onFormat = (key: FormatKey) => {
+    const next = toggledFormats(hiddenFormats, key);
+    const nextN = filterByFormat(media, next).length;
+    const nextContinuing = filterByFormat(continuingAll, next);
+    toggleFormat(key);
+    // A re-sort like the continuing toggle's, but only when the list changes ("Music 0" changes nothing).
+    if (nextN !== n || nextContinuing.length !== continuing.length) setPinnedIds([]);
+    announce(
+      STATUS.formats({
+        key,
+        shown: !next.includes(key),
+        label,
+        n: nextN,
+        c: nextContinuing.length,
+        complete,
+        tvContinuing: Math.abs(nextContinuing.length - continuing.length),
+      })
+    );
+  };
+  /** The panel's "Show every format" unmounts: focus the heading (or the continuing panel's button). */
+  const showAllFromPanel = () => {
+    flushSync(() => {
+      showAllFormats();
+      setPinnedIds([]);
+    });
+    if (document.getElementById("season-shows-title")) focusById("season-shows-title");
+    else document.getElementById("season-show-continuing")?.focus();
+    announce(STATUS.formats({ key: null, shown: true, label, n: media.length, c: continuingAll.length, complete }));
   };
   const onContinuing = (on: boolean) => {
     // The count that will actually render (popularity mode can still hold some back).
@@ -424,7 +500,7 @@ export default function PageBase({
    */
   const cellsInLastBlock = sorted.length - (gridItems.length > visibleCount ? pinnedCount : 0);
   const showsHeading = onlyContinuing ? "Continuing series" : `${label} shows`;
-  const continuingShown = showContinuing && c > 0;
+  const continuingShown = showContinuing && cByFormat > 0;
 
   return (
     // Not focusable: after a client navigation Next focuses the new page's
@@ -439,7 +515,9 @@ export default function PageBase({
         complete={complete}
         loadFailed={status === "error"}
         empty={empty}
+        // Kept while the formats list nothing (its fixed-height card says so), so the page never shifts.
         showsListed={!nothingListed}
+        nothingInFormats={formatsHideAll}
         carryOverIncluded={carryOverIncluded}
         onJumpToShows={jumpToShows}
       />
@@ -455,12 +533,16 @@ export default function PageBase({
               clockFallback={seed.at}
               continuingCount={c}
               continuingCapped={carryOverCapped}
+              continuingNeedsTv={tvBlocksContinuing}
               carryOverIncluded={carryOverIncluded}
               hasCountdowns={hasCountdowns}
               anyInSeason={anyInSeason}
               showHint={!nothingListed}
+              formats={formatRowShown || wantFormatRow ? { counts, exact } : null}
               onSort={onSort}
               onContinuing={onContinuing}
+              onContinuingNeedsTv={() => announce(STATUS.continuingNeedsTv(showContinuing))}
+              onFormat={onFormat}
             />
             {nothingListed ? (
               <ContinuingHiddenPanel
@@ -485,22 +567,42 @@ export default function PageBase({
                   <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#95ccff]" />
                   {showsHeading}
                   <span aria-hidden="true" className="font-mono text-sm font-normal tabular-nums text-[rgb(164,164,164)]">
-                    {onlyContinuing ? continuingLabel(c, carryOverCapped) : countLabel(n, exact)}
+                    {onlyContinuing ? (cByFormat ? continuingLabel(cByFormat, carryOverCapped) : "0") : countLabel(n, exact)}
                     {!onlyContinuing && continuingShown && (
-                      <span className="hidden sm:inline">{` · ${continuingLabel(c, carryOverCapped)} continuing`}</span>
+                      <span className="hidden sm:inline">{` · ${continuingLabel(cByFormat, carryOverCapped)} continuing`}</span>
                     )}
+                    {/* At every width: on phones the hidden chips may be scrolled out of view. */}
+                    {onlyContinuing
+                      ? continuingHiddenWithTv && ` · ${continuingLabel(c, carryOverCapped)} hidden`
+                      : hiddenLabel(hidden, exact)}
                   </span>
                   <span className="sr-only">
                     {onlyContinuing
-                      ? `: ${spokenContinuing(c, carryOverCapped)}`
-                      : headingSr({ n, exact, c, capped: carryOverCapped, showContinuing })}
+                      ? continuingHiddenWithTv
+                        ? `: 0; ${spokenContinuing(c, carryOverCapped)} more in hidden formats`
+                        : `: ${spokenContinuing(c, carryOverCapped)}`
+                      : headingSr({ n, exact, c: cByFormat, capped: carryOverCapped, showContinuing, hidden })}
                   </span>
                   <span
                     aria-hidden="true"
                     className="h-px min-w-8 flex-1 bg-gradient-to-r from-[#95ccff]/30 to-transparent"
                   />
                 </h2>
-                {onlyContinuing && <OnlyContinuingNote year={year} season={season} clockFallback={seed.at} />}
+                {onlyContinuing && !formatsHideAll && (
+                  <OnlyContinuingNote year={year} season={season} clockFallback={seed.at} />
+                )}
+                {formatsHideAll && (
+                  <FormatsHiddenPanel
+                    label={label}
+                    n={N}
+                    exact={exact}
+                    formats={hiddenWithShows(counts, hiddenFormats)}
+                    cHidden={continuingHiddenWithTv || !showContinuing ? c : 0}
+                    capped={carryOverCapped}
+                    onShowAll={showAllFromPanel}
+                  />
+                )}
+                {formatsOnlyContinuing && <FormatsHiddenNote label={label} exact={exact} onShowAll={showAllFromPanel} />}
 
                 <ol ref={gridRef} role="list" className={CARD_LAYOUT.grid}>
                   {gridItems}
@@ -532,12 +634,15 @@ export default function PageBase({
                       clockFallback={seed.at}
                       {...endCardText({
                         label,
-                        n,
+                        n: N,
                         c,
                         capped: carryOverCapped,
                         orderShifted,
                         showContinuing,
                         carryOverIncluded,
+                        hidden,
+                        hiddenFormats: hiddenWithShows(counts, hiddenFormats),
+                        continuingHiddenWithTv,
                       })}
                       note={endCardNote(dataAt, orderShifted)}
                       onBackToTop={backToTop}

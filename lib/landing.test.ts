@@ -75,6 +75,15 @@ describe("pickAiringCandidates", () => {
     });
   });
 
+  it("picks from every format, like the season page it previews", () => {
+    const list = [
+      media(1, { airingAt: NOW_S + HOUR, extra: { format: "ONA" } }),
+      media(2, { airingAt: NOW_S + 2 * HOUR, extra: { format: "TV_SHORT" } }),
+      media(3, { airingAt: NOW_S + 3 * HOUR, extra: { format: "TV" } }),
+    ];
+    expect(pickAiringCandidates(list, [], NOW_MS, opts).ids).toEqual([1, 2, 3]);
+  });
+
   it("keeps next episodes within [now − 30 min, now + windowDays]", () => {
     const list = [
       media(1, { airingAt: NOW_S - AIRED_GRACE_SECONDS }), // edge: kept

@@ -86,6 +86,7 @@ export function SeasonEndCard({
   season,
   clockFallback,
   report,
+  hidden,
   continuing,
   note,
   onBackToTop,
@@ -95,6 +96,8 @@ export function SeasonEndCard({
   season: SeasonName;
   clockFallback: number;
   report: string;
+  /** How many of the season's shows are in hidden formats (null when none). */
+  hidden: string | null;
   continuing: string | null;
   note: string;
   onBackToTop: () => void;
@@ -121,6 +124,7 @@ export function SeasonEndCard({
           <SageTag kind="Report" />
           {report}
         </p>
+        {hidden && <p className={`text-sm ${SOFT_TEXT}`}>{hidden}</p>}
         {continuing && <p className={`text-sm ${SOFT_TEXT}`}>{continuing}</p>}
         <p className={`text-xs ${MUTED_TEXT}`}>{note}</p>
         <div className="mt-1 flex w-full flex-col items-center gap-1">

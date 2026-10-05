@@ -1,11 +1,23 @@
 import { mediaFieldsFragment } from "./mediaFields";
 
 /**
- * One season, 50 per page, most popular first (TV_SHORT and ONA excluded).
+ * Which of a season's entries the season page lists: every anime format
+ * (TV, TV short, movie, special, OVA, ONA, music video, and entries with no
+ * format), adult titles excluded. The landing's exact season count
+ * (landingExtrasQuery.ts) uses the same filter, so its "AniList lists N"
+ * matches the season page.
+ */
+export const SEASON_LIST_FILTER = "type: ANIME, isAdult: false";
+
+/**
+ * One season, 50 per page, most popular first (SEASON_LIST_FILTER; ties by
+ * id, so the low-popularity tail keeps one order across page requests).
  *
  * With $withCarryOver (page 1 only) the same request also returns TV series
  * that started before the season and are still airing during it — one AniList
- * request either way. See lib/anime/carryOver.ts:
+ * request either way. TV only: AniList lists 80–115 "still airing" TV shorts
+ * and ONAs from earlier seasons, mostly stale, which would fill the 50-item
+ * lists every season. See lib/anime/carryOver.ts:
  * - ended:  start < season start, end date after it (AniList skips null end dates here)
  * - airing: start < season start, still RELEASING today (no end date yet). For a
  *   season that hasn't started this is everything airing now, so it is sorted
@@ -30,13 +42,7 @@ query allCurrAnimeTag(
       lastPage
       hasNextPage
     }
-    media(
-      season: $season
-      seasonYear: $year
-      sort: POPULARITY_DESC
-      isAdult: false
-      format_not_in: [TV_SHORT, ONA]
-    ) {
+    media(season: $season, seasonYear: $year, sort: [POPULARITY_DESC, ID], ${SEASON_LIST_FILTER}) {
       ...mediaFields
     }
   }

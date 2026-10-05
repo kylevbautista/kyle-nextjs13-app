@@ -141,8 +141,9 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 
 | Feature | User sees | Implementation | Key files |
 |---|---|---|---|
-| Season browser | Night-sky banner (Skill 01 · Magic Sense) with a phase-aware Great Sage line, the months, Previous/Next season tiles (+ "Current season" off-season) and, from 1024px for current/upcoming seasons, the Next-episodes card; a controls panel; "Fall 2026 shows 72 · 21 continuing" (`50+` until every page loads); a 1–3 column grid (classic card; 2–5 for the poster) of every non-adult TV/movie/OVA/special/music entry (not TV_SHORT/ONA); a Great Sage divider + **Re-sort** when shows below the pinned cards air sooner; an inline load error with Retry; the landing's dashed end card ("All 72 Fall 2026 shows sensed, excluding ONAs, TV shorts and adult titles.", data time, next season, back to the top) | Server fetches page 1 (50) → client reveals 12 at a time (IntersectionObserver sentinel) and fetches pages 2–6 from the browser right after hydration, one request at a time. All copy in `lib/anime/seasonCopy.ts`, ordering/pinning in `lib/anime/seasonOrder.ts` (both unit-tested) | `components/animev3/PageBase.tsx`, `components/animev3/season/*`, `utils/useLazyLoad.tsx`, `utils/getAniListData.ts` |
-| Continuing series | Shows that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; a "✓ Continuing series 21" toggle (default on; `21+` when a carry-over list hit AniList's 50-item cap); a season with only continuing series says so ("No new Fall 2026 shows here yet…"), or offers "Show continuing series" when they're hidden; "Continuing series didn't load from AniList." when the page-1 request fell back without them | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1); `carryOverIncluded` / `carryOverCapped` from `getAniListData` | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx`, `season/SeasonEmpty.tsx` |
+| Season browser | Night-sky banner (Skill 01 · Magic Sense) with a phase-aware Great Sage line, the months, Previous/Next season tiles (+ "Current season" off-season) and, from 1024px for current/upcoming seasons, the Next-episodes card; a controls panel with the format chips; "Fall 2026 shows 96 · 21 continuing" (`50+` until every page loads; " · 26 hidden" when formats are hidden); a 1–3 column grid (classic card; 2–5 for the poster) of every non-adult entry AniList files under the season, in every format (TV, TV short, movie, special, OVA, ONA, music video, none); a Great Sage divider + **Re-sort** when shows below the pinned cards air sooner; an inline load error with Retry; the landing's dashed end card ("All 96 of AniList's Fall 2026 shows sensed, excluding adult titles.", a line for shows in hidden formats, data time, next season, back to the top) | Server fetches page 1 (50) → client reveals 12 at a time (IntersectionObserver sentinel) and fetches pages 2–6 from the browser right after hydration, one request at a time (a season of 101–150 shows, e.g. Summer 2026's 107, takes 3 pages). All copy in `lib/anime/seasonCopy.ts`, ordering/pinning in `lib/anime/seasonOrder.ts` (both unit-tested) | `components/animev3/PageBase.tsx`, `components/animev3/season/*`, `utils/useLazyLoad.tsx`, `utils/getAniListData.ts` |
+| Continuing series | TV series that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; they are TV only (AniList lists 80–115 "still airing" TV shorts and ONAs from earlier seasons, mostly stale), so every count says "TV series"; a "✓ Continuing series 21" toggle (dashed and aria-disabled while TV is hidden: they're TV) (default on; `21+` when a carry-over list hit AniList's 50-item cap); a season with only continuing series says so ("No new Fall 2026 shows here yet…"), or offers "Show continuing series" when they're hidden; "Continuing series didn't load from AniList." when the page-1 request fell back without them | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1); `carryOverIncluded` / `carryOverCapped` from `getAniListData` | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx`, `season/SeasonEmpty.tsx` |
+| Formats | A "Formats" row under the sort hint: AniList's seven anime formats as ✓/+ toggle chips with counts ("✓ TV 56", "+ ONA 13", "✓ Music 0"; "+" while counts are lower bounds), always in AniList's order, plus "Other" once a show has no format (Winter 2027 has 4); every format on by default; hiding one re-sorts (only when it changes the list: "Music 0" doesn't), hides the continuing series too when it's TV (their chip stays, dashed and aria-disabled, and a press says "Show TV to list them" or, with their toggle off, "Show TV, then turn them on"), adds " · N hidden" to the heading and a line to the end card, and speaks "ONA hidden. 83 Fall 2026 shows listed, plus 21 continuing series."; nothing listed → "No shows listed in these formats" + "Show every format" above the empty grid (the sort hint and the banner's fixed-height Next-episodes card stay, so the chips never move under a finger). Each count sits in a 2ch box with its lower-bound "+" outside the layout, so the row never rewraps when later pages land. The row, once shown, stays for the page's life (and shows while a format is hidden, even on a season with no season shows). Phones: the label above one sideways-scrolling row (My List's shelves) | `HeaderContext.hiddenFormats` (canonical order, session only, survives season nav; the static HTML renders every format); `lib/anime/seasonFormats.ts` (pure: keys, counts, chips, filter; tested); claims about the season ("no shows here") use every loaded show, what's listed uses the filter; continuing series are chosen (popularity floor) before the filter; labels are the cards' (`lib/landing.ts#formatLabel`) | `season/SeasonControls.tsx`, `season/SeasonEmpty.tsx`, `PageBase.tsx`, `lib/anime/{seasonFormats,seasonCopy}.ts` |
 | Sort | "Sort by Countdown (default) / Popularity" chips, and a line saying what the order means for this season (past seasons: "Summer 2026 has ended, so countdown order matches popularity.") | `HeaderContext.sort` (layout-level, survives season nav); countdown uses absolute `airingAt` within the season (`countdownComparator`), stable so ties keep popularity order | `layoutSelector/HeaderProvider.tsx`, `season/SeasonControls.tsx`, `lib/anime/seasonOrder.ts` |
 | Season banner | "Fall 2026 Anime", the Great Sage line (current: the landing's "Magic Sense active. Incoming episodes detected."; upcoming: "Winter 2027 starts January 1. …"; past: "…has ended. Magic Sense is reading the archive."), months, the lineup's scope (640px+), season tiles, Next-episodes card | Rendered by `PageBase` (the layout has no data). A per-minute clock leaf (`useSeasonPhase`: the data's fetch time until it runs). Tiles prefetch on intent only (hover/focus/touch) and show a `useLinkStatus` spinner while pending; keyboard focus follows to the same tile on the new page (`season/seasonFocus.ts`). Tiles outside the valid year window are omitted | `season/{SeasonBanner,SeasonHeader,SeasonNav,useSeasonPhase,seasonFocus}.ts(x)`, `components/theme/LinkPendingGlyph.tsx`, `lib/season.ts` |
 | Anime card + details sheet | **Classic layout** (the owner's original organization, default): a gel card warmed by the cover's color; the title (sage, 2 lines) over genre chips; the cover with the Magic Sense HUD across its top ("PREMIERE / 1h 28m 56s": violet for a premiere, amber in the last hour, emerald + a card rim while airing, or the release status "FINISHED / 28 eps"), a Continuing / Premiere badge, a "★ 8.2 · TV" pill and a slime perched on shows on your list (it gulps when you add one); beside it a Great Sage readout (Studio, Premiere date/time PT, Source, Episodes "12 × 24 min" / "25 min each", a numbering note when AniList numbers past the count) and the synopsis well (scrolls with a swipe on touch, on hover with a mouse); a footer with the pill add button and the MAL / AniList / Crunchyroll glyphs. Tapping the card (anywhere but the footer and the synopsis) opens a 《Analyze》 sheet (bottom sheet on phones): premiere, format, episodes, length, source, studios, score, genres, sanitized synopsis, the add button, links. Unknown fields are left off the card; the sheet says "TBA" (unaired) or "Not listed on AniList". **Poster layout** (`AnimeCard`, Oct 2026 redesign): cover with a countdown chip, title, "★ 7.6 · TV · Studio", genres, add button | One constant picks the layout for the season page, `/search` and the landing's Magic Sense: `ANIME_CARD_LAYOUT` in `components/theme/cardLayout.ts` (`CARD_LAYOUT` = card, skeleton, add control, grid, cover sizes, skeleton fill, end-card span, landing grid). Cards are memo'd; the page injects its add control as a module-level `Action`; one `useAnimeDetails()` sheet per page (a native modal `<dialog>` outside the grid, with its own sr-only status). The classic card's CSS half is the "Classic anime card" section of `styles/globals.css` (gel surface, HUD tones, well, perch, `site-glyphs.webp` masks); its class strings live in `tokens.ts`. The Quest Log always uses the compact poster. My List, the Airing Schedule and Top Anime have their own cards and rows | `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeCardSkeleton,AnimeDetailsDialog}.ts(x)`, `lib/anime/cardLabels.ts` |
@@ -171,11 +172,14 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 ### 5.1 Season page `/anime/2026/fall`
 1. `proxy.ts` validates the slug with `seasonRouteRedirect()` (pure, `lib/season.ts`) and 307s if needed.
    The page is static ISR like `/` and `/topanime`: no request APIs and **no `loading.tsx`** (§9.15);
-   `app/anime/layout.tsx` is only `<main>` + `HeaderProvider` (sort + continuing toggle, so they
-   survive season navigation). Everything else, banner included, is `PageBase`.
-2. `Boundary.tsx` → `getAniListData({page:1, withCarryOver: true})`. It returns
+   `app/anime/layout.tsx` is only `<main>` + `HeaderProvider` (sort, continuing toggle and hidden
+   formats, so they survive season navigation). Everything else, banner included, is `PageBase`.
+2. `Boundary.tsx` → `getAniListData({page:1, withCarryOver: true})`. The season list is
+   `SEASON_LIST_FILTER` ("type: ANIME, isAdult: false": every format, no adult titles), sorted
+   `[POPULARITY_DESC, ID]` so the low-popularity tail keeps one order across page requests; the
+   landing's exact count uses the same constant (a test pins both). It returns
    `{ok, media, hasNextPage, carryOver, carryOverIncluded, carryOverCapped}` and never throws. The same single request also asks for
-   TV series that started before the season (`seasonStartMs`, app convention) and either ended
+   TV series (only TV: see "Continuing series" in §4) that started before the season (`seasonStartMs`, app convention) and either ended
    after it began (`ended`) or are still RELEASING (`airing`). AniList's `endDate_greater` skips
    null end dates, hence two lists. `lib/anime/carryOver.ts#selectCarryOver` dedupes them, drops
    the season's own shows (page 1, or anything AniList files under that season), and sorts by
@@ -210,6 +214,16 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
    Continuing series merge into both sorts ("By Popularity" uses AniList's `popularity` count).
    They are deduped against later season pages and hidden by the `showContinuing` toggle in
    `HeaderContext`, which also re-sorts.
+   **Formats.** `HeaderContext.hiddenFormats` filters season shows and continuing series alike
+   (`filterByFormat`), after `selectContinuing` (whose popularity floor and dedupe see every loaded
+   show). Counts: N = every loaded season show (empty, onlyContinuing, the end card's report), n =
+   listed, hidden = N − n, and the continuing series in shown formats. `formatsHideAll` (shows
+   exist, none listed) puts a panel above the empty grid inside the section, so the heading and a
+   failed page's Retry stay; the sort hint and the banner's fixed-height Next-episodes card stay too
+   (the card says "No shows are listed in the chosen formats."), so the chips never move.
+   `hasCountdowns` uses every loaded show, so Pause live timers never comes and goes with a chip.
+   A format press resets the pins only when it changes what's listed, and its status line is
+   computed from the next state.
    Countdown order counts only episodes airing **within the browsed season**, ties broken by
    popularity, so past and upcoming seasons don't open with today's long runners. In popularity
    mode, carry-overs less popular than every loaded season show wait until the season's later
@@ -406,7 +420,9 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
 2. **Season request** (1 AniList request, 2 after a 429 retry): exactly `/anime`'s page 1
    (`getAniListData`, carry-over on, no fallback, 6 s), default fetch cache, so the route stays ISR.
    `pickAiringCandidates()` keeps up to 12 shows whose next episode airs within
-   [now − 30 min, now + 7 days] (16 in preview): the 30 most popular, soonest first.
+   [now − 30 min, now + 7 days] (16 in preview): the 30 most popular, soonest first, from every
+   format (the season page's default). Its stat line is `seasonCopy.ts#landingSeasonStat`
+   ("AniList lists 96 Fall 2026 shows, excluding adult titles, plus 21 TV series continuing …").
 3. **Extras request** (0 on a data-cache hit, else 1; skipped when step 2 spent 2): the Tensura
    franchise + banners, the Rimuru character and the season's id pages for an exact show count
    (`landingExtrasQuery`), with `cache: "force-cache"`, `next.revalidate` 3600, tag
@@ -506,7 +522,7 @@ drops duplicates, re-sanitizes, and bounds dates.
 | CDN | `/api/top-anime?page=N`: `s-maxage=3600, stale-while-revalidate=300` | The only cache for "Show more" pages (errors are `no-store`) |
 | Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
-| React context | `HeaderContext` (season sort mode + continuing toggle), under `app/anime/layout.tsx` | |
+| React context | `HeaderContext` (season sort mode, continuing toggle, hidden formats), under `app/anime/layout.tsx` | Session only: the static ISR HTML renders the defaults |
 | Local state | My List (`MyList.tsx`: items, `activities`, `held` (entries as held), and one `TrackQueue` in state), Top Anime list, season `PageBase` (pins, cursor, refresh state), the details sheet (`useAnimeDetails`) | |
 | Module memory | `app/topanime/rankingStore.ts` · `components/animev3/utils/seasonFreshness.ts` · `components/animev3/season/seasonFocus.ts` · `components/utils/searchArrival.ts` · `components/theme/RetryButton.tsx` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) · a season's browser refresh, so Back/Forward doesn't refresh again · a one-shot focus token for season navigation (10 s) · /search's one-shot arrival token (30 s, matched on the canonical key `searchKey`: query, filters and page; dropped on popstate) and its status line's text · the error pages' focus-return token after a failed retry (`retryFocusAt`, 10 s) |
 | Shared clocks | `useNow()` (1 s, countdown leaves only) · `useMinuteNow()` (per minute: "today", season phase) | `useSyncExternalStore`; one interval each for the page. `useMinuteNow` reads null again once nothing subscribes, so a later mount renders its fallback first |
@@ -548,6 +564,8 @@ lib/                        pure, shared by server + client (unit-tested)
                               the chip), unloggedAired
   anime/seasonOrder.ts        the season page's ordering: countdown (within the season) / popularity, continuing series,
                               orderSeason (pinned prefix + pinnedCount), soonerBelow (the divider), pinnedPrefixLength
+  anime/seasonFormats.ts      the season page's format filter: FORMAT_KEYS (AniList's order + OTHER), formatKeyOf, formatCounts,
+                              chipFormats, filterByFormat, canonicalFormats, hiddenWithShows, toggleFormat
   anime/seasonCopy.ts         every season-page line and its condition (Sage lines, scope, counts, hint, divider, end card,
                               empty states, status messages, meta description); SEASON_EYEBROW, MAGIC_SENSE_LINE
   anime/cardLabels.ts         AnimeCard / details-sheet labels (status chip, meta line, genres, facts, links, sheet results)
@@ -652,7 +670,8 @@ components/
   auth/                       sign-in (signIn/SignInActions: the client island; signIn/SignInSlime: the CSS-switched slime),
                               GoogleButton (Google's light pill; also the landing's sign-in dialog), GoogleIcon (the kit's G,
                               a client leaf importing ./google-g.png), SignOutButton
-  utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
+  utils/                      anilist-queries/ (mediaFields fragment + queries, SEASON_LIST_FILTER shared by the season list and
+                              landingExtrasQuery's count pages), fetchWithTimeout,
                               useMyList, useNow (1 s), useMinuteNow (per minute: "today" labels), searchArrival (/search's
                               focus token + status store)
 components/og/              the list share images (next/og): fonts (assets/og), OgSky (sky, stars, aurora, treeline), parts,
@@ -744,11 +763,15 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     highest-ranked shows, each with a Track shortcut). Change both sides together. In-page jump links use next/link or a button, never a
     plain `<a href="#…">`: a native fragment entry has no router state, so a later Back changes the
     URL but not the page.
-19. **Season counts and "none" claims carry the lineup's scope.** The season query leaves out ONAs,
-    TV shorts and adult titles, so a total says so in the same sentence ("All 72 Fall 2026 shows
-    sensed, excluding ONAs, TV shorts and adult titles.") and an empty state is about the page ("No
-    shows here yet. This page skips …"), never "AniList lists no …". Counts that may be partial say
-    "50+" / "at least 50". `lib/anime/seasonCopy.ts` holds them all, with a truth-sweep test.
+19. **Season counts and "none" claims carry the lineup's scope.** The season list is every format of
+    AniList's filing for the season minus adult titles, and continuing series are TV only. So a
+    season total says so in the same sentence and names AniList's filing ("All 96 of AniList's Fall
+    2026 shows sensed, excluding adult titles."; AniList files some ONAs under no season), every
+    continuing count says "TV series", and an empty state is about the page ("No shows here yet.
+    Adult titles are skipped; continuing series are TV only."), never "AniList lists no …". Shows in
+    hidden formats are counted apart ("26 of them are in hidden formats: TV Short and ONA.").
+    Counts that may be partial say "50+" / "at least 50". `lib/anime/seasonCopy.ts` holds them all,
+    with a truth-sweep test.
     `/search` follows the same rule: the search covers every format but never adult titles, so an
     exact total says "excluding adult titles" and "none" says "This search skips adult titles."
     (`lib/anime/searchCopy.ts`). Filtered totals and none lines also name every filter ("No movie
@@ -915,6 +938,10 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 - `useMyList`'s add/remove toasts render dimmed behind an open details sheet and aren't spoken
   (the sheet says "Couldn't add it to your list. Try again." itself; a specific reason such as
   "list is full" is only in that toast). A top-layer or visual-only toaster would fix it site-wide.
+- Continuing series are TV only: a series continuing as an ONA or TV short (e.g. Link Click Season 3)
+  isn't listed. ONAs AniList files under no season (several low-popularity donghua each season)
+  don't appear on any season page. Hidden formats last for the session (not across visits: the
+  static HTML can only render every format).
 - The landing's Next-episodes card picks from the season's 30 most popular shows, so it can differ
   from the season banner's (which uses every show).
 - Season tiles prefetch only on intent, so a first tap on a phone waits for the fetch (the pending
