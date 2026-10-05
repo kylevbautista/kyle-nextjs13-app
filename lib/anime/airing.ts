@@ -152,17 +152,57 @@ export function compareByNextAiring(
 }
 
 /**
- * Aired episodes not logged yet ("2 new") for a show being watched (Watching
- * or Paused): the next scheduled episode's number minus one, plus that episode
- * once its air time has passed (when `nowMs` is given), minus progress; for a
- * finished show, its episode count minus progress (so the count doesn't vanish
- * the moment the finale airs). 0 when caught up. Null when it can't be known
- * or doesn't apply: another status, no numbered next episode on a show that
- * hasn't finished, or more "aired" than the known episode count (AniList
- * sometimes numbers a split cour continuously).
+ * Episodes aired so far, from the show's stored schedule: the next scheduled
+ * episode's number minus one, plus that episode once its air time has passed
+ * (when `nowMs` is given); for a finished show, its episode count (so the
+ * count doesn't vanish the moment the finale airs); 0 for a show that hasn't
+ * premiered while its next airing is still ahead and its own schedule holds no
+ * earlier airing, whatever that episode's number (a second cour can be
+ * numbered from 13; AniList's status can lag a premiere that has aired).
+ * Null when it can't be known:
+ * no numbered next episode on a show that hasn't finished, or a next episode
+ * numbered past the known episode count (AniList sometimes numbers a split
+ * cour continuously).
+ *
+ * `exact`: the count is also an upper bound, because the stored next episode
+ * is still ahead (or the show has finished). Once that episode's air time has
+ * passed, the stored schedule knows of no later one, so later episodes may
+ * have aired since: the count is then only a lower bound until the snapshot
+ * is refreshed (server/lib/userList.ts#refreshEntriesIfStale).
  *
  * Pass `nowMs = null` for a clock-free count (sorting, banner text) so server
  * and client agree; the live chip passes useNow().
+ */
+export function airedCount(
+  media: Partial<AiringFields> | null | undefined,
+  nowMs: number | null
+): { aired: number; exact: boolean } | null {
+  const next = nextAiring(media);
+  const total = media?.episodes && media.episodes > 0 ? media.episodes : null;
+  if (next?.episode) {
+    if (total !== null && next.episode > total) return null;
+    const ahead = nowMs === null || nowMs < next.airingAt * 1000;
+    if (ahead) {
+      // Unreleased and nothing earlier in its own schedule (AniList's status can lag a premiere).
+      const first = media?.firstEpisode?.episode?.[0];
+      const unaired = media?.status === "NOT_YET_RELEASED" && (!first?.airingAt || first.airingAt >= next.airingAt);
+      return { aired: unaired ? 0 : next.episode - 1, exact: true };
+    }
+    return { aired: next.episode, exact: false };
+  }
+  if (!next && media?.status === "FINISHED" && total !== null) return { aired: total, exact: true };
+  return null;
+}
+
+/** airedCount's number alone: the "N new" chip, the +1 cap and catch-ups count from it. */
+export const airedEpisodes = (media: Partial<AiringFields> | null | undefined, nowMs: number | null) =>
+  airedCount(media, nowMs)?.aired ?? null;
+
+/**
+ * Aired episodes not logged yet ("2 new") for a show being watched (Watching
+ * or Paused): airedEpisodes minus progress. 0 when caught up (or logged ahead).
+ * Null when it can't be known (airedEpisodes is null) or doesn't apply
+ * (another status).
  */
 export function unloggedAired(
   media: Partial<AiringFields> & { userData: Pick<UserAnimeData, "listType" | "episodeProgressNumber"> },
@@ -170,12 +210,6 @@ export function unloggedAired(
 ): number | null {
   const { listType, episodeProgressNumber } = media.userData;
   if (listType !== "watching" && listType !== "paused") return null;
-  const next = nextAiring(media);
-  const total = media.episodes && media.episodes > 0 ? media.episodes : null;
-  let aired: number;
-  if (next?.episode) aired = next.episode - 1 + (nowMs !== null && nowMs >= next.airingAt * 1000 ? 1 : 0);
-  else if (!next && media.status === "FINISHED" && total !== null) aired = total;
-  else return null;
-  if (total !== null && aired > total) return null;
-  return Math.max(0, aired - episodeProgressNumber);
+  const aired = airedEpisodes(media, nowMs);
+  return aired === null ? null : Math.max(0, aired - episodeProgressNumber);
 }

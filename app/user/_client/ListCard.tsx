@@ -4,8 +4,9 @@ import Image from "next/image";
 import Slime from "@/components/home/Slime";
 import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
 import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
+import PlusOneButton from "@/components/theme/PlusOneButton";
 import UndoButton from "@/components/theme/UndoButton";
-import { BAR_SHEEN, CARD, FOCUS_RING_PANEL, PLUS_ONE_SAVING_DOT } from "@/components/theme/tokens";
+import { BAR_SHEEN, CARD, FOCUS_RING_PANEL } from "@/components/theme/tokens";
 import { STATUS_BADGE_CLASS } from "@/lib/anime/statusBadge";
 import type { CardActivity } from "@/lib/anime/trackQueue";
 import { undoLabel, undoTitle } from "@/lib/anime/trackerConsole";
@@ -57,10 +58,10 @@ interface ListCardProps {
  * One show on My List. It is the landing's tracker demo card
  * (components/home/TrackerDemo.tsx) made real: cover, title, status badge,
  * +1, "Ep 12 / 24" with its bar, and the date · score line, plus the live
- * countdown and Edit. The owner's +1 never blocks while saving (taps queue up),
- * the "N new" chip becomes "Log N new", and after a confirmed change "↶ Undo +N"
- * takes the date line's place for a few seconds. Visitors get the same card
- * without the buttons.
+ * countdown and Edit. The owner's +1 never blocks while saving (taps queue up)
+ * and stops at the last aired episode (PlusOneButton), the "N new" chip becomes
+ * "Log N new", and after a confirmed change "↶ Undo +N" takes the date line's
+ * place for a few seconds. Visitors get the same card without the buttons.
  */
 export const ListCard = memo(function ListCard({
   entry,
@@ -79,7 +80,6 @@ export const ListCard = memo(function ListCard({
   const { listType, episodeProgressNumber: progress, score } = entry.userData;
   const total = entry.episodes && entry.episodes > 0 ? entry.episodes : null;
   const ratio = progressRatio(entry);
-  const atLastEpisode = total !== null && progress >= total;
   // The number rolls up only when it goes up (not on an Undo or a rollback): the last
   // progress seen, kept from the previous render (React's "adjust state while rendering").
   const [shown, setShown] = useState({ progress, up: false });
@@ -133,30 +133,17 @@ export const ListCard = memo(function ListCard({
               </span>
             </div>
             {isOwner && (
-              <button
+              <PlusOneButton
                 id={incrementButtonId(entry.id)}
-                type="button"
-                onClick={() => {
-                  if (!atLastEpisode) onIncrement(entry);
-                }}
-                // A held Enter logs one episode, not an auto-repeat stream.
-                onKeyDown={(event) => {
-                  if (event.repeat) event.preventDefault();
-                }}
-                aria-disabled={atLastEpisode || undefined}
-                // Starts with the visible "+1" (WCAG 2.5.3) and stays the same between
-                // presses, so screen readers hear only the result line.
-                aria-label={atLastEpisode ? `All episodes of ${title} watched` : `+1: log the next episode of ${title}`}
-                title={atLastEpisode ? "All episodes watched" : "Mark the next episode as watched"}
-                className={`relative inline-flex h-11 w-16 shrink-0 touch-manipulation items-center justify-center rounded-lg text-sm font-bold transition-colors md:h-10 ${poke} ${FOCUS_RING_PANEL} ${
-                  atLastEpisode
-                    ? "cursor-default bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/40"
-                    : "bg-blue-600 text-white hover:bg-blue-500"
-                }`}
-              >
-                {atLastEpisode ? <span aria-hidden="true">✓</span> : "+1"}
-                {activity?.saving && <span aria-hidden="true" className={PLUS_ONE_SAVING_DOT} />}
-              </button>
+                media={entry}
+                userData={entry.userData}
+                title={title}
+                renderedAt={renderedAt}
+                saving={activity?.saving ?? false}
+                settling={activity?.burst ?? false}
+                pokeClass={poke}
+                onPress={() => onIncrement(entry)}
+              />
             )}
           </div>
 

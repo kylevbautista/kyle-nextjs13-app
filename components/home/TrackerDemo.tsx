@@ -5,7 +5,7 @@ import Image from "next/image";
 import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
 import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
 import { revealInRow } from "@/components/theme/revealInRow";
-import { BAR_SHEEN } from "@/components/theme/tokens";
+import { BAR_SHEEN, PLUS_ONE, PLUS_ONE_READY } from "@/components/theme/tokens";
 import UndoButton from "@/components/theme/UndoButton";
 import { normalizeUserData } from "@/lib/anime/normalize";
 import { STATUS_BADGE_CLASS, STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
@@ -33,7 +33,7 @@ import {
   type UserAnimeData,
 } from "@/lib/anime/types";
 import { applyProgressRequest, applyUserDataRequest, type ProgressRequest } from "@/lib/anime/userDataRequest";
-import { DEMO_FALLBACK, DEMO_MEDIA_ID } from "@/lib/landing";
+import { DEMO_FALLBACK, DEMO_MEDIA_ID, demoTrackMedia } from "@/lib/landing";
 import { trackOnce } from "./analytics";
 import { useLanding } from "./LandingProvider";
 import {
@@ -194,7 +194,7 @@ export default function TrackerDemo() {
   const completed = data.listType === "completed";
   const message = state.message;
   // The engine, the chip and the lines all read this, so the chip never promises more than the demo logs.
-  const demoMedia: TrackMedia = { ...(live ?? {}), id: DEMO_MEDIA_ID, episodes: EPISODES };
+  const demoMedia: TrackMedia = demoTrackMedia(live);
 
   useEffect(
     () =>
@@ -409,13 +409,12 @@ export default function TrackerDemo() {
                   }}
                   // A fixed name, like My List's: screen readers hear only the console's line.
                   aria-label={atLast ? undefined : "+1: log the next episode (demo)"}
-                  className={`relative inline-flex h-11 shrink-0 touch-manipulation items-center justify-center rounded-lg text-sm font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] md:h-10 ${
-                    activity && activity.taps > 0 ? (activity.taps % 2 ? "animate-slime-poke" : "animate-slime-poke-2") : ""
-                  } ${
+                  // My List's +1 box (PlusOneButton's tokens); "Reset demo" takes its text's width.
+                  className={`${
                     atLast
-                      ? "border border-[#95ccff]/40 bg-white/5 px-3 hover:bg-white/10"
-                      : "w-16 bg-blue-600 hover:bg-blue-500"
-                  }`}
+                      ? "relative inline-flex h-11 shrink-0 touch-manipulation items-center justify-center rounded-lg border border-[#95ccff]/40 bg-white/5 px-3 text-sm font-bold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] md:h-10"
+                      : `${PLUS_ONE} ${PLUS_ONE_READY}`
+                  } ${activity && activity.taps > 0 ? (activity.taps % 2 ? "animate-slime-poke" : "animate-slime-poke-2") : ""}`}
                 >
                   {atLast ? "Reset demo" : "+1"}
                 </button>

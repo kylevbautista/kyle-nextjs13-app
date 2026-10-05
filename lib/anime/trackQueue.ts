@@ -13,9 +13,18 @@
  * server's `previous`, checked against what this page last saved (`expect`),
  * so it never erases another tab's or device's change. A save whose outcome
  * can't be known (no response) is never resent: the engine re-reads the list.
+ * A +1 never logs an episode that hasn't aired: the server caps every
+ * increment, and a tap the page knows can't log anything is refused here.
  */
-import { unloggedAired, type AiringFields } from "./airing";
-import { burstMessage, failedMessage, undoMessage, type ConsoleMessage, type FailReason } from "./trackerConsole";
+import { airedCount, nextAiring, type AiringFields } from "./airing";
+import {
+  burstMessage,
+  failedMessage,
+  notAiredMessage,
+  undoMessage,
+  type ConsoleMessage,
+  type FailReason,
+} from "./trackerConsole";
 import type { UserAnimeData } from "./types";
 import {
   MAX_CATCH_UP_TO,
@@ -52,8 +61,9 @@ export interface SaveOutcome {
   userData: UserAnimeData;
   previous: UserAnimeData | null;
   /**
-   * The stored airing fields the server counted from (a catch-up's response):
-   * the card adopts them, so its "Log N new" agrees with what the server logs.
+   * The stored airing fields the server counted from (a +1's or a catch-up's
+   * response): the card adopts them, so its +1 and "Log N new" agree with what
+   * the server logs.
    */
   snapshot?: Partial<AiringFields>;
 }
@@ -86,6 +96,11 @@ export interface CardActivity {
   /** A tap or catch-up just completed the show (the bar's one sheen). */
   justCompleted: boolean;
   undo: UndoView | null;
+  /**
+   * A burst is open (taps in flight or queued, or its line not said yet). The capped +1 waits for
+   * it to close, so a focused button's name changes only after the burst's line ("Caught up.").
+   */
+  burst: boolean;
 }
 
 export interface TrackEvents {
@@ -97,7 +112,7 @@ export interface TrackEvents {
   say(id: number, message: ConsoleMessage, opts: { celebrate: boolean }): void;
   /** After a burst line, an undo or a failure (My List refreshes its router cache). */
   settled(id: number): void;
-  /** The server's stored airing fields for the show (after a catch-up): update the card's copy. */
+  /** The server's stored airing fields for the show (after a +1 or a catch-up): update the card's copy. */
   media?(id: number, fields: Partial<AiringFields>): void;
 }
 
@@ -110,7 +125,6 @@ interface Burst {
   last: UserAnimeData | null;
   /** A response showed the stored value had moved on since this page's last save. */
   stale: boolean;
-  catchUp: boolean;
   lastActionAt: number;
   timer: Timer | null;
 }
@@ -138,8 +152,20 @@ interface Track {
 }
 
 const QUIET_MS = 700;
+const ONE: ProgressRequest = { kind: "increment", increment: 1 };
 
 const knownTotal = (episodes: number | null | undefined) => (episodes && episodes > 0 ? episodes : null);
+
+/**
+ * A +1 the fold can't show is still sent when only a lower-bound aired count
+ * (the stored next episode's air time has passed) stands in its way: below
+ * the last episode, the server's snapshot may know of later episodes.
+ */
+function serverDecides(media: TrackMedia, before: UserAnimeData, now: number) {
+  const count = airedCount(media, now);
+  if (!count || count.exact || before.episodeProgressNumber < count.aired) return false;
+  return before.episodeProgressNumber < (knownTotal(media.episodes) ?? MAX_CATCH_UP_TO);
+}
 
 /** Folds unsent ops onto a value with the server's own rules (a step that fails keeps the value). */
 function applyOps(media: TrackMedia, base: UserAnimeData, ops: readonly ProgressRequest[], now: number) {
@@ -175,6 +201,8 @@ export class TrackQueue {
   private readonly setTimer: (fn: () => void, ms: number) => Timer;
   private readonly clearTimer: (timer: Timer) => void;
   private readonly quietMs: number;
+  /** When a refused tap last came, per show (repeated refusals within QUIET_MS say nothing more). */
+  private readonly refusedAt = new Map<number, number>();
 
   constructor(
     private readonly transport: TrackTransport,
@@ -202,19 +230,39 @@ export class TrackQueue {
     };
   }
 
-  /** A +1. `shown` seeds a new track (what the card shows); `title` names the show in lines. */
-  tap(media: TrackMedia, shown: UserAnimeData, title?: string) {
+  /**
+   * A +1. `shown` seeds a new track (what the card shows); `title` names the
+   * show in lines. Returns whether the tap was taken. A tap that can't log
+   * anything is refused and changes nothing: at the last episode silently (the
+   * button is ✓), and when the next episode is known not to have aired (an
+   * exact airedCount) with one line on an idle card, or none mid-burst (the
+   * burst's own "Caught up." says it). Past the stored schedule's horizon the
+   * aired count is only a lower bound, so such a tap is sent, the card shows no
+   * step past what the page knows has aired, and the server's snapshot decides.
+   */
+  tap(media: TrackMedia, shown: UserAnimeData, title?: string): boolean {
+    // A refusal never creates a track: a track's confirmed value would outlive a later re-read of the list.
+    const existing = this.tracks.get(media.id);
+    if (existing) {
+      existing.media = media;
+      if (title !== undefined) existing.title = title;
+    }
+    const before = existing ? this.view(existing) : shown;
+    const now = this.now();
+    const step = applyProgressRequest({ ...media, userData: before }, ONE, now);
+    if (!(step.ok && step.changed) && !serverDecides(media, before, now)) {
+      this.refuse(existing ?? null, media, before, now, existing?.title ?? title);
+      return false;
+    }
     const t = this.track(media, shown, title);
     t.suppressUndo = false;
-    const before = this.view(t);
-    const total = knownTotal(media.episodes);
-    if (total !== null && before.episodeProgressNumber >= total) return;
     this.openBurst(t);
-    merge(t.queue, { kind: "increment", increment: 1 });
+    merge(t.queue, ONE);
     t.taps += 1;
     this.markCompletion(t, before);
     this.emit(t);
     this.pump(t);
+    return true;
   }
 
   /** "Log N new": `count` is what the chip showed, so the request never exceeds what the reader saw aired. */
@@ -225,7 +273,6 @@ export class TrackQueue {
     const catchUpTo = before.episodeProgressNumber + count;
     if (count < 1 || catchUpTo > MAX_CATCH_UP_TO) return;
     this.openBurst(t);
-    t.burst!.catchUp = true;
     merge(t.queue, { kind: "catchUp", catchUpTo });
     this.markCompletion(t, before);
     this.emit(t);
@@ -293,6 +340,7 @@ export class TrackQueue {
     if (!t) return;
     this.closeBurst(t);
     this.tracks.delete(id);
+    this.refusedAt.delete(id);
     for (const resolve of t.waiters.splice(0)) resolve(null);
   }
 
@@ -366,6 +414,31 @@ export class TrackQueue {
     return applyOps(t.media, base, ops, this.now());
   }
 
+  /** A refused +1: a line only for an exact aired cap on an idle card, at most once per pause in pressing. */
+  private refuse(t: Track | null, media: TrackMedia, before: UserAnimeData, now: number, title: string | undefined) {
+    const count = airedCount(media, now);
+    const next = nextAiring(media);
+    const progress = before.episodeProgressNumber;
+    const total = knownTotal(media.episodes);
+    if (!count?.exact || !next?.episode || progress < count.aired || (total !== null && progress >= total)) return;
+    if (t?.burst) {
+      // The burst's line says it; keep the burst open, so that line isn't followed at once by this one.
+      this.openBurst(t);
+      this.pump(t);
+      return;
+    }
+    if (t && !this.idle(t)) return;
+    const last = this.refusedAt.get(media.id);
+    this.refusedAt.set(media.id, now);
+    if (last !== undefined && now - last < this.quietMs) return;
+    // Nothing changed, so no `settled` (no refresh).
+    this.events?.say(
+      media.id,
+      notAiredMessage({ cap: { progress, aired: count.aired, next: { episode: next.episode, airingAt: next.airingAt } }, title }),
+      { celebrate: false }
+    );
+  }
+
   private markCompletion(t: Track, before: UserAnimeData) {
     const after = this.view(t);
     if (after.listType === "completed" && before.listType !== "completed") t.justCompleted = true;
@@ -392,8 +465,9 @@ export class TrackQueue {
           : next;
     }
     const saving = this.saving(t);
-    if (!saving && t.taps === 0 && !t.justCompleted && !undo) return null;
-    return { saving, taps: t.taps, justCompleted: t.justCompleted, undo };
+    const burst = t.burst !== null;
+    if (!saving && t.taps === 0 && !t.justCompleted && !undo && !burst) return null;
+    return { saving, taps: t.taps, justCompleted: t.justCompleted, undo, burst };
   }
 
   private emit(t: Track, forceView = false) {
@@ -414,7 +488,8 @@ export class TrackQueue {
         activity.saving === last.saving &&
         activity.taps === last.taps &&
         activity.justCompleted === last.justCompleted &&
-        activity.undo === last.undo);
+        activity.undo === last.undo &&
+        activity.burst === last.burst);
     if (!same) {
       t.lastActivity = activity;
       this.events?.activity(t.id, activity);
@@ -435,7 +510,7 @@ export class TrackQueue {
       t.burst.timer = null;
       t.burst.lastActionAt = this.now();
     } else {
-      t.burst = { first: null, last: null, stale: false, catchUp: false, lastActionAt: this.now(), timer: null };
+      t.burst = { first: null, last: null, stale: false, lastActionAt: this.now(), timer: null };
     }
   }
 
@@ -605,20 +680,16 @@ export class TrackQueue {
     this.closeBurst(t);
     if (burst.first && burst.last) {
       const { first, last } = burst;
-      const now = this.now();
       this.say(
         t,
         burstMessage({
           first,
           last,
           stale: burst.stale,
-          catchUp: burst.catchUp,
           episodes: t.media.episodes ?? null,
           title: t.title,
-          unlogged: {
-            before: unloggedAired({ ...t.media, userData: first }, now),
-            after: unloggedAired({ ...t.media, userData: last }, now),
-          },
+          // From the airing fields the server sent back (adopted in logSaved).
+          aired: airedCount(t.media, this.now()),
         }),
         last.listType === "completed" && first.listType !== "completed"
       );

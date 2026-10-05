@@ -331,6 +331,18 @@ export const DEMO_FALLBACK = {
   color: "#1abbd6",
 } as const;
 
+/**
+ * The tracker demo's show as its +1 engine and "Log N new" chip see it: the
+ * demo's 24 episodes, with the live show's schedule only once it has finished.
+ * A +1 never logs an episode that hasn't aired (lib/anime/airing.ts#airedCount),
+ * so an airing show's schedule could stop the demo short of the finale it
+ * promises; without one nothing caps it (and the chip stays hidden).
+ */
+export function demoTrackMedia(live: AnimeMedia | null): Partial<AnimeMedia> & { id: number; episodes: number } {
+  const show = { id: DEMO_MEDIA_ID, episodes: DEMO_FALLBACK.episodes };
+  return live?.status === "FINISHED" ? { ...live, ...show } : show;
+}
+
 // ---------------------------------------------------------------------------
 // Season meta and counts
 // ---------------------------------------------------------------------------

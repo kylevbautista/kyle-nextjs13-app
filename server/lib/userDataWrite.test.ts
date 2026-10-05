@@ -234,3 +234,29 @@ describe("catch-up snapshot", () => {
     });
   });
 });
+
+describe("the aired cap", () => {
+  const airing = (progress: number) =>
+    entry(1, userData({ episodeProgressNumber: progress }), {
+      status: "RELEASING",
+      upComingAirDate: { episode: [{ airingAt: 2_000_000_000, episode: 8 }] },
+    });
+
+  it("caps an increment at what has aired, and returns the airing fields", async () => {
+    const users = fakeUsers([airing(5)]);
+    await expect(write(users, { kind: "increment", increment: 5 })).resolves.toMatchObject({
+      kind: "ok",
+      userData: { episodeProgressNumber: 7 },
+      previous: { episodeProgressNumber: 5 },
+      snapshot: { status: "RELEASING", upComingAirDate: { episode: [{ airingAt: 2_000_000_000, episode: 8 }] } },
+    });
+  });
+
+  it("writes nothing when every aired episode is logged", async () => {
+    const users = fakeUsers([airing(7)]);
+    const result = await write(users, { kind: "increment", increment: 1 });
+    expect(result).toMatchObject({ kind: "ok", userData: { episodeProgressNumber: 7 }, snapshot: { status: "RELEASING" } });
+    if (result.kind === "ok") expect(result.previous).toEqual(result.userData);
+    expect(users.updateOne).not.toHaveBeenCalled();
+  });
+});

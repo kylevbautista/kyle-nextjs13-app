@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { airedCount } from "./anime/airing";
 import { normalizeMedia } from "./anime/normalize";
 import type { AnimeMedia } from "./anime/types";
 import {
@@ -9,6 +10,7 @@ import {
   addIntentCallbackUrl,
   buildSeasonMeta,
   defaultScheduleDay,
+  demoTrackMedia,
   evolutionTier,
   firstName,
   formatCountdownMinutes,
@@ -510,5 +512,30 @@ describe("evolutionProgress", () => {
     expect(evolutionProgress("slime", 0)).toEqual({ ratio: 1, remaining: 0, next: "named" });
     expect(evolutionRemainingLine({ remaining: 2, next: "lord" })).toBe("2 more to Demon Lord");
     expect(FINAL_FORM_LINE).toBe("Final form reached. For now.");
+  });
+});
+
+describe("demoTrackMedia", () => {
+  const show = (overrides: Partial<AnimeMedia>) =>
+    ({
+      ...normalizeMedia({ id: 182205, title: { romaji: "Tensura" }, coverImage: {} }),
+      ...overrides,
+    }) as AnimeMedia;
+  const airsIn = (seconds: number, episode: number) => ({
+    upcomingEpisode: { id: 1, episode, timeUntilAiring: null, mediaId: 182205 },
+    upComingAirDate: { episode: [{ airingAt: Math.floor(Date.UTC(2026, 9, 4) / 1000) + seconds, episode, timeUntilAiring: null }] },
+  });
+
+  it("lets the demo's +1 reach its finale whatever the live show's schedule", () => {
+    const now = Date.UTC(2026, 9, 4);
+    // Finished: the live show's data, with the demo's 24 episodes. Every episode has aired.
+    const finished = demoTrackMedia(show({ status: "FINISHED", episodes: 25 }));
+    expect(finished).toMatchObject({ id: 182205, status: "FINISHED", episodes: 24 });
+    expect(airedCount(finished, now)).toEqual({ aired: 24, exact: true });
+    // Still airing (EP 20 next): its schedule would cap the demo at 19 of 24, so it's left out.
+    const airing = demoTrackMedia(show({ status: "RELEASING", episodes: 24, ...airsIn(3600, 20) }));
+    expect(airing).toEqual({ id: 182205, episodes: 24 });
+    expect(airedCount(airing, now)).toBeNull();
+    expect(demoTrackMedia(null)).toEqual({ id: 182205, episodes: 24 });
   });
 });

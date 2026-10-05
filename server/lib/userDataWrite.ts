@@ -18,7 +18,7 @@ import type { UserDoc } from "./userList";
 
 type Users = Pick<Collection<UserDoc>, "findOne" | "updateOne">;
 
-/** The stored airing fields a catch-up counted from (sent back so the card's chip agrees). */
+/** The stored airing fields a +1 or a catch-up counted from (sent back so the card's +1 and chip agree). */
 export type AiringSnapshot = Pick<ListEntry, "status" | "episodes" | "upcomingEpisode" | "upComingAirDate">;
 
 const airingSnapshot = (entry: ListEntry): AiringSnapshot => ({
