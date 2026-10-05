@@ -3,7 +3,10 @@ import { createContext, ReactNode, useCallback, useMemo, useState } from "react"
 import type { SortMode } from "@/lib/anime/seasonOrder";
 import { toggleFormat as toggled, type FormatKey } from "@/lib/anime/seasonFormats";
 
-/** How the season grid is ordered (lib/anime/seasonOrder.ts). Lives in the /anime layout so it survives season changes. */
+/**
+ * How the season grid is ordered (lib/anime/seasonOrder.ts): popularity by default. Lives in the
+ * /anime layout so it survives season changes.
+ */
 export type { SortMode };
 
 interface HeaderContextValue {
@@ -24,7 +27,7 @@ interface HeaderContextValue {
 const NO_FORMATS: readonly FormatKey[] = [];
 
 const HeaderContext = createContext<HeaderContextValue>({
-  sort: "countdown",
+  sort: "popularity",
   setSort: () => {},
   showContinuing: true,
   setShowContinuing: () => {},
@@ -35,7 +38,7 @@ const HeaderContext = createContext<HeaderContextValue>({
 
 /** Session state only: the static ISR HTML renders the defaults (every format, continuing series on). */
 function HeaderProvider({ children }: { children: ReactNode }) {
-  const [sort, setSort] = useState<SortMode>("countdown");
+  const [sort, setSort] = useState<SortMode>("popularity");
   const [showContinuing, setShowContinuing] = useState(true);
   const [hiddenFormats, setHiddenFormats] = useState<readonly FormatKey[]>(NO_FORMATS);
   const toggleFormat = useCallback((key: FormatKey) => setHiddenFormats((current) => toggled(current, key)), []);
