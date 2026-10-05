@@ -1,27 +1,38 @@
 "use client";
-import { useId, useReducer, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useReducer, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
 import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
 import { revealInRow } from "@/components/theme/revealInRow";
-import { unloggedAired } from "@/lib/anime/airing";
+import { BAR_SHEEN } from "@/components/theme/tokens";
+import UndoButton from "@/components/theme/UndoButton";
 import { normalizeUserData } from "@/lib/anime/normalize";
 import { STATUS_BADGE_CLASS, STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
 import {
+  SaveError,
+  TrackQueue,
+  type CardActivity,
+  type SaveOutcome,
+  type TrackMedia,
+  type TrackTransport,
+} from "@/lib/anime/trackQueue";
+import {
   PROMPT_MESSAGE,
-  plusOneMessage,
   scoreMessage,
   statusMessage,
+  undoLabel,
+  undoTitle,
   type ConsoleMessage,
 } from "@/lib/anime/trackerConsole";
 import {
   LIST_STATUSES,
   LIST_STATUS_LABELS,
   displayTitle,
-  type AnimeMedia,
   type ListStatus,
   type UserAnimeData,
 } from "@/lib/anime/types";
+import { applyProgressRequest, applyUserDataRequest, type ProgressRequest } from "@/lib/anime/userDataRequest";
 import { DEMO_FALLBACK, DEMO_MEDIA_ID } from "@/lib/landing";
 import { trackOnce } from "./analytics";
 import { useLanding } from "./LandingProvider";
@@ -45,6 +56,10 @@ const INITIAL: UserAnimeData = {
   score: null,
 };
 const SCORES = Array.from({ length: 20 }, (_, index) => 10 - index * 0.5);
+/** A +1 press this soon after the demo moved focus onto it (or reached the finale) is a double press. */
+const GUARD_MS = 500;
+/** The guard's clock (event handlers only). */
+const clock = () => performance.now();
 
 // Stored dates are UTC-midnight calendar days, so format them in UTC.
 const dateFormat = new Intl.DateTimeFormat("en-US", {
@@ -54,58 +69,76 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-type Kind = "plus_one" | "status" | "score";
-type LastAction =
-  | { kind: "start" | "reset" }
-  | { kind: Kind; prev: UserAnimeData; next: UserAnimeData };
-
 interface DemoState {
   data: UserAnimeData;
-  last: LastAction;
+  /** The console line: the prompt until something happens, then the engine's or a pill's line. */
+  message: ConsoleMessage;
   touched: boolean;
   /** Transitions into Completed, to replay the console slime's gulp. */
   completions: number;
+  activity: CardActivity | null;
 }
 
-type DemoAction = { type: "apply"; kind: Kind; value: UserAnimeData } | { type: "reset" };
+type DemoAction =
+  | { type: "view"; userData: UserAnimeData; prev: UserAnimeData }
+  | { type: "message"; message: ConsoleMessage }
+  | { type: "activity"; activity: CardActivity | null }
+  | { type: "touch" };
 
 function reducer(state: DemoState, action: DemoAction): DemoState {
-  if (action.type === "reset") {
-    return { ...state, data: INITIAL, last: { kind: "reset" }, touched: true };
+  switch (action.type) {
+    case "view": {
+      const completed = action.userData.listType === "completed" && action.prev.listType !== "completed";
+      return { ...state, data: action.userData, completions: state.completions + (completed ? 1 : 0) };
+    }
+    case "message":
+      return { ...state, message: action.message };
+    case "activity":
+      return { ...state, activity: action.activity };
+    case "touch":
+      return state.touched ? state : { ...state, touched: true };
   }
-  const prev = state.data;
-  const next = action.value;
-  const completed = next.listType === "completed" && prev.listType !== "completed";
-  return {
-    data: next,
-    last: { kind: action.kind, prev, next },
-    touched: true,
-    completions: state.completions + (completed ? 1 : 0),
-  };
 }
 
 /**
- * The console line, derived from the last action and its result. The words
- * come from lib/anime/trackerConsole.ts, which My List's console uses too.
+ * The demo's "server": My List's request rules (lib/anime/userDataRequest.ts)
+ * applied in memory, so the demo runs the page's own engine (TrackQueue) with
+ * nothing sent or saved.
  */
-function consoleMessage(last: LastAction, live: AnimeMedia | null): ConsoleMessage {
-  // "Caught up" comes from the real show's schedule, never from made-up numbers.
-  const unlogged = (data: UserAnimeData) => (live ? unloggedAired({ ...live, userData: data }, null) : null);
-  switch (last.kind) {
-    case "start":
-    case "reset":
-      return PROMPT_MESSAGE;
-    case "plus_one":
-      return plusOneMessage({
-        prev: last.prev,
-        next: last.next,
-        episodes: EPISODES,
-        unlogged: { before: unlogged(last.prev), after: unlogged(last.next) },
-      });
-    case "status":
-      return statusMessage(last.prev, last.next);
-    case "score":
-      return scoreMessage(last.next);
+class DemoServer implements TrackTransport {
+  private stored: UserAnimeData;
+  constructor(stored: UserAnimeData) {
+    this.stored = stored;
+  }
+  put(value: UserAnimeData) {
+    this.stored = value;
+  }
+  /** A status pill or the score: an absolute write against the stored value, as the route does. */
+  set(patch: Partial<UserAnimeData>) {
+    const result = normalizeUserData(patch, { episodes: EPISODES, previous: this.stored, now: Date.now() });
+    if (result.ok) this.stored = result.value;
+    return result;
+  }
+  async log(_id: number, op: ProgressRequest, media: TrackMedia): Promise<SaveOutcome> {
+    const previous = this.stored;
+    const result = applyProgressRequest({ ...media, userData: previous }, op, Date.now());
+    if (!result.ok) throw new SaveError(result.error, "rejected", "invalid");
+    this.stored = result.value;
+    return { userData: result.value, previous };
+  }
+  async undo(_id: number, restore: UserAnimeData, expect: UserAnimeData, media: TrackMedia): Promise<SaveOutcome> {
+    const previous = this.stored;
+    const result = applyUserDataRequest({ kind: "set", userData: restore, expect }, { ...media, userData: previous }, Date.now());
+    if (!result.ok) {
+      throw result.code === "changed"
+        ? new SaveError(result.error, "changed", "changed", previous)
+        : new SaveError(result.error, "rejected", "invalid");
+    }
+    this.stored = result.value;
+    return { userData: result.value, previous };
+  }
+  async read() {
+    return this.stored;
   }
 }
 
@@ -135,41 +168,105 @@ export default function TrackerDemo() {
 
   const [state, dispatch] = useReducer(reducer, {
     data: INITIAL,
-    last: { kind: "start" },
+    message: PROMPT_MESSAGE,
     touched: false,
     completions: 0,
+    activity: null,
   });
   const [coverFailed, setCoverFailed] = useState(false);
   const plusRef = useRef<HTMLButtonElement>(null);
   const radioName = useId();
   const scoreId = useId();
+  const [server] = useState(() => new DemoServer(INITIAL));
+  const [queue] = useState(() => new TrackQueue(server));
+  /**
+   * When focus was last moved onto +1 by the demo, or +1 last logged an episode: a press
+   * that soon after is a double press (My List's guard), and never resets the demo.
+   */
+  const guardAt = useRef(0);
 
-  const { data } = state;
+  const { data, activity } = state;
   const progress = data.episodeProgressNumber;
   const atLast = progress >= EPISODES;
+  // The number rolls up only when it goes up (My List's card).
+  const [shown, setShown] = useState({ progress, up: false });
+  if (shown.progress !== progress) setShown({ progress, up: progress > shown.progress });
   const completed = data.listType === "completed";
-  const message = consoleMessage(state.last, live ?? null);
+  const message = state.message;
+  // The engine, the chip and the lines all read this, so the chip never promises more than the demo logs.
+  const demoMedia: TrackMedia = { ...(live ?? {}), id: DEMO_MEDIA_ID, episodes: EPISODES };
 
-  const apply = (kind: Kind, patch: Partial<UserAnimeData>) => {
-    const result = normalizeUserData(patch, { episodes: EPISODES, previous: data, now: Date.now() });
-    if (!result.ok) return null;
-    dispatch({ type: "apply", kind, value: result.value });
+  useEffect(
+    () =>
+      queue.connect({
+        view: (_id, userData, prev) => {
+          dispatch({ type: "view", userData, prev });
+          if (userData.listType === "completed" && prev.listType !== "completed") {
+            trackOnce("demo_action", { action: "complete" });
+          }
+        },
+        activity: (_id, next) => {
+          // Undo unmounting under keyboard focus: hand focus to +1 (My List's rule).
+          const active = document.activeElement;
+          const undoFocused =
+            active instanceof HTMLElement && active.matches(`[data-track-card="${DEMO_MEDIA_ID}"] [data-undo]`);
+          if (!next?.undo && undoFocused) {
+            flushSync(() => dispatch({ type: "activity", activity: next }));
+            guardAt.current = clock();
+            plusRef.current?.focus();
+          } else {
+            dispatch({ type: "activity", activity: next });
+          }
+        },
+        say: (_id, line) => dispatch({ type: "message", message: line }),
+        settled: () => {},
+      }),
+    [queue]
+  );
+
+  /** A pill or the score: the server's absolute rules, then the engine adopts the result. */
+  const apply = (kind: "status" | "score", patch: Partial<UserAnimeData>) => {
+    const result = server.set(patch);
+    if (!result.ok) return;
+    dispatch({ type: "touch" });
+    queue.adopt(DEMO_MEDIA_ID, result.value, demoMedia);
+    dispatch({ type: "message", message: kind === "status" ? statusMessage(data, result.value) : scoreMessage(result.value) });
     trackOnce("demo_action", { action: kind });
-    if (result.value.listType === "completed" && data.listType !== "completed") {
-      trackOnce("demo_action", { action: "complete" });
-    }
-    return result.value;
   };
 
   const handlePlusOne = () => {
+    if (clock() - guardAt.current < GUARD_MS) return;
+    dispatch({ type: "touch" });
     if (atLast) {
-      dispatch({ type: "reset" });
+      server.put(INITIAL);
+      queue.adopt(DEMO_MEDIA_ID, INITIAL, demoMedia);
+      dispatch({ type: "message", message: PROMPT_MESSAGE });
       trackOnce("demo_action", { action: "reset" });
     } else {
-      apply("plus_one", { episodeProgressNumber: progress + 1 });
+      queue.tap(demoMedia, data);
+      // The finale turns this button into Reset demo: a fast extra press must not reset it.
+      if (progress + 1 >= EPISODES) guardAt.current = clock();
+      trackOnce("demo_action", { action: "plus_one" });
     }
     // Same element either way ("+1" ⇄ "Reset demo"): keep focus on it.
     plusRef.current?.focus();
+  };
+
+  const handleCatchUp = (count: number, button: HTMLButtonElement) => {
+    const hadFocus = document.activeElement === button;
+    dispatch({ type: "touch" });
+    flushSync(() => queue.catchUp(demoMedia, data, count));
+    if (hadFocus && !button.isConnected) {
+      guardAt.current = clock();
+      plusRef.current?.focus();
+    }
+    trackOnce("demo_action", { action: "catch_up" });
+  };
+
+  const handleUndo = () => {
+    dispatch({ type: "touch" });
+    queue.undo(DEMO_MEDIA_ID);
+    trackOnce("demo_action", { action: "undo" });
   };
 
   // The same shelves as My List: "All", then each status with its dot.
@@ -221,6 +318,10 @@ export default function TrackerDemo() {
               the finale and the show files itself under Completed.
             </Bullet>
             <Bullet>
+              <strong className="font-semibold text-white">Behind on logging?</strong> Log N new marks every
+              aired episode you haven&apos;t logged. Undo puts it back.
+            </Bullet>
+            <Bullet>
               Scores out of 10, start and finish dates filled in for you, and filters by status, year,
               season and airing day.
             </Bullet>
@@ -256,6 +357,7 @@ export default function TrackerDemo() {
           </ul>
 
           <div
+            data-track-card={DEMO_MEDIA_ID}
             className={`relative mt-3 grid grid-cols-1 gap-4 rounded-xl border border-[rgb(53,53,53)] bg-[rgb(30,30,30)] p-4 min-[360px]:grid-cols-[72px_1fr] ${
               state.touched ? "ring-1 ring-[#95ccff]/20" : ""
             }`}
@@ -301,8 +403,15 @@ export default function TrackerDemo() {
                   ref={plusRef}
                   type="button"
                   onClick={handlePlusOne}
-                  aria-label={atLast ? undefined : `+1: log episode ${progress + 1} (demo)`}
-                  className={`inline-flex h-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] ${
+                  // A held Enter logs one episode, not an auto-repeat stream (My List's +1).
+                  onKeyDown={(event) => {
+                    if (event.repeat) event.preventDefault();
+                  }}
+                  // A fixed name, like My List's: screen readers hear only the console's line.
+                  aria-label={atLast ? undefined : "+1: log the next episode (demo)"}
+                  className={`relative inline-flex h-11 shrink-0 touch-manipulation items-center justify-center rounded-lg text-sm font-bold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#95ccff] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(30,30,30)] md:h-10 ${
+                    activity && activity.taps > 0 ? (activity.taps % 2 ? "animate-slime-poke" : "animate-slime-poke-2") : ""
+                  } ${
                     atLast
                       ? "border border-[#95ccff]/40 bg-white/5 px-3 hover:bg-white/10"
                       : "w-16 bg-blue-600 hover:bg-blue-500"
@@ -317,11 +426,18 @@ export default function TrackerDemo() {
 
               <div className="flex flex-col gap-1.5">
                 <div className="flex min-h-5 items-center justify-between gap-2">
-                  <p className="text-xs text-[rgb(164,164,164)]">
-                    Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {EPISODES}
+                  <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
+                    Ep{" "}
+                    <span
+                      key={progress}
+                      className={`font-semibold tabular-nums text-white ${activity && shown.up ? "inline-block animate-tick" : ""}`}
+                    >
+                      {progress}
+                    </span>{" "}
+                    / {EPISODES}
                   </p>
-                  {/* My List's "N new" chip, from the live show's real schedule (none once it has finished airing). */}
-                  {live && <NewEpisodesChip media={{ ...live, userData: data }} />}
+                  {/* My List's "Log N new" chip, from the live show's real schedule (none for the fallback). */}
+                  {live && <NewEpisodesChip media={{ ...demoMedia, userData: data }} demo onCatchUp={handleCatchUp} />}
                 </div>
                 <div
                   role="progressbar"
@@ -330,7 +446,7 @@ export default function TrackerDemo() {
                   aria-valuemax={EPISODES}
                   aria-valuenow={progress}
                   aria-valuetext={`Episode ${progress} of ${EPISODES}`}
-                  className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]"
+                  className="relative h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]"
                 >
                   <div
                     className={`h-full rounded-full transition-[width,background-color] duration-300 ${
@@ -338,13 +454,33 @@ export default function TrackerDemo() {
                     }`}
                     style={{ width: `${Math.round((progress / EPISODES) * 100)}%` }}
                   />
+                  {activity?.justCompleted && <span aria-hidden="true" className={BAR_SHEEN} />}
                 </div>
               </div>
 
-              <p className="text-xs text-[rgb(164,164,164)]">
-                {dateLine} · Score{" "}
-                <span className="font-semibold tabular-nums text-white">{data.score ?? "—"}</span>
-              </p>
+              {/* My List's row: Undo takes the date line's place (the demo has no Edit). */}
+              <div className="mt-auto flex min-h-11 items-center gap-2 md:min-h-9">
+                {activity?.undo ? (
+                  <UndoButton
+                    undo={activity.undo}
+                    label={undoLabel({
+                      n: activity.undo.n,
+                      restore: activity.undo.restore,
+                      current: data,
+                      episodes: EPISODES,
+                      demo: true,
+                    })}
+                    title={undoTitle({ restore: activity.undo.restore, current: data, episodes: EPISODES })}
+                    onUndo={handleUndo}
+                    onExpire={() => queue.expireUndo(DEMO_MEDIA_ID)}
+                  />
+                ) : (
+                  <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
+                    {dateLine} · Score{" "}
+                    <span className="font-semibold tabular-nums text-white">{data.score ?? "—"}</span>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -394,7 +530,9 @@ export default function TrackerDemo() {
             </div>
           </div>
 
-          <div className="mt-4 flex min-h-[56px] items-center gap-3 rounded-xl border border-[#95ccff]/20 bg-[#0a1528]/70 px-3 py-2">
+          {/* Room for its tallest line (3 lines below 390px, 2 above): a line that lands ~700 ms after a
+              tap never resizes the box and moves the call to action below it. */}
+          <div className="mt-4 flex min-h-[78px] items-center gap-3 rounded-xl border border-[#95ccff]/20 bg-[#0a1528]/70 px-3 py-2 min-[390px]:min-h-[58px]">
             <Slime
               size={28}
               mood={completed ? "happy" : "idle"}

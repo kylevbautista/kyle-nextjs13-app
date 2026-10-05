@@ -30,6 +30,12 @@ interface EditEntryDialogProps {
   /** `spoken` is the Great Sage line for what changed (the page's status line reads it). */
   onSaved: (animeId: number, userData: UserAnimeData, spoken: string) => void;
   onRemoved: (animeId: number) => void;
+  /**
+   * Waits for the card's +1s still saving and resolves with the confirmed value
+   * (My List's TrackQueue#whenIdle), so the save compares against what's stored,
+   * not an optimistic number that may have been rolled back.
+   */
+  beforeSave?: () => Promise<UserAnimeData | null>;
   /** Element to focus when the dialog closes (the card's Edit button)… */
   returnFocusId: string;
   /** …or this one when that element is gone (the entry was removed). */
@@ -47,6 +53,7 @@ export function EditEntryDialog({
   onClose,
   onSaved,
   onRemoved,
+  beforeSave,
   returnFocusId,
   fallbackFocusId,
 }: EditEntryDialogProps) {
@@ -123,11 +130,12 @@ export function EditEntryDialog({
     setFormError(null);
     setBusy("save");
     try {
+      const prev = (await beforeSave?.()) ?? initial;
       const saved = await saveUserData(entry.id, result.userData);
-      // One Great Sage line for the most important change, against the values the
-      // dialog opened with (a +1 can land while it's open).
-      const message = editMessage({ prev: initial, sent: result.userData, next: saved, episodes: entry.episodes });
-      consoleToast(message, { celebrate: saved.listType === "completed" && initial.listType !== "completed" });
+      // One Great Sage line for the most important change, against the settled value
+      // (the dialog may have opened on +1s that were still saving).
+      const message = editMessage({ prev, sent: result.userData, next: saved, episodes: entry.episodes });
+      consoleToast(message, { celebrate: saved.listType === "completed" && prev.listType !== "completed" });
       setBusy(null);
       onSaved(entry.id, saved, message.spoken);
     } catch (err) {

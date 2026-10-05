@@ -1,17 +1,21 @@
 "use client";
-import { memo, useId, type CSSProperties } from "react";
+import { memo, useId, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Slime from "@/components/home/Slime";
 import NewEpisodesChip from "@/components/theme/NewEpisodesChip";
 import NextEpisodeLine from "@/components/theme/NextEpisodeLine";
-import { CARD, FOCUS_RING_PANEL } from "@/components/theme/tokens";
+import UndoButton from "@/components/theme/UndoButton";
+import { BAR_SHEEN, CARD, FOCUS_RING_PANEL, PLUS_ONE_SAVING_DOT } from "@/components/theme/tokens";
 import { STATUS_BADGE_CLASS } from "@/lib/anime/statusBadge";
+import type { CardActivity } from "@/lib/anime/trackQueue";
+import { undoLabel, undoTitle } from "@/lib/anime/trackerConsole";
 import { LIST_STATUS_LABELS, displayTitle, type UserAnimeData } from "@/lib/anime/types";
 import { progressRatio } from "./listFilters";
 import type { MyListEntry } from "./listFilters";
 
 export const editButtonId = (animeId: number) => `edit-entry-${animeId}`;
 export const incrementButtonId = (animeId: number) => `increment-entry-${animeId}`;
+export const undoButtonId = (animeId: number) => `undo-entry-${animeId}`;
 
 // Stored dates are UTC-midnight calendar days, so format them in UTC.
 const dateFormat = new Intl.DateTimeFormat("en-US", {
@@ -39,9 +43,13 @@ interface ListCardProps {
   ownerName: string | null;
   /** The page's server render time (the chip's reference until the clock hydrates). */
   renderedAt: number;
-  /** A "+1" save for this entry is in flight. */
-  pending: boolean;
+  /** The card's +1 engine state (lib/anime/trackQueue.ts): saving dot, motion, Undo. Null when idle. */
+  activity: CardActivity | null;
   onIncrement: (entry: MyListEntry) => void;
+  /** "Log N new": `count` is what the chip showed. */
+  onCatchUp: (entry: MyListEntry, count: number, button: HTMLButtonElement) => void;
+  onUndo: (entry: MyListEntry) => void;
+  onUndoExpire: (animeId: number) => void;
   onEdit: (entry: MyListEntry) => void;
 }
 
@@ -49,15 +57,21 @@ interface ListCardProps {
  * One show on My List. It is the landing's tracker demo card
  * (components/home/TrackerDemo.tsx) made real: cover, title, status badge,
  * +1, "Ep 12 / 24" with its bar, and the date · score line, plus the live
- * countdown and Edit. Visitors get the same card without the buttons.
+ * countdown and Edit. The owner's +1 never blocks while saving (taps queue up),
+ * the "N new" chip becomes "Log N new", and after a confirmed change "↶ Undo +N"
+ * takes the date line's place for a few seconds. Visitors get the same card
+ * without the buttons.
  */
 export const ListCard = memo(function ListCard({
   entry,
   isOwner,
   ownerName,
   renderedAt,
-  pending,
+  activity,
   onIncrement,
+  onCatchUp,
+  onUndo,
+  onUndoExpire,
   onEdit,
 }: ListCardProps) {
   const titleId = useId();
@@ -66,7 +80,12 @@ export const ListCard = memo(function ListCard({
   const total = entry.episodes && entry.episodes > 0 ? entry.episodes : null;
   const ratio = progressRatio(entry);
   const atLastEpisode = total !== null && progress >= total;
-  const incrementBlocked = atLastEpisode || pending;
+  // The number rolls up only when it goes up (not on an Undo or a rollback): the last
+  // progress seen, kept from the previous render (React's "adjust state while rendering").
+  const [shown, setShown] = useState({ progress, up: false });
+  if (shown.progress !== progress) setShown({ progress, up: progress > shown.progress });
+  // Alternating two identical keyframes restarts the squish on every tap.
+  const poke = activity && activity.taps > 0 ? (activity.taps % 2 ? "animate-slime-poke" : "animate-slime-poke-2") : "";
   const color = entry.coverImage?.color ?? null;
   const cover =
     entry.coverImage?.large ?? entry.coverImage?.extraLarge ?? entry.coverImage?.medium ?? null;
@@ -77,6 +96,7 @@ export const ListCard = memo(function ListCard({
     <li className="flex min-w-0 animate-[rise-in_400ms_ease-out_both]">
       <article
         aria-labelledby={titleId}
+        data-track-card={entry.id}
         style={{ "--card-glow": color ?? "rgba(93,174,241,.55)" } as CSSProperties}
         className={`grid w-full min-w-0 grid-cols-1 gap-4 p-4 text-white min-[360px]:grid-cols-[72px_minmax(0,1fr)] ${CARD}`}
       >
@@ -117,21 +137,25 @@ export const ListCard = memo(function ListCard({
                 id={incrementButtonId(entry.id)}
                 type="button"
                 onClick={() => {
-                  if (!incrementBlocked) onIncrement(entry);
+                  if (!atLastEpisode) onIncrement(entry);
                 }}
-                aria-disabled={incrementBlocked || undefined}
-                aria-busy={pending || undefined}
+                // A held Enter logs one episode, not an auto-repeat stream.
+                onKeyDown={(event) => {
+                  if (event.repeat) event.preventDefault();
+                }}
+                aria-disabled={atLastEpisode || undefined}
                 // Starts with the visible "+1" (WCAG 2.5.3) and stays the same between
                 // presses, so screen readers hear only the result line.
                 aria-label={atLastEpisode ? `All episodes of ${title} watched` : `+1: log the next episode of ${title}`}
                 title={atLastEpisode ? "All episodes watched" : "Mark the next episode as watched"}
-                className={`inline-flex h-11 w-16 shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors aria-busy:animate-pulse md:h-10 ${FOCUS_RING_PANEL} ${
+                className={`relative inline-flex h-11 w-16 shrink-0 touch-manipulation items-center justify-center rounded-lg text-sm font-bold transition-colors md:h-10 ${poke} ${FOCUS_RING_PANEL} ${
                   atLastEpisode
                     ? "cursor-default bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/40"
-                    : "bg-blue-600 text-white hover:bg-blue-500 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:hover:bg-blue-600"
+                    : "bg-blue-600 text-white hover:bg-blue-500"
                 }`}
               >
                 {atLastEpisode ? <span aria-hidden="true">✓</span> : "+1"}
+                {activity?.saving && <span aria-hidden="true" className={PLUS_ONE_SAVING_DOT} />}
               </button>
             )}
           </div>
@@ -140,17 +164,30 @@ export const ListCard = memo(function ListCard({
 
           <div className="flex flex-col gap-1.5">
             <div className="flex min-h-5 items-center justify-between gap-2">
-              <p className="text-xs text-[rgb(164,164,164)]">
+              <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
                 <span aria-hidden="true">
-                  Ep <span className="font-semibold tabular-nums text-white">{progress}</span> / {total ?? "?"}
+                  Ep{" "}
+                  <span
+                    key={progress}
+                    className={`font-semibold tabular-nums text-white ${activity && shown.up ? "inline-block animate-tick" : ""}`}
+                  >
+                    {progress}
+                  </span>{" "}
+                  / {total ?? "?"}
                 </span>
                 <span className="sr-only">
                   {progress} of {total ?? "an unknown number of"} episodes watched
                 </span>
               </p>
-              <NewEpisodesChip media={entry} ownerName={isOwner ? null : ownerName} renderedAt={renderedAt} />
+              <NewEpisodesChip
+                media={entry}
+                ownerName={isOwner ? null : ownerName}
+                renderedAt={renderedAt}
+                title={title}
+                onCatchUp={isOwner ? (count, button) => onCatchUp(entry, count, button) : undefined}
+              />
             </div>
-            <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]">
+            <div aria-hidden="true" className="relative h-1.5 w-full overflow-hidden rounded-full bg-[rgb(53,53,53)]">
               {ratio !== null ? (
                 <div
                   className={`h-full rounded-full transition-[width,background-color] duration-300 ${
@@ -162,20 +199,39 @@ export const ListCard = memo(function ListCard({
                 // Unknown episode count: a dashed track, so it can't read as 0%.
                 <div className="h-full w-full bg-[repeating-linear-gradient(90deg,rgba(149,204,255,.3)_0_6px,transparent_6px_12px)]" />
               )}
+              {activity?.justCompleted && ratio !== null && <span aria-hidden="true" className={BAR_SHEEN} />}
             </div>
           </div>
 
           <div className="mt-auto flex items-center justify-between gap-2">
-            <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
-              {dateLine(entry.userData)}{" "}
-              <span className="whitespace-nowrap">
-                · Score{" "}
-                <span className="font-semibold tabular-nums text-white">
-                  {score ?? "—"}
-                  {score !== null && <span className="sr-only"> out of 10</span>}
+            {/* Undo takes the date line's place (same height as Edit), so nothing below moves. */}
+            {isOwner && activity?.undo ? (
+              <UndoButton
+                id={undoButtonId(entry.id)}
+                undo={activity.undo}
+                label={undoLabel({
+                  n: activity.undo.n,
+                  restore: activity.undo.restore,
+                  current: entry.userData,
+                  episodes: entry.episodes,
+                  title,
+                })}
+                title={undoTitle({ restore: activity.undo.restore, current: entry.userData, episodes: entry.episodes })}
+                onUndo={() => onUndo(entry)}
+                onExpire={() => onUndoExpire(entry.id)}
+              />
+            ) : (
+              <p className="min-w-0 text-xs text-[rgb(164,164,164)]">
+                {dateLine(entry.userData)}{" "}
+                <span className="whitespace-nowrap">
+                  · Score{" "}
+                  <span className="font-semibold tabular-nums text-white">
+                    {score ?? "—"}
+                    {score !== null && <span className="sr-only"> out of 10</span>}
+                  </span>
                 </span>
-              </span>
-            </p>
+              </p>
+            )}
             {isOwner && (
               <button
                 id={editButtonId(entry.id)}

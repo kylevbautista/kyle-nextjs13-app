@@ -1,6 +1,9 @@
+import type { EvolutionTier } from "@/lib/landing";
+
 /**
  * The kylevb slime: single source of its geometry, shared by the React SVG
- * (./Slime.tsx) and the share image (app/(home)/opengraph-image.tsx).
+ * (./Slime.tsx) and the share images (app/(home)/opengraph-image.tsx,
+ * components/og).
  *
  * An ORIGINAL drawing: a glossy droplet whose tip curls to the right, with
  * open eyes, a small smile and blush. It is a tribute to the slime-form
@@ -15,6 +18,17 @@ export const SLIME_ASPECT = 170 / 200;
 
 /** Rendered height for a given width (the viewBox is 200 × 170). */
 export const slimeHeight = (size: number) => Math.round(size * SLIME_ASPECT);
+
+/** Demon Slime and Demon Lord draw their aura (r 92 around 100,94 → y 2…186): resvg clips to the viewBox. */
+export const SLIME_AURA_VIEWBOX = "0 -4 200 194";
+const hasAura = (tier?: EvolutionTier) => tier === "demon" || tier === "lord";
+export const slimeViewBox = (tier?: EvolutionTier) => (hasAura(tier) ? SLIME_AURA_VIEWBOX : SLIME_VIEWBOX);
+/** Rendered height of slimeSvgMarkup({ size, tier }). */
+export const slimeMarkupHeight = (size: number, tier?: EvolutionTier) =>
+  hasAura(tier) ? Math.round((size * 194) / 200) : slimeHeight(size);
+/** From the top of slimeSvgMarkup({ size, tier }) to the slime's base (y 158): stands it on a line. */
+export const slimeBaseY = (size: number, tier?: EvolutionTier) =>
+  Math.round((size * (158 + (hasAura(tier) ? 4 : 0))) / 200);
 
 /** Where every squash/stretch pivots: the middle of the base. */
 export const SLIME_PIVOT = "100px 158px";
@@ -131,12 +145,15 @@ const ellipse = ({ cx, cy, rx, ry }: Ellipse, attrs: string) =>
 
 /**
  * A standalone `<svg xmlns>` string of the slime: no CSS variables, classes
- * or animation, so it is safe for next/og (resvg) and data URIs.
+ * or animation, so it is safe for next/og (resvg) and data URIs. `tier` adds
+ * the evolution accessories (gold rim + star, aura, crown); without one (or
+ * "slime") the string is exactly the plain slime's.
  */
 export function slimeSvgMarkup(
-  opts: { mood?: "idle" | "happy"; size?: number } = {}
+  opts: { mood?: "idle" | "happy"; size?: number; tier?: EvolutionTier } = {}
 ): string {
-  const { mood = "idle", size = 200 } = opts;
+  const { mood = "idle", size = 200, tier } = opts;
+  const named = tier !== undefined && tier !== "slime";
   const { gloss, sparkle, reflection, shadow, bandFrom } = SLIME_DETAILS;
   const c = SLIME_COLORS;
   const stops = SLIME_GRADIENT_STOPS.map(
@@ -156,8 +173,22 @@ export function slimeSvgMarkup(
           .map(({ cx, cy, r }) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff"/>`)
           .join("");
 
+  // Tier styles: keep in sync with Slime.tsx (aura, rim, star, crown).
+  const { aura, star, crown } = SLIME_ACCESSORIES;
+  const auraRing = hasAura(tier)
+    ? `<circle cx="${aura.cx}" cy="${aura.cy}" r="${aura.r}" fill="none" stroke="${c.aura}" stroke-opacity="0.6" stroke-width="1.75" stroke-dasharray="${aura.dash}" stroke-linecap="round"/>`
+    : "";
+  const accessories =
+    tier === "named" || tier === "demon"
+      ? `<path d="${star}" fill="${c.gold}"/>`
+      : tier === "lord"
+        ? `<g transform="${crown.transform}"><path d="${crown.path}" fill="${c.gold}" stroke="${c.goldStroke}" stroke-width="1.5" stroke-linejoin="round"/><path d="${crown.band}" stroke="${c.goldStroke}" stroke-width="1.25"/>${crown.gems
+            .map(({ cx, cy, r }) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff3c4"/>`)
+            .join("")}</g>`
+        : "";
+
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${SLIME_VIEWBOX}" width="${size}" height="${slimeHeight(size)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${slimeViewBox(tier)}" width="${size}" height="${slimeMarkupHeight(size, tier)}">`,
     `<defs>`,
     `<radialGradient id="kv-body" cx="${SLIME_GRADIENT.cx}" cy="${SLIME_GRADIENT.cy}" r="${SLIME_GRADIENT.r}">${stops}</radialGradient>`,
     `<radialGradient id="kv-gloss"><stop offset="0%" stop-color="#fff" stop-opacity="0.75"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>`,
@@ -166,6 +197,7 @@ export function slimeSvgMarkup(
     `<clipPath id="kv-clip"><path d="${SLIME_BODY_PATH}"/></clipPath>`,
     `</defs>`,
     ellipse(shadow, `fill="url(#kv-shadow)"`),
+    auraRing,
     `<path d="${SLIME_BODY_PATH}" fill="url(#kv-body)"/>`,
     `<rect x="0" y="${bandFrom}" width="200" height="${158 - bandFrom}" fill="url(#kv-band)" clip-path="url(#kv-clip)"/>`,
     ellipse(
@@ -174,7 +206,7 @@ export function slimeSvgMarkup(
     ),
     `<circle cx="${sparkle.cx}" cy="${sparkle.cy}" r="${sparkle.r}" fill="#fff" fill-opacity="0.8"/>`,
     ellipse(reflection, `fill="${c.rim}" fill-opacity="0.25"`),
-    `<path d="${SLIME_BODY_PATH}" fill="none" stroke="${c.rim}" stroke-opacity="0.5" stroke-width="1.5"/>`,
+    `<path d="${SLIME_BODY_PATH}" fill="none" stroke="${named ? c.rimNamed : c.rim}" stroke-opacity="${named ? 0.7 : 0.5}" stroke-width="1.5"/>`,
     eyes,
     `<path d="${SLIME_FACE.mouth}" fill="none" stroke="${c.eye}" stroke-width="2.5" stroke-linecap="round"/>`,
     SLIME_FACE.blush
@@ -182,6 +214,7 @@ export function slimeSvgMarkup(
         ellipse(blush, `fill="${c.blush}" fill-opacity="${mood === "happy" ? 0.5 : 0.3}"`)
       )
       .join(""),
+    accessories,
     `</svg>`,
   ].join("");
 }

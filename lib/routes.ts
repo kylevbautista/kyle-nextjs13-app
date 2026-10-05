@@ -25,3 +25,8 @@ export function isCurrentPath(pathname: string, href: string, match: PathMatch =
   if (pathname === href) return true;
   return match === "prefix" && pathname.startsWith(`${href}/`);
 }
+
+/** My List's link-preview image (CLAUDE.md §5.8). `v` = components/og/shareCard.ts#shareVersion, a cache key. */
+export const listShareImagePath = (userId: string, v: string) => `/user/og/${userId}/${v}`;
+/** The Airing Schedule's link-preview image. */
+export const scheduleShareImagePath = (userId: string, v: string) => `/mylist/og/${userId}/${v}`;

@@ -1,19 +1,18 @@
 "use client";
 import { useEffect } from "react";
 import { announcePending, holdSearchFocus, searchStatusSnapshot } from "@/components/utils/searchArrival";
-import { loadingStatus } from "@/lib/anime/searchCopy";
 
 /**
- * Renders nothing. "Searching AniList for “q”…", only for a search the reader
- * started (its token), never on a full load; it also restarts the token's
- * clock, since the wait for AniList starts now. Said once (React StrictMode
+ * Renders nothing. "Searching AniList for “q”…" (`line`), only for a search
+ * the reader started (its token for `searchKey`), never on a full load; it
+ * also restarts the token's clock, since the wait for AniList starts now, and
+ * records the search as the one on screen. Said once (React StrictMode
  * replays the effect in development).
  */
-export default function SearchPendingStatus({ query, page }: { query: string; page: number }) {
+export default function SearchPendingStatus({ searchKey, line }: { searchKey: string; line: string }) {
   useEffect(() => {
-    if (!holdSearchFocus(query, page)) return;
-    const line = loadingStatus(query, page);
+    if (!holdSearchFocus(searchKey)) return;
     if (searchStatusSnapshot().text !== line) announcePending(line);
-  }, [query, page]);
+  }, [searchKey, line]);
   return null;
 }

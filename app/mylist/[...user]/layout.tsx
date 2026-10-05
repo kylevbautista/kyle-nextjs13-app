@@ -1,17 +1,5 @@
-import type { Metadata } from "next";
 import { requireListOwner } from "@/server/lib/listRoute";
 import { airingSchedulePath } from "@/lib/routes";
-
-export const metadata: Metadata = {
-  metadataBase: new URL("https://kylevb.com"),
-  title: "Airing Schedule",
-  description: "What's airing from an anime list, with live episode countdowns.",
-  openGraph: {
-    title: "Airing Schedule",
-    description: "What's airing from an anime list, with live episode countdowns.",
-    images: [{ url: "/rimuru.png", width: 200, height: 141 }],
-  },
-};
 
 /**
  * Validates the list URL here, outside loading.tsx, so unknown lists get a

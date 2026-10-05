@@ -13,6 +13,7 @@ import {
   groupByStatus,
   hasActiveFilters,
   matchesFilters,
+  placeHeld,
   sortEntries,
   yearOptions,
 } from "./listFilters";
@@ -229,5 +230,51 @@ describe("the view in the URL", () => {
     expect(parsed.sort).toBe("next");
     expect(parsed.filters).toMatchObject({ year: null, season: null, weekday: null, release: null });
     expect(parsed.filters.query).toHaveLength(100);
+  });
+});
+
+describe("placeHeld", () => {
+  const named = (romaji: string, userData: Partial<UserAnimeData>) =>
+    entry({ title: { romaji, english: null, native: null }, userData });
+  const ids = (sections: { entries: MyListEntry[] }[]) => sections.map((section) => section.entries.map((e) => e.id));
+
+  it("keeps a held card's place while its live progress rises", () => {
+    const a = named("A", { listType: "watching", episodeProgressNumber: 2 });
+    const b = named("B", { listType: "watching", episodeProgressNumber: 4 });
+    const c = named("C", { listType: "watching", episodeProgressNumber: 6 });
+    const before = placeHeld([a, b, c], new Map(), { sort: "progress", tab: "all", nowMs: null });
+    expect(ids(before)).toEqual([[c.id, b.id, a.id]]);
+    // A rises past everyone (5 taps → 7 of 12), but it is held at its old value.
+    const risen = { ...a, userData: { ...a.userData, episodeProgressNumber: 7 } };
+    const held = new Map([[a.id, a.userData]]);
+    expect(ids(placeHeld([risen, b, c], held, { sort: "progress", tab: "all", nowMs: null }))).toEqual([[c.id, b.id, a.id]]);
+    // Released: it sorts by its live value.
+    expect(ids(placeHeld([risen, b, c], new Map(), { sort: "progress", tab: "all", nowMs: null }))).toEqual([
+      [risen.id, c.id, b.id],
+    ]);
+  });
+
+  it("keeps a held card that completed in its section, and returns the live object", () => {
+    const a = named("A", { listType: "watching", episodeProgressNumber: 11 });
+    const done = { ...a, userData: { ...a.userData, listType: "completed" as const, episodeProgressNumber: 12 } };
+    const held = new Map([[a.id, a.userData]]);
+    const shelf = placeHeld([done], held, { sort: "next", tab: "watching", nowMs: null });
+    expect(shelf).toHaveLength(1);
+    expect(shelf[0].status).toBe("watching");
+    expect(shelf[0].entries[0]).toBe(done);
+    const all = placeHeld([done], held, { sort: "next", tab: "all", nowMs: null });
+    expect(all.map((section) => section.status)).toEqual(["watching"]);
+    expect(all[0].entries[0].userData.listType).toBe("completed");
+  });
+
+  it("is the plain sort and grouping with nothing held", () => {
+    const entries = [
+      named("Charlie", { listType: "dropped" }),
+      named("Alpha", { listType: "watching" }),
+      named("Bravo", { listType: "watching" }),
+    ];
+    const sections = placeHeld(entries, new Map(), { sort: "title", tab: "all", nowMs: null });
+    expect(sections).toEqual(groupByStatus(sortEntries(entries, "title")));
+    expect(placeHeld(entries, new Map(), { sort: "title", tab: "completed", nowMs: null })).toEqual([]);
   });
 });

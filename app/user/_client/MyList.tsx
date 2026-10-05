@@ -3,11 +3,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import toast from "react-hot-toast";
 import { SageTag } from "@/components/home/SageLine";
 import { consoleToast } from "@/components/theme/consoleToast";
 import { revealInRow } from "@/components/theme/revealInRow";
 import EvolutionCard from "@/components/theme/EvolutionCard";
+import { CountBadge, FilterIcon, FilterSelect } from "@/components/theme/FilterSelect";
 import { LiveTimersToggle } from "@/components/theme/LiveTimersToggle";
 import PageBanner from "@/components/theme/PageBanner";
 import SagePanel from "@/components/theme/SagePanel";
@@ -30,15 +30,26 @@ import {
 } from "@/components/theme/tokens";
 import { SEASONS, SEASON_LABELS, isSeasonName } from "@/lib/season";
 import { WEEKDAYS, nextAiring, unloggedAired } from "@/lib/anime/airing";
+import {
+  LIST_EMPTY_TITLE,
+  LIST_EYEBROW,
+  LIST_STAT_LABELS,
+  listEmptyBody,
+  listOf,
+  listStats,
+  listTitle,
+  listVisitorLine,
+  listVisitorSub,
+} from "@/lib/anime/listCopy";
 import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
-import { plusOneMessage } from "@/lib/anime/trackerConsole";
+import { TrackQueue, type CardActivity } from "@/lib/anime/trackQueue";
 import { LIST_STATUSES, LIST_STATUS_LABELS, displayTitle } from "@/lib/anime/types";
 import type { ListEntry, UserAnimeData } from "@/lib/anime/types";
 import { evolutionTier, showsLabel } from "@/lib/landing";
 import { airingSchedulePath, searchPath } from "@/lib/routes";
-import { errorMessage, saveUserData } from "./api";
+import { logEpisodes, readListUserData, undoUserData } from "./api";
 import { EditEntryDialog } from "./EditEntryDialog";
-import { ListCard, editButtonId, incrementButtonId } from "./ListCard";
+import { ListCard, editButtonId, incrementButtonId, undoButtonId } from "./ListCard";
 import { ListGrid } from "./ListGrid";
 import {
   EMPTY_FILTERS,
@@ -48,7 +59,6 @@ import {
   WEEKDAY_LABELS,
   countByStatus,
   formatRuntime,
-  groupByStatus,
   hasActiveFilters,
   isReleaseStatus,
   isSortKey,
@@ -56,7 +66,7 @@ import {
   listViewQuery,
   matchesFilters,
   parseListView,
-  sortEntries,
+  placeHeld,
   watchedRuntime,
   yearOptions,
 } from "./listFilters";
@@ -87,62 +97,11 @@ const TAB_LABELS: Record<StatusTab, string> = { all: "All", ...LIST_STATUS_LABEL
  */
 const REFRESH_DELAY_MS = 2_000;
 
+/** A +1 press this soon after the page moved focus onto it is the second half of a double press. */
+const HANDOFF_GUARD_MS = 500;
+
 /** Four narrow cells: every label reserves two lines so the numbers line up when one wraps. */
 const STAT_LABEL = "min-h-[2.5em]";
-
-/** The banner's status readout. Real list data only. */
-function listStats(items: MyListEntry[]) {
-  let episodes = 0;
-  let scoreSum = 0;
-  let scored = 0;
-  for (const entry of items) {
-    episodes += entry.userData.episodeProgressNumber;
-    if (entry.userData.score !== null) {
-      scoreSum += entry.userData.score;
-      scored += 1;
-    }
-  }
-  return {
-    episodes,
-    meanScore: scored ? (Math.round((scoreSum / scored) * 10) / 10).toFixed(1) : null,
-    /** Literally "still airing": AniList says the show is releasing, whatever its list status. */
-    releasing: items.filter((entry) => entry.status === "RELEASING").length,
-  };
-}
-
-function FilterSelect({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <label htmlFor={id} className={LABEL_CLASS}>
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={FIELD}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 function SortSelect({
   id,
@@ -178,17 +137,6 @@ function SortSelect({
   );
 }
 
-/** "2 active" on the filters toggle. */
-function CountBadge({ count, className = "" }: { count: number; className?: string }) {
-  if (!count) return null;
-  return (
-    <span className={`items-center rounded-full bg-blue-600 px-2 text-[11px] text-white ${className}`}>
-      {count}
-      <span className="sr-only"> active</span>
-    </span>
-  );
-}
-
 /**
  * My List, in the landing's Tempest theme (skill 02 · Predator): a night-sky
  * banner with the list's stats and its evolving slime, the demo's shelves,
@@ -206,7 +154,14 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   const [sort, setSort] = useState<SortKey>(initialView.sort);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(() => new Set());
+  /** Each card's +1 engine state (saving dot, motion, Undo); absent when idle. */
+  const [activities, setActivities] = useState<ReadonlyMap<number, CardActivity>>(() => new Map());
+  /**
+   * Cards being tapped keep their place (sorted and filed by this userData)
+   * until the view changes, an Edit saves them or they're removed, so nothing
+   * moves under a thumb mid-burst and Undo stays on the card.
+   */
+  const [held, setHeld] = useState<ReadonlyMap<number, UserAnimeData>>(() => new Map());
   /**
    * The one spoken channel for tracker results (each +1 and each save): the
    * console toast mirrors it visually but is silent, so nothing is said twice.
@@ -224,8 +179,6 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
 
   /** userData written by this page, updated synchronously (state renders later). */
   const latestUserData = useRef(new Map<number, UserAnimeData>());
-  /** Entries with a "+1" request in flight (one at a time per entry). */
-  const inFlight = useRef(new Set<number>());
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Entries removed on this page (so a late server read can't bring them back). */
   const removedIds = useRef(new Set<number>());
@@ -278,112 +231,153 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
     );
   }, []);
 
-  const incrementProgress = useCallback(
-    async (entry: MyListEntry) => {
-      const animeId = entry.id;
-      if (inFlight.current.has(animeId)) return;
-      const previous = latestUserData.current.get(animeId) ?? entry.userData;
-      if (entry.episodes && previous.episodeProgressNumber >= entry.episodes) return;
-
-      const optimistic: UserAnimeData = {
-        ...previous,
-        episodeProgressNumber: previous.episodeProgressNumber + 1,
-      };
-      inFlight.current.add(animeId);
-      setPendingIds((current) => new Set(current).add(animeId));
-      setUserData(animeId, optimistic);
-      try {
-        const saved = await saveUserData(animeId, {
-          episodeProgressNumber: optimistic.episodeProgressNumber,
-        });
-        // Only apply if nothing else (the edit dialog, a removal) changed it meanwhile.
-        const completed = saved.listType === "completed" && previous.listType !== "completed";
-        const nowMs = Date.now();
-        const message = plusOneMessage({
-          prev: previous,
-          next: saved,
-          episodes: entry.episodes,
-          title: displayTitle(entry),
-          unlogged: {
-            before: unloggedAired({ ...entry, userData: previous }, nowMs),
-            after: unloggedAired({ ...entry, userData: saved }, nowMs),
-          },
-        });
-        if (latestUserData.current.get(animeId) === optimistic) {
-          // Auto-complete moves the card to the Completed section (or off this shelf).
-          // Keyboard users keep their place in the section they were working through:
-          // the next card's +1, else the section heading. Mouse and touch users are
-          // left alone (no focus jump, no scroll).
-          const buttonId = incrementButtonId(animeId);
+  /**
+   * The +1 engine (lib/anime/trackQueue.ts): taps queue while a save is in
+   * flight and go out as one relative request; one line per burst; Undo. The
+   * transport touches no refs or state, so building it in an initializer is safe.
+   */
+  const [queue] = useState(
+    () =>
+      new TrackQueue({
+        log: (id, op) => logEpisodes(id, op),
+        undo: (id, restore, expect) => undoUserData(id, restore, expect),
+        read: (id) => readListUserData(owner.id, id),
+      })
+  );
+  useEffect(
+    () =>
+      queue.connect({
+        view: (id, userData) => setUserData(id, userData),
+        // A catch-up's response carries the stored airing fields: the chip recounts from them.
+        media: (id, fields) =>
+          setItems((current) => current.map((entry) => (entry.id === id ? { ...entry, ...fields } : entry))),
+        activity: (id, next) => {
+          const update = () =>
+            setActivities((current) => {
+              if (!next && !current.has(id)) return current;
+              const copy = new Map(current);
+              if (next) copy.set(id, next);
+              else copy.delete(id);
+              return copy;
+            });
+          // Undo unmounting under keyboard focus: hand focus to the card's Edit (a second Enter there
+          // only opens the dialog; on +1 it would log an episode).
           const active = document.activeElement;
-          const keyboard =
-            active instanceof HTMLElement && active.id === buttonId && active.matches(":focus-visible");
-          const section = active?.closest("section")?.getAttribute("aria-labelledby") ?? null;
-          const item = active?.closest("li");
-          const neighbor = (item?.nextElementSibling ?? item?.previousElementSibling)?.querySelector<HTMLElement>(
-            "[id^='increment-entry-']"
-          )?.id;
-          flushSync(() => setUserData(animeId, saved));
-          if (keyboard) {
-            const moved = document.getElementById(buttonId);
-            const movedSection = moved?.closest("section")?.getAttribute("aria-labelledby");
-            // Stay in the section being worked through; when it emptied out, follow
-            // the card (All view) or return to the selected shelf, never the page top.
-            const target =
-              (movedSection === section ? moved : null) ??
-              (neighbor ? document.getElementById(neighbor) : null) ??
-              (section ? document.getElementById(section) : null) ??
-              moved ??
-              document.querySelector<HTMLElement>('[aria-label="List status"] [aria-pressed="true"]') ??
-              document.getElementById(HEADING_ID);
-            if (target && target !== document.activeElement) target.focus();
+          if (!next?.undo && active instanceof HTMLElement && active.id === undoButtonId(id)) {
+            flushSync(update);
+            document.getElementById(editButtonId(id))?.focus();
+          } else {
+            update();
           }
-          consoleToast(message, { celebrate: completed });
+        },
+        say: (_id, message, { celebrate }) => {
+          consoleToast(message, { celebrate });
           announce(message.spoken);
-        }
-        scheduleRefresh();
-      } catch (err) {
-        if (latestUserData.current.get(animeId) === optimistic) setUserData(animeId, previous);
-        toast.error(errorMessage(err));
-      } finally {
-        inFlight.current.delete(animeId);
-        setPendingIds((current) => {
-          const next = new Set(current);
-          next.delete(animeId);
-          return next;
-        });
-      }
-    },
-    [announce, scheduleRefresh, setUserData]
+        },
+        settled: () => scheduleRefresh(),
+      }),
+    [queue, setUserData, announce, scheduleRefresh]
   );
 
-  const openEditor = useCallback((entry: MyListEntry) => setEditingId(entry.id), []);
+  const hold = useCallback((animeId: number, userData: UserAnimeData) => {
+    setHeld((current) => (current.has(animeId) ? current : new Map(current).set(animeId, userData)));
+  }, []);
+
+  const release = useCallback((animeId: number) => {
+    setHeld((current) => {
+      if (!current.has(animeId)) return current;
+      const next = new Map(current);
+      next.delete(animeId);
+      return next;
+    });
+  }, []);
+
+  /** Focus handed to a card's +1 by the page (the chip vanished): a press right after it is a double press. */
+  const handoff = useRef<{ id: number; at: number } | null>(null);
+
+  const incrementProgress = useCallback(
+    (entry: MyListEntry) => {
+      const last = handoff.current;
+      if (last && last.id === entry.id && performance.now() - last.at < HANDOFF_GUARD_MS) return;
+      hold(entry.id, entry.userData);
+      queue.tap(entry, entry.userData, displayTitle(entry));
+    },
+    [hold, queue]
+  );
+
+  const catchUpProgress = useCallback(
+    (entry: MyListEntry, count: number, button: HTMLButtonElement) => {
+      const hadFocus = document.activeElement === button;
+      hold(entry.id, entry.userData);
+      flushSync(() => queue.catchUp(entry, entry.userData, count, displayTitle(entry)));
+      // The chip is gone once nothing is left to log: keep keyboard focus on the card.
+      if (hadFocus && !button.isConnected) {
+        handoff.current = { id: entry.id, at: performance.now() };
+        document.getElementById(incrementButtonId(entry.id))?.focus();
+      }
+    },
+    [hold, queue]
+  );
+
+  const undoProgress = useCallback((entry: MyListEntry) => queue.undo(entry.id), [queue]);
+  const expireUndo = useCallback((animeId: number) => queue.expireUndo(animeId), [queue]);
+
+  /** A shelf, sort or filter change: held cards go where they belong and Undos close. */
+  const changeView = useCallback(() => {
+    setHeld((current) => (current.size ? new Map() : current));
+    queue.viewChanged();
+  }, [queue]);
+
+  const openEditor = useCallback(
+    (entry: MyListEntry) => {
+      queue.closeUndo(entry.id);
+      setEditingId(entry.id);
+    },
+    [queue]
+  );
   const closeEditor = useCallback(() => setEditingId(null), []);
 
   const handleSaved = useCallback(
     (animeId: number, userData: UserAnimeData, spoken: string) => {
       setUserData(animeId, userData);
+      queue.adopt(animeId, userData);
+      release(animeId);
       announce(spoken);
       setEditingId((current) => (current === animeId ? null : current));
       scheduleRefresh();
     },
-    [announce, scheduleRefresh, setUserData]
+    [announce, queue, release, scheduleRefresh, setUserData]
   );
 
   const handleRemoved = useCallback(
     (animeId: number) => {
+      queue.forget(animeId);
       latestUserData.current.delete(animeId);
       removedIds.current.add(animeId);
       setItems((current) => current.filter((entry) => entry.id !== animeId));
+      setActivities((current) => {
+        if (!current.has(animeId)) return current;
+        const next = new Map(current);
+        next.delete(animeId);
+        return next;
+      });
+      release(animeId);
       setEditingId((current) => (current === animeId ? null : current));
       scheduleRefresh();
     },
-    [scheduleRefresh]
+    [queue, release, scheduleRefresh]
   );
 
-  const updateFilters = (patch: Partial<ListFilters>) =>
+  const updateFilters = (patch: Partial<ListFilters>) => {
+    changeView();
     setFilters((current) => ({ ...current, ...patch }));
+  };
+  const changeSort = (next: SortKey) => {
+    changeView();
+    setSort(next);
+  };
   const clearFilters = () => {
+    changeView();
     setFilters(EMPTY_FILTERS);
     // The Clear button unmounts itself; give keyboard focus a sensible home.
     document.getElementById("list-search")?.focus();
@@ -420,12 +414,10 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
     [items, renderedAt]
   );
   const runtime = useMemo(() => watchedRuntime(items), [items]);
-  const sections = useMemo(() => {
-    const sorted = sortEntries(filtered, sort, renderedAt);
-    if (tab === "all") return groupByStatus(sorted);
-    const inTab = sorted.filter((entry) => entry.userData.listType === tab);
-    return inTab.length ? [{ status: tab, entries: inTab }] : [];
-  }, [filtered, sort, tab, renderedAt]);
+  const sections = useMemo(
+    () => placeHeld(filtered, held, { sort, tab, nowMs: renderedAt }),
+    [filtered, held, sort, tab, renderedAt]
+  );
   const hasCountdowns = useMemo(() => items.some((entry) => nextAiring(entry) !== null), [items]);
 
   const filtersActive = hasActiveFilters(filters);
@@ -433,7 +425,9 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   // the deferred filters (typing stays responsive on long lists).
   const shownActive = hasActiveFilters(deferredFilters);
   const shownCount = sections.reduce((sum, section) => sum + section.entries.length, 0);
-  const scopeTotal = tab === "all" ? items.length : totals[tab];
+  // Held cards stay on the shelf they were on: count the shelf the way its cards are placed.
+  const scopeTotal =
+    tab === "all" ? items.length : items.filter((entry) => (held.get(entry.id) ?? entry.userData).listType === tab).length;
   const readout = shownActive
     ? `${shownCount} of ${showsLabel(scopeTotal)}${tab !== "all" ? ` in ${TAB_LABELS[tab]}` : ""} match.`
     : "";
@@ -448,26 +442,26 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   const editingEntry =
     editingId === null ? null : items.find((entry) => entry.id === editingId) ?? null;
   const name = owner.name?.trim() || "Anonymous";
-  const listName = isOwner ? "your list" : `${name}'s list`;
+  const listName = isOwner ? "your list" : listOf(name);
 
   const sage = !items.length
     ? isOwner
       ? { kind: "Notice" as const, text: "Your list is empty. Recommend: predation." }
-      : { kind: "Report" as const, text: `${name} hasn't stored any shows yet.` }
+      : listVisitorLine(name, stats)
     : {
         kind: "Report" as const,
         text: isOwner
           ? `Stomach contents: ${showsLabel(items.length)}. ${stats.releasing} still airing${
               withNewEpisodes ? `, ${withNewEpisodes} with new episodes` : ""
             }.`
-          : `Analysis complete: ${showsLabel(items.length)} on ${name}'s list, ${stats.releasing} still airing.`,
+          : listVisitorLine(name, stats).text,
       };
 
   const banner = (
     <PageBanner
-      eyebrow="Skill 02 · Predator"
+      eyebrow={LIST_EYEBROW}
       sage={sage}
-      title={`${name}'s list`}
+      title={listTitle(name)}
       titleId={HEADING_ID}
       sub={
         isOwner ? (
@@ -479,7 +473,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
             Anyone with the link can look; only you can edit.
           </>
         ) : (
-          `What ${name} is watching, planning and has finished. Only ${name} can edit it.`
+          listVisitorSub(name)
         )
       }
       aside={
@@ -506,10 +500,10 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
       </div>
       {items.length > 0 && (
         <StatGrid className="mt-6 max-w-2xl grid-cols-4">
-          <Stat label="Shows" value={items.length} labelClassName={STAT_LABEL} />
-          <Stat label="Watching" value={totals.watching} labelClassName={STAT_LABEL} />
+          <Stat label={LIST_STAT_LABELS.shows} value={stats.shows} labelClassName={STAT_LABEL} />
+          <Stat label={LIST_STAT_LABELS.watching} value={stats.watching} labelClassName={STAT_LABEL} />
           <Stat
-            label="Episodes seen"
+            label={LIST_STAT_LABELS.episodes}
             labelClassName={STAT_LABEL}
             value={stats.episodes}
             // From 640px: a phone keeps its 4-across row short.
@@ -531,7 +525,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
                 : ""
             }`}
           />
-          <Stat label="Mean score" value={stats.meanScore ?? "—"} labelClassName={STAT_LABEL} />
+          <Stat label={LIST_STAT_LABELS.meanScore} value={stats.meanScore ?? "—"} labelClassName={STAT_LABEL} />
         </StatGrid>
       )}
     </PageBanner>
@@ -564,14 +558,14 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
             <SagePanel
               kind="Report"
               mood="worried"
-              title="Nothing here yet"
+              title={LIST_EMPTY_TITLE}
               actions={
                 <Link href="/anime" className={GHOST_BUTTON}>
                   Browse this season
                 </Link>
               }
             >
-              {name} hasn&apos;t added any anime to their list.
+              {listEmptyBody(name)}
             </SagePanel>
           )}
         </div>
@@ -597,6 +591,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
                       aria-pressed={selected}
                       ref={selected ? selectedShelfRef : undefined}
                       onClick={(event) => {
+                        changeView();
                         setTab(value);
                         revealInRow(event.currentTarget);
                       }}
@@ -636,7 +631,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
                 className={`${FIELD} font-mono`}
               />
             </div>
-            <SortSelect id="list-sort" value={sort} onChange={setSort} className="hidden w-48 shrink-0 sm:flex" />
+            <SortSelect id="list-sort" value={sort} onChange={changeSort} className="hidden w-48 shrink-0 sm:flex" />
             <button
               type="button"
               aria-expanded={filtersOpen}
@@ -645,9 +640,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
               className={`${GHOST_BUTTON_PANEL} shrink-0 md:h-10 lg:hidden`}
             >
               {/* Below 375px an icon, so the search field keeps its width. */}
-              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-4 w-4 shrink-0 min-[375px]:hidden">
-                <path d="M3 5h14M6 10h8M9 15h2" />
-              </svg>
+              <FilterIcon className="h-4 w-4 shrink-0 min-[375px]:hidden" />
               <span className="max-[374px]:sr-only sm:hidden">Sort &amp; filter</span>
               <span className="hidden sm:inline">Filters</span>
               <CountBadge count={panelFilterCount + (sort !== "next" ? 1 : 0)} className="sm:hidden" />
@@ -663,7 +656,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
             <SortSelect
               id="list-sort-panel"
               value={sort}
-              onChange={setSort}
+              onChange={changeSort}
               className="flex min-[375px]:col-span-2 sm:hidden"
             />
             <FilterSelect
@@ -785,8 +778,11 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
                     isOwner={isOwner}
                     ownerName={isOwner ? null : name}
                     renderedAt={renderedAt}
-                    pending={pendingIds.has(entry.id)}
+                    activity={activities.get(entry.id) ?? null}
                     onIncrement={incrementProgress}
+                    onCatchUp={catchUpProgress}
+                    onUndo={undoProgress}
+                    onUndoExpire={expireUndo}
                     onEdit={openEditor}
                   />
                 ))}
@@ -809,6 +805,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
           onClose={closeEditor}
           onSaved={handleSaved}
           onRemoved={handleRemoved}
+          beforeSave={() => queue.whenIdle(editingEntry.id, { beforeBurst: true })}
           returnFocusId={editButtonId(editingEntry.id)}
           fallbackFocusId={HEADING_ID}
         />

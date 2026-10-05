@@ -31,7 +31,7 @@ for a one-card page (a static sign-in with one client island, its slime switched
    Next-episodes card, and the Magic Sense chapter's cards *are* the season page's card
    (`CARD_LAYOUT`: the same card, the same details sheet, the same eyebrow and Sage line
    constants). `SageSearch` is the /search home: the same `ConsoleFrame`, `SearchConsole`,
-   `SearchChips` and `SageDoorway`. The Quest Log keeps the compact poster card on purpose (a picker, not a demo). A page that has a demo uses the demo's markup and classes. If you change
+   `SearchChips` and `SageDoorway`. The Quest Log keeps the compact poster card on purpose (a picker, not a demo). The list share images (`components/og/`) are the My List and Airing Schedule banners at 1200×630, drawn from the same copy (`lib/anime/listCopy.ts`): change them with the banners. A page that has a demo uses the demo's markup and classes. If you change
    one side, change the other in the same PR. The owner noticed when they drifted apart.
 2. **Real data only.** Stats, counts, tiers and messages come from actual list or AniList data.
    Never show placeholder numbers or invented "activity".
@@ -57,7 +57,8 @@ for a one-card page (a static sign-in with one client island, its slime switched
    pages. Never present an artifact of how we fetch as a fact about the source (no "tied" for two
    shows that land on one rank across pages).
 9. **Messages come from one place.** Tracker lines live in `lib/anime/trackerConsole.ts` (the
-   demo and My List both call it), with a `spoken` form where "/" would read badly; the season
+   demo and My List both call it, through the same `TrackQueue` engine), with a `spoken` form where
+   "/" or "–" would read badly; the season
    page's in `lib/anime/seasonCopy.ts`. One speech channel per page: a persistent sr-only
    `role="status"`; toasts are visual only. A modal `<dialog>` makes the page (and its status)
    inert, so a dialog that changes something speaks through its own status line.
@@ -120,7 +121,7 @@ name everywhere:
 | Airing Schedule (`/mylist`) | `Skill 03 · Thought Acceleration` | done |
 | Search (`/search`) | `Skill 04 · Great Sage` | done |
 | Top Anime (`/topanime`) | `Rankings · The Octagram` (the eight Demon Lords = ranks 1–8) | done |
-| Sharing a list | `Thought Communication` | landing quest 3, share strip |
+| Sharing a list | `Thought Communication` | landing quest 3, share strip (share images keep the page's own eyebrow) |
 | Signing in | "Naming" (`Naming complete.`); tiers in `lib/landing.ts` | the sign-in page (already signed in: the Named Slime + `Naming complete.`), landing |
 | Suggestions | season pages → `Skill 01 · Magic Sense` · errors and 404 → `《Warning》` with a worried slime | errors and 404: done (CardPage pages, season and Top Anime errors); season pages: done |
 
@@ -134,7 +135,8 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 |---|---|---|
 | Class tokens | `components/theme/tokens.ts` | Focus rings (`FOCUS_RING_CONSOLE` on a #0a1528 console), containers, type, `PANEL`, `CONSOLE_PANEL`, `SAGE_CONSOLE` + `SCANLINES` (the framed console), `CARD` (lift + cover-color glow via `--card-glow`), `EMPTY_PANEL`, buttons (`*_PANEL` variants on rgb-30 surfaces; the primary has a transparent border, its edge in forced colors), `DOORWAY_LINK`, `FIELD`, `SHELF`/`SHELF_ON`/`SHELF_OFF`, `HAIRLINE`, `DAY_TINTS` |
 | `PageBanner` | `components/theme/PageBanner.tsx` | The night-sky header for app pages: eyebrow, `lead` (under the eyebrow: /search's box on top), typed-in SageLine (or `sageSlot`: your own node, e.g. a Suspense boundary that streams the line), h1 (`titleId`, focusable, `scroll-mt-20`), sub, `children` (actions, stats), `aside` (right column from 1024px). `asideClassName="hidden lg:block"` for a desktop-only aside (keeps the phone banner short). `sageKey` re-types the Sage line when a live line changes (key it on the text, never the clock) |
-| `SearchConsole`, `SearchChips` | `components/theme/SearchConsole.tsx` | The Great Sage search console: a GET `/search` form (next/form, never prefetched: a prefetch of bare /search leaks its title), `size` `large` (stacked on phones) or `compact` (one row, icon-only Analyze below 360px), `showLabel`, `autoFocus`, `onSubmit` for analytics; leaves /search's arrival token. `SearchChips`: "Try:" + the `SEARCH_EXAMPLES` chips (44px hit area, no prefetch). /search and the landing's chapter |
+| `SearchConsole`, `SearchChips` | `components/theme/SearchConsole.tsx` | The Great Sage search console: a GET `/search` form (next/form, never prefetched: a prefetch of bare /search leaks its title), `size` `large` (stacked on phones) or `compact` (one row, icon-only Analyze below 375px), `showLabel`, `autoFocus`, `onSubmit` for analytics; leaves /search's arrival token. `SearchChips`: "Try:" + the `SEARCH_EXAMPLES` chips (44px hit area, no prefetch). /search and the landing's chapter. `toggle` / `children` / `hrefFor` slots, filled only by /search's results box (`app/search/FilteredSearchConsole.tsx`: a filter toggle, a panel of FilterSelects, Apply / Clear; never auto-submits). Its strings live in `lib/anime/searchConsoleCopy.ts` (the landing imports nothing else of the search copy) |
+| `FilterSelect`, `CountBadge`, `FilterIcon` | `components/theme/FilterSelect.tsx` | My List's labelled select (`LABEL_CLASS` + `FIELD`; controlled `value`/`onChange`, or a GET form's `name`/`defaultValue`), the filters toggle's count badge and icon. My List and /search's filter panel |
 | `ConsoleFrame`, `SageDoorway` | `components/theme/{ConsoleFrame,SageDoorway}.tsx` | The framed console (glow border, scanlines, corner brackets; hook-free) and a doorway row: icon, `《kind》 line`, "**Lead:** text", one `DOORWAY_LINK`. Doorways ask, so `kind="Question"` |
 | `StatGrid`, `Stat` | `components/theme/StatGrid.tsx` | The console stat readout (My List's stats, Top Anime's glance). Optional `note` (with `noteClassName`, e.g. `hidden sm:block`). Four across on phones |
 | `TrophyIcon`, `CrownIcon`, `StarIcon` | `components/theme/icons.tsx` | Gold theme icons, aria-hidden. The crown is the Demon Lord slime's |
@@ -151,8 +153,9 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `useAnimeDetails` | `components/theme/AnimeDetailsDialog.tsx` | The 《Analyze》 details sheet behind every card: `const { openDetails, sheet } = useAnimeDetails({ Action, fallbackFocusId })`, pass `openDetails` to the cards and render `sheet` once, outside the grid. Bottom sheet on phones; speaks add/remove results itself |
 | `LinkPendingGlyph` | `components/theme/LinkPendingGlyph.tsx` | Inside a next/link `<Link>`: its arrow becomes a spinner while the navigation is pending (fixed 16px box, 100 ms delay). For links to static pages without `loading.tsx` |
 | `isBackdropEvent` | `components/theme/dialog.ts` | Backdrop-click check for a modal `<dialog>` (ignores its own scrollbar) |
-| `consoleToast` | `components/theme/consoleToast.tsx` | The Great Sage console as one toast that replaces the last (slime icon, 《Kind》 tag). Visual only: the page speaks the same line through its own sr-only `role="status"` |
-| `NewEpisodesChip` | `components/theme/NewEpisodesChip.tsx` | "2 new" (aired, not logged; Watching/Paused only). A 1 s clock leaf; nothing at 0 |
+| `consoleToast` | `components/theme/consoleToast.tsx` | The Great Sage console as one toast that replaces the last (slime icon, 《Kind》 tag). Visual only: the page speaks the same line through its own sr-only `role="status"`. A `Warning` line shows the worried slime for 5 s |
+| `NewEpisodesChip` | `components/theme/NewEpisodesChip.tsx` | "2 new" (aired, not logged; Watching/Paused only). A 1 s clock leaf; nothing at 0. `onCatchUp` (the owner's card, the demo) makes it the "Log N new" button: the exact count from the shown userData, 20px tall with a 44px hit area on phones, 32px from 768px (`CATCH_UP_CHIP`, `z-[1]` over the bar); visitors and schedule rows keep the span |
+| `UndoButton` | `components/theme/UndoButton.tsx` | A tracker card's timed "↶ Undo +N", in place of the date · score line (Edit's height, so nothing moves). 10 s drain (`UNDO_MS`), paused while a mouse/pen is over the `data-track-card`, while focus is anywhere in that card, or while the tab is hidden; restarts from full. Labels from `trackerConsole#undoLabel` / `undoTitle`. Driven by `TrackQueue`'s `CardActivity.undo` (`lib/anime/trackQueue.ts`, also the demo's engine) |
 | `NextEpisodeLine` | `components/theme/NextEpisodeLine.tsx` | A tracker card's live countdown, or the release status ("Finished airing · 12 eps"). ListCard and TrackerDemo both use it |
 | `useMinuteNow` | `components/utils/useMinuteNow.ts` | A per-minute clock for "today"-style labels; keep `useNow()` (1 s) for the countdown leaves only, or whole panels re-render every second |
 | `LiveTimersToggle` | `components/theme/LiveTimersToggle.tsx` | Required next to per-second countdowns. `onToggle` for a page's own analytics (only from a client component). `short` shows "Pause timers" below 420px, for a tight controls row (the season page) |
@@ -164,6 +167,7 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `ListToggle` | `components/animev3/ListToggle.tsx` | The add/remove control. Never re-implement list writes |
 | Toasts | `app/providers.tsx` | Already themed (console navy, sage border); write messages with `sageText` |
 | Site chrome | `components/common/{NavBar,AnimeBar,NavSearch,LogInBox,SiteFooter}.tsx`; tokens `NAV_*`, `MENU_*`, `FOOTER_*` | Already themed on every page; don't restyle it per page. The nav is the top edge of the night sky and ends in `#050915`, so a `PageBanner` (with its `-mt-2`) continues it. Its box is fixed (`h-16` + `mb-2`), it can't widen the page (a size container; the link strip scrolls when it can't fit), and nothing in it may animate on its own (it is sticky over every scroll). Its focusables use `FOCUS_RING_NAV` (an inset outline: the strip clips, and forced colors paints the outline). "Skip to content" (`SkipLink`) is its first Tab stop, and `FocusNudge` keeps keyboard focus out from under it: a page needs exactly one `<main>` and nothing else. The footer is the forest floor (`Treeline`) with the `《Report》` credits and stays `body > footer` |
+| Share images | `components/og/` | next/og art for link previews: `OgSky` (`ogStars()`/`ogAurora()`/`ogTreeline()` called as functions), `parts` (`OgEyebrow`, `OgSageBox`, `OgTitle`, `OgSub`, `OgFooter`), `ListShareImage`, `ScheduleShareImage`; fonts in `assets/og`; view models in `components/og/shareCard.ts`. Satori rules: CLAUDE.md §9.24. No clock, no covers, ≤ 300 KB |
 
 The landing-only pieces stay in `components/home` and are not for other pages: `Reveal`
 (scroll reveals), `LandingProvider`, `SessionCta`, `trackLanding` analytics.

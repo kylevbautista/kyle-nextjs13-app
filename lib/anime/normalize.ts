@@ -213,7 +213,8 @@ export const calendarDayMs = (ms: number) => {
 
 const MIN_DATE_MS = Date.UTC(1900, 0, 1);
 const MAX_DATE_MS = Date.UTC(2200, 0, 1);
-const MAX_EPISODES = 100_000;
+/** The highest progress normalizeUserData accepts. */
+export const MAX_EPISODES = 100_000;
 
 export type UserDataResult =
   | { ok: true; value: UserAnimeData }

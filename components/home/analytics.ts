@@ -43,7 +43,7 @@ export interface LandingEvents {
   /** A successful add through LandingAddButton. */
   list_add: { location: LandingLocation; status: ListStatus };
   /** Tracker demo, once per action per page view. */
-  demo_action: { action: "plus_one" | "complete" | "status" | "score" | "reset" };
+  demo_action: { action: "plus_one" | "complete" | "status" | "score" | "reset" | "catch_up" | "undo" };
   search_submit: { location: "sage_search" };
   search_chip: { chip: string };
   /** Once per page view. */

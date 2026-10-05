@@ -1,18 +1,22 @@
 import { useSyncExternalStore } from "react";
-import { normalizePage, normalizeQuery, SEARCH_TITLE_ID } from "@/lib/search";
+import { NO_FILTERS, SEARCH_TITLE_ID, searchKey, type SearchFilters } from "@/lib/search";
 
 /**
  * /search's arrival focus and its one spoken channel.
  *
  * Focus: Next reuses the /search page across ?q / ?page navigations, but the
- * page keys its results (and the search box) by query and page, so a new
- * search remounts them: the control that started it unmounts and focus falls
- * to <body>. Every control that starts a search leaves a one-shot token here
- * (a form submit; a link's onNavigate, so never a modified click), and the
+ * page keys its results (and the search box) by the search, so a new search
+ * remounts them: the control that started it unmounts and focus falls to
+ * <body>. Every control that starts a search leaves a one-shot token here (a
+ * form submit; a link's onNavigate, so never a modified click), and the
  * arriving results' SearchArrival takes it: the h1 after a new search, the
  * Results h2 after paging. Like components/animev3/season/seasonFocus.ts, but
- * matched on (query, page), and Back/Forward (popstate) drops it, so only the
- * navigation that left it can take it.
+ * matched on the search's canonical key (lib/search.ts#searchKey: query,
+ * filters, page), and Back/Forward (popstate) drops it, so only the
+ * navigation that left it can take it. The search on screen is the key the
+ * server rendered (recorded by the pending state and the arrival), never
+ * re-parsed from the URL: the server bounds the year by its clock, and the
+ * filter tables stay out of this module (the landing imports it).
  *
  * Status: app/search/layout.tsx renders the page's one sr-only role="status"
  * (SearchStatus). It persists across searches, so text written into it is
@@ -27,15 +31,17 @@ export type SearchFocusTarget = "title" | "list";
  */
 const TOKEN_TTL_MS = 30_000;
 
-let token: { target: SearchFocusTarget; query: string; page: number; at: number } | null = null;
+/** The /search home's key: never a search, so never a token. */
+const HOME_KEY = searchKey("", 1);
 
-const keyOf = (query: string, page: number) => `${page}\n${query}`;
+let token: { target: SearchFocusTarget; key: string; at: number } | null = null;
+/** The canonical key (the server's) of the search on screen; set by holdSearchFocus and arriveAtSearch. */
+let shown: string | null = null;
 
-/** The search /search shows now (from the URL), or null off /search. */
+/** The search /search shows now, or null off /search. */
 function shownSearch(): string | null {
   if (typeof window === "undefined" || window.location.pathname !== "/search") return null;
-  const params = new URLSearchParams(window.location.search);
-  return keyOf(normalizeQuery(params.get("q")), normalizePage(params.get("page")));
+  return shown;
 }
 
 // Back/Forward never takes a token (only the navigation that left it may).
@@ -46,45 +52,60 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * Call from an event handler with the normalized query of the search being
- * started. Returns false, and leaves no token, when that search is already
- * on screen: the URL doesn't change, so nothing arrives to take it (the
- * caller repeats the arrival instead: repeatSearchArrival).
+ * Call from an event handler with the canonical key of the search being
+ * started (a searchKey: the URL it opens). Returns false, and leaves no token,
+ * when that search is already on screen: the URL doesn't change, so nothing
+ * arrives to take it (the caller repeats the arrival instead:
+ * repeatSearchArrival).
  */
-export function rememberSearchFocus(target: SearchFocusTarget, query: string, page: number): boolean {
-  if (query && shownSearch() === keyOf(query, page)) {
+export function rememberSearchKey(target: SearchFocusTarget, key: string): boolean {
+  if (key !== HOME_KEY && shownSearch() === key) {
+    // Still loading (shown by the pending state, not arrived yet): keep a token for the arrival.
+    if (lastArrival?.key !== key) {
+      token = { target, key, at: Date.now() };
+      return true;
+    }
     token = null;
     return false;
   }
-  token = query ? { target, query, page, at: Date.now() } : null;
+  token = key !== HOME_KEY ? { target, key, at: Date.now() } : null;
   return true;
 }
 
-const fresh = (query: string, page: number) =>
-  token !== null && Date.now() - token.at <= TOKEN_TTL_MS && token.query === query && token.page === page;
+/** rememberSearchKey for a normalized query, page and filters (no filters by default: NavSearch, chips, Track). */
+export const rememberSearchFocus = (
+  target: SearchFocusTarget,
+  query: string,
+  page: number,
+  filters: SearchFilters = NO_FILTERS
+) => rememberSearchKey(target, searchKey(query, page, filters));
+
+const fresh = (key: string) => token !== null && Date.now() - token.at <= TOKEN_TTL_MS && token.key === key;
 
 /**
  * The pending state: is this a search the reader just started? Doesn't
  * consume the token, but restarts its clock (the wait for AniList starts now).
+ * Also records `key` as the search on screen.
  */
-export function holdSearchFocus(query: string, page: number): boolean {
-  if (!fresh(query, page) || !token) return false;
+export function holdSearchFocus(key: string): boolean {
+  shown = key;
+  if (!fresh(key) || !token) return false;
   token = { ...token, at: Date.now() };
   return true;
 }
 
 /** The arriving page: the target to focus, once. Every call clears the token. */
-export function takeSearchFocus(query: string, page: number): SearchFocusTarget | null {
+export function takeSearchFocus(key: string): SearchFocusTarget | null {
   const current = token;
   token = null;
   if (!current || Date.now() - current.at > TOKEN_TTL_MS) return null;
-  return current.query === query && current.page === page ? current.target : null;
+  return current.key === key ? current.target : null;
 }
 
 type Status = { text: string; count: number };
 const EMPTY: Status = { text: "", count: 0 };
 let status: Status = EMPTY;
-/** The page (query + page) whose outcome the status line holds; null while it holds anything else. */
+/** The search (its key) whose outcome the status line holds; null while it holds anything else. */
 let spokenFor: string | null = null;
 /** The last results page that arrived, and what its outcome says (repeatSearchArrival). */
 let lastArrival: { key: string; outcome: string } | null = null;
@@ -117,16 +138,16 @@ export function clearSearchStatus(): void {
 }
 
 /**
- * A results page arrived (SearchArrival's effect). With a token for it: the
- * focus target, and its outcome is spoken. Without one (a full load, Back /
- * Forward): null, and the status line empties, so it never holds another
- * page's count. Re-running for the same page (React StrictMode's effect
- * replay) keeps what was said.
+ * A results page arrived (SearchArrival's effect), with the server's key for
+ * it. With a token for it: the focus target, and its outcome is spoken.
+ * Without one (a full load, Back / Forward): null, and the status line
+ * empties, so it never holds another page's count. Re-running for the same
+ * page (React StrictMode's effect replay) keeps what was said.
  */
-export function arriveAtSearch(query: string, page: number, outcome: string): SearchFocusTarget | null {
-  const key = keyOf(query, page);
-  lastArrival = query ? { key, outcome } : null;
-  const target = takeSearchFocus(query, page);
+export function arriveAtSearch(key: string, outcome: string): SearchFocusTarget | null {
+  shown = key;
+  lastArrival = key !== HOME_KEY ? { key, outcome } : null;
+  const target = takeSearchFocus(key);
   if (target) {
     announceSearch(outcome);
     spokenFor = key;

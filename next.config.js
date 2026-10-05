@@ -20,6 +20,12 @@ const nextConfig = {
       { protocol: "https", hostname: "cdn.myanimelist.net" },
     ],
   },
+  // The share-image routes readFile() their fonts from assets/og (components/og/fonts.ts, literal paths): this
+  // include is the backup that ships them in the trace even if the tracer misses a readFile.
+  outputFileTracingIncludes: {
+    "/user/og/**": ["./assets/og/*.ttf"],
+    "/mylist/og/**": ["./assets/og/*.ttf"],
+  },
   // NOTE: /anime → current season is resolved per request in proxy.ts.
   // Don't reintroduce it as a redirects() rule: those are evaluated at build time.
 };

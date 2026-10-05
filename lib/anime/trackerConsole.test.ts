@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { editMessage, plusOneMessage, PROMPT_MESSAGE, scoreMessage, statusMessage } from "./trackerConsole";
+import {
+  burstMessage,
+  catchUpLabel,
+  editMessage,
+  failedMessage,
+  noChangeMessage,
+  plusOneMessage,
+  PROMPT_MESSAGE,
+  scoreMessage,
+  staleMessage,
+  statusMessage,
+  undoLabel,
+  undoMessage,
+  undoTitle,
+} from "./trackerConsole";
+import { LIST_STATUSES } from "./types";
 import type { UserAnimeData } from "./types";
 
 const day = Date.UTC(2026, 3, 3);
@@ -136,5 +151,284 @@ describe("tracker console lines", () => {
         episodes: 24,
       }).text
     ).toBe("Episode 24 logged. That's every episode.");
+  });
+});
+
+describe("burst lines", () => {
+  const p = (episodeProgressNumber: number, overrides: Partial<UserAnimeData> = {}) =>
+    data({ episodeProgressNumber, ...overrides });
+
+  it("names a range of episodes, spoken without the dash", () => {
+    const two = plusOneMessage({ prev: p(11), next: p(13), episodes: 24, title: "Frieren" });
+    expect(two.text).toBe("Episodes 12–13 logged for Frieren. 11 to go.");
+    expect(two.spoken).toBe("Episodes 12 and 13 logged for Frieren. 11 to go.");
+    const three = plusOneMessage({ prev: p(11), next: p(14), episodes: 24, title: "Frieren" });
+    expect(three.spoken).toBe("Episodes 12 to 14 logged for Frieren. 10 to go.");
+    expect(plusOneMessage({ prev: p(1353), next: p(1355), episodes: null, title: "Shin Chan" }).text).toBe(
+      "Episodes 1354–1355 logged for Shin Chan."
+    );
+    expect(
+      plusOneMessage({ prev: p(0, { listType: "planning" }), next: p(2), episodes: 24, title: "Red River" }).text
+    ).toBe("Episodes 1–2 logged. Red River moved to Watching.");
+    // A range that reaches the finale is the finale line.
+    expect(
+      plusOneMessage({ prev: p(20), next: p(24, { listType: "completed", finishDate: day }), episodes: 24, title: "Frieren" }).text
+    ).toBe("Final episode reached. Frieren moved to Completed. Finish date set to today.");
+  });
+
+  it("picks the finale, then stale, then nothing logged, then the range", () => {
+    const done = p(24, { listType: "completed", finishDate: day + 1 });
+    expect(burstMessage({ first: p(22), last: done, stale: true, catchUp: false, episodes: 24 }).text).toBe(
+      "Final episode reached. Moved to Completed. Finish date set to today."
+    );
+    expect(burstMessage({ first: p(12), last: p(13), stale: true, catchUp: false, episodes: 24, title: "Frieren" }).text).toBe(
+      "Episode 13 logged for Frieren. It had changed since this page last checked: now Ep 13 / 24."
+    );
+    expect(burstMessage({ first: p(7), last: p(7), stale: false, catchUp: true, episodes: 12, title: "X" }).text).toBe(
+      "Nothing logged: no new episode has aired yet. X is at Ep 7 / 12."
+    );
+    expect(burstMessage({ first: p(7), last: p(7), stale: false, catchUp: false, episodes: 12, title: "X" }).text).toBe(
+      "Nothing logged: X is already at Ep 7 / 12."
+    );
+    expect(burstMessage({ first: p(12), last: p(12), stale: false, catchUp: true, episodes: 12, title: "X" }).text).toBe(
+      "Nothing logged: X is already at Ep 12 / 12."
+    );
+    expect(burstMessage({ first: p(5), last: p(7), stale: false, catchUp: false, episodes: 12, title: "X" }).text).toBe(
+      "Episodes 6–7 logged for X. 5 to go."
+    );
+    expect(
+      burstMessage({
+        first: p(1212),
+        last: p(1215),
+        stale: false,
+        catchUp: true,
+        episodes: null,
+        title: "Detective Conan",
+        unlogged: { before: 3, after: 0 },
+      }).spoken
+    ).toBe("Episodes 1213 to 1215 logged for Detective Conan. Caught up.");
+  });
+
+  it("says a stale save plainly", () => {
+    expect(staleMessage({ first: p(1355), last: p(1356), episodes: null, title: "Shin Chan" }).text).toBe(
+      "Episode 1356 logged for Shin Chan. It had changed since this page last checked: now Ep 1356."
+    );
+    const two = staleMessage({ first: p(11), last: p(13), episodes: 24, title: "Frieren" });
+    expect(two.text).toBe("Episodes 12–13 logged for Frieren. It had changed since this page last checked: now Ep 13 / 24.");
+    expect(two.spoken).toBe(
+      "Episodes 12 and 13 logged for Frieren. It had changed since this page last checked: now episode 13 of 24."
+    );
+    expect(staleMessage({ first: p(10), last: p(13), episodes: 24 }).spoken).toBe(
+      "Episodes 11 to 13 logged. It had changed since this page last checked: now episode 13 of 24."
+    );
+    expect(staleMessage({ first: p(24), last: p(24), episodes: 24, title: "Frieren" }).text).toBe(
+      "Nothing logged for Frieren. It had changed since this page last checked: now Ep 24 / 24."
+    );
+  });
+
+  it("says what nothing-logged means", () => {
+    expect(noChangeMessage({ current: p(1214), episodes: null, title: "Detective Conan", notAired: true }).spoken).toBe(
+      "Nothing logged: no new episode has aired yet. Detective Conan is at episode 1214."
+    );
+    expect(noChangeMessage({ current: p(24), episodes: 24, notAired: false }).text).toBe(
+      "Nothing logged: it is already at Ep 24 / 24."
+    );
+  });
+});
+
+describe("undo lines", () => {
+  const watching = (episodeProgressNumber: number, overrides: Partial<UserAnimeData> = {}) =>
+    data({ episodeProgressNumber, ...overrides });
+  const completed = data({ listType: "completed", episodeProgressNumber: 24, finishDate: day + 1 });
+  const planned = data({ listType: "planning", episodeProgressNumber: 0, startDate: null });
+
+  it("says where the show is back to", () => {
+    const same = undoMessage({ from: watching(15), restored: watching(13), episodes: 24, title: "Frieren" });
+    expect(same.text).toBe("Undone. Frieren is back to Ep 13 / 24.");
+    expect(same.spoken).toBe("Undone. Frieren is back to episode 13 of 24.");
+    expect(undoMessage({ from: completed, restored: watching(23), episodes: 24, title: "Frieren" }).text).toBe(
+      "Undone. Frieren is back in Watching at Ep 23 / 24. Finish date cleared."
+    );
+    expect(undoMessage({ from: watching(1), restored: planned, episodes: 24, title: "Red River" }).text).toBe(
+      "Undone. Red River is back in Plan to Watch, no episodes logged. Start date cleared."
+    );
+    expect(
+      undoMessage({
+        from: data({ listType: "completed", episodeProgressNumber: 1, finishDate: day }),
+        restored: planned,
+        episodes: 1,
+      }).text
+    ).toBe("Undone. Back in Plan to Watch, no episodes logged. Dates cleared.");
+    expect(undoMessage({ from: completed, restored: watching(22), episodes: 24 }).text).toBe(
+      "Undone. Back in Watching at Ep 22 / 24. Finish date cleared."
+    );
+    expect(undoMessage({ from: watching(24), restored: watching(22), episodes: 24 }).spoken).toBe(
+      "Undone. Back to episode 22 of 24."
+    );
+    expect(undoMessage({ from: watching(1355), restored: watching(1353), episodes: null, title: "Shin Chan" }).text).toBe(
+      "Undone. Shin Chan is back to Ep 1353."
+    );
+  });
+
+  it("labels Undo with what it reverts", () => {
+    expect(undoLabel({ n: 2, restore: watching(11), current: watching(13), episodes: 24, title: "Frieren" })).toBe(
+      "Undo +2: put Frieren back to 11 of 24 episodes"
+    );
+    expect(undoLabel({ n: 1, restore: watching(23), current: completed, episodes: 24, title: "Ascendance of a Bookworm" })).toBe(
+      "Undo +1: put Ascendance of a Bookworm back in Watching at 23 of 24 episodes"
+    );
+    expect(undoLabel({ n: 1, restore: planned, current: watching(1), episodes: 24, title: "Red River" })).toBe(
+      "Undo +1: put Red River back in Plan to Watch, no episodes logged"
+    );
+    expect(undoLabel({ n: 2, restore: watching(1353), current: watching(1355), episodes: null, title: "Shin Chan" })).toBe(
+      "Undo +2: put Shin Chan back to episode 1353"
+    );
+    expect(undoLabel({ n: 2, restore: watching(22), current: completed, episodes: 24, demo: true })).toBe(
+      "Undo +2: back in Watching at 22 of 24 episodes (demo)"
+    );
+    expect(undoTitle({ restore: watching(11), current: watching(13), episodes: 24 })).toBe("Back to Ep 11 / 24");
+    expect(undoTitle({ restore: watching(23), current: completed, episodes: 24 })).toBe("Back to Ep 23 / 24, Watching");
+  });
+
+  it("labels the catch-up chip with the exact episodes", () => {
+    expect(catchUpLabel({ count: 1, from: 1213, title: "Detective Conan" })).toBe(
+      "Log 1 new: mark episode 1213 of Detective Conan as watched"
+    );
+    expect(catchUpLabel({ count: 2, from: 1354, title: "Shin Chan" })).toBe(
+      "Log 2 new: mark episodes 1354 and 1355 of Shin Chan as watched"
+    );
+    expect(catchUpLabel({ count: 3, from: 1213, title: "X" })).toBe("Log 3 new: mark episodes 1213 to 1215 of X as watched");
+    expect(catchUpLabel({ count: 2, from: 23, title: "X", demo: true })).toBe(
+      "Log 2 new: mark episodes 23 and 24 as watched (demo)"
+    );
+  });
+});
+
+describe("failure lines", () => {
+  const at = data({ episodeProgressNumber: 11 });
+  const nine = data({ episodeProgressNumber: 9 });
+  const five = data({ episodeProgressNumber: 5 });
+
+  it("says what failed and where the show is", () => {
+    expect(
+      failedMessage({ action: "save", outcome: "rejected", reason: "signedOut", current: at, episodes: 24, title: "Frieren" })
+    ).toEqual({
+      kind: "Warning",
+      text: "Couldn't save: you're signed out. Frieren is at Ep 11 / 24.",
+      spoken: "Couldn't save: you're signed out. Frieren is at episode 11 of 24.",
+    });
+    expect(
+      failedMessage({ action: "undo", outcome: "rejected", reason: "changed", current: data({ episodeProgressNumber: 14 }), episodes: 24, title: "Frieren" }).text
+    ).toBe("Couldn't undo: it had changed since this page last checked. Frieren is at Ep 14 / 24.");
+    expect(failedMessage({ action: "save", outcome: "rejected", reason: "invalid", current: at, episodes: 24 }).text).toBe(
+      "Couldn't save: the server refused it. It is at Ep 11 / 24."
+    );
+    for (const action of ["save", "undo"] as const) {
+      expect(failedMessage({ action, outcome: "rejected", reason: "notOnList", current: null, episodes: 24, title: "Frieren" }).text).toBe(
+        `Couldn't ${action}: Frieren isn't on your list anymore. Reload to update it.`
+      );
+    }
+  });
+
+  it("says when the outcome couldn't be known", () => {
+    expect(failedMessage({ action: "save", outcome: "checked", current: nine, episodes: 24, title: "Frieren" }).spoken).toBe(
+      "Couldn't confirm the save. Checked again: Frieren is at episode 9 of 24."
+    );
+    expect(failedMessage({ action: "undo", outcome: "checked", current: nine, episodes: 24, title: "Frieren" }).text).toBe(
+      "Couldn't confirm the undo. Checked again: Frieren is at Ep 9 / 24."
+    );
+    expect(
+      failedMessage({ action: "save", outcome: "checked", undoDropped: true, current: nine, episodes: 24, title: "Frieren" }).text
+    ).toBe("Couldn't confirm the save, so Undo wasn't sent. Checked again: Frieren is at Ep 9 / 24.");
+    expect(failedMessage({ action: "save", outcome: "unchecked", current: five, episodes: 24, title: "Frieren" }).text).toBe(
+      "Couldn't confirm the save. Frieren was last confirmed at Ep 5 / 24. Reload to check."
+    );
+    expect(
+      failedMessage({ action: "save", outcome: "unchecked", undoDropped: true, current: five, episodes: 24, title: "Frieren" }).spoken
+    ).toBe("Couldn't confirm the save, so Undo wasn't sent. Frieren was last confirmed at episode 5 of 24. Reload to check.");
+  });
+});
+
+describe("truth sweep: burst lines", () => {
+  it("says exactly what each burst did, in at most 112 characters", () => {
+    const TITLE = "Frierenfrier"; // 12 characters
+    for (const total of [null, 12, 24]) {
+      for (let from = 0; from <= 30; from += 3) {
+        for (let to = from; to <= 30; to += 2) {
+          if (total !== null && to > total) continue;
+          for (const status of LIST_STATUSES) {
+            const first = data({ listType: status, episodeProgressNumber: from });
+            // What the rules allow: +1s move Plan to Watch / Paused to Watching; the finale completes.
+            const moved = to > from && (status === "planning" || status === "paused") ? "watching" : status;
+            const lastStatus =
+              total !== null && to === total && from < total && (moved === "watching" || moved === "planning")
+                ? "completed"
+                : moved;
+            const last = data({
+              listType: lastStatus,
+              episodeProgressNumber: to,
+              finishDate: lastStatus === "completed" ? day : null,
+            });
+            for (const stale of [false, true]) {
+              for (const catchUp of [false, true]) {
+                for (const unlogged of [undefined, { before: 2, after: 0 }, { before: 2, after: 1 }]) {
+                  const m = burstMessage({ first, last, stale, catchUp, episodes: total, title: TITLE, unlogged });
+                  const label = `${status} ${from}→${to}/${total} stale=${stale} catchUp=${catchUp}`;
+                  if (lastStatus === "completed" && status !== "completed") {
+                    expect(m.text, label).toMatch(/^Final episode reached\./);
+                  } else if (to > from) {
+                    const expectedRange = to - from === 1 ? `Episode ${to}` : `Episodes ${from + 1}–${to}`;
+                    expect(m.text.startsWith(expectedRange), label).toBe(true);
+                    expect(m.text.includes("It had changed since"), label).toBe(stale);
+                    const caught = !stale && unlogged?.before === 2 && unlogged.after === 0 && moved === status && to - from === 2;
+                    expect(m.text.includes("Caught up"), label).toBe(caught);
+                    if (!stale && !caught && moved === status && total !== null && to < total) {
+                      expect(m.text, label).toContain(` ${total - to} to go.`);
+                    }
+                  } else {
+                    expect(m.text.includes("no new episode has aired"), label).toBe(
+                      !stale && catchUp && (total === null || to < total)
+                    );
+                    expect(m.text.includes("It had changed since"), label).toBe(stale);
+                  }
+                  expect(m.text.length, label).toBeLessThanOrEqual(112);
+                  expect(m.spoken, label).not.toMatch(/[/–]/);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+});
+
+describe("review fixes", () => {
+  const p = (episodeProgressNumber: number, overrides: Partial<UserAnimeData> = {}) =>
+    data({ episodeProgressNumber, ...overrides });
+
+  it("says caught up only when the burst ends on the last aired episode", () => {
+    // 13/26 with EP 14 aired: three taps log 14–16, two of them not aired yet.
+    expect(plusOneMessage({ prev: p(13), next: p(16), episodes: 26, title: "Knight", unlogged: { before: 1, after: 0 } }).text).toBe(
+      "Episodes 14–16 logged for Knight. 10 to go."
+    );
+    expect(plusOneMessage({ prev: p(13), next: p(14), episodes: 26, title: "Knight", unlogged: { before: 1, after: 0 } }).text).toBe(
+      "Episode 14 logged for Knight. Caught up."
+    );
+  });
+
+  it("says when an Undo went back to another writer's value", () => {
+    const line = undoMessage({ from: p(21), restored: p(20), episodes: 26, title: "Knight", stale: true });
+    expect(line.text).toBe("Undone, but it had changed since this page last checked: Knight is back to Ep 20 / 26.");
+    expect(line.spoken).toBe("Undone, but it had changed since this page last checked: Knight is back to episode 20 of 26.");
+    expect(undoMessage({ from: p(24, { listType: "completed", finishDate: day }), restored: p(23), episodes: 24, stale: true }).text).toBe(
+      "Undone, but it had changed since this page last checked: back in Watching at Ep 23 / 24. Finish date cleared."
+    );
+  });
+
+  it("says a dropped Undo after a sign-out", () => {
+    expect(
+      failedMessage({ action: "save", outcome: "rejected", reason: "signedOut", undoDropped: true, current: p(14), episodes: 26, title: "Knight" }).text
+    ).toBe("Couldn't save: you're signed out, so Undo wasn't sent. Knight is at Ep 14 / 26.");
   });
 });

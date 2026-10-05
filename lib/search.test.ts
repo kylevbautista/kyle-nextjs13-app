@@ -2,12 +2,27 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_PAGE,
   MAX_QUERY_LENGTH,
+  NO_FILTERS,
+  filtersQuery,
   normalizePage,
   normalizeQuery,
   resultWindow,
+  searchKey,
   searchResultsPath,
   searchView,
+  type SearchFilters,
 } from "./search";
+import {
+  SEARCH_FORMATS,
+  SEARCH_GENRES,
+  normalizeFilters,
+  parseFiltersQuery,
+  readFilterParams,
+  searchVariables,
+  searchYearOptions,
+} from "./searchFilters";
+import { RELEASE_STATUSES } from "./anime/releaseStatus";
+import { SEASONS } from "./season";
 
 describe("normalizeQuery", () => {
   it("returns an empty string when q is missing or blank", () => {
@@ -104,5 +119,143 @@ describe("searchView", () => {
       rateLimited: true,
       retryAfterSeconds: 30,
     });
+  });
+});
+
+const MAX_YEAR = 2027;
+const FULL: SearchFilters = { format: "tv", genre: "slice-of-life", year: 2026, season: "fall", release: "RELEASING" };
+
+describe("normalizeFilters", () => {
+  it("keeps every allowed value exactly", () => {
+    for (const { slug } of SEARCH_FORMATS) expect(normalizeFilters({ format: slug }, MAX_YEAR).format).toBe(slug);
+    for (const { slug } of SEARCH_GENRES) expect(normalizeFilters({ genre: slug }, MAX_YEAR).genre).toBe(slug);
+    for (const season of SEASONS) expect(normalizeFilters({ season }, MAX_YEAR).season).toBe(season);
+    for (const release of RELEASE_STATUSES) expect(normalizeFilters({ release }, MAX_YEAR).release).toBe(release);
+    for (const year of [1940, 2026, 2027]) expect(normalizeFilters({ year: String(year) }, MAX_YEAR).year).toBe(year);
+    expect(SEARCH_GENRES).toHaveLength(18);
+  });
+
+  it("drops anything else (exact values only, never sent to AniList)", () => {
+    const bad = ["TV", " tv", "tv ", "TV_SHORT", "tv_short", "Slice of Life", "slice_of_life", "SLICE-OF-LIFE", "Sci-Fi",
+      "manga", "hentai", "Hentai", "FALL", "Fall", "autumn", "airing", "releasing", "paused", "canceled", "",
+      "1939", "2028", " 2026", "20x6", "02026", "2026.0", "99999"];
+    for (const value of bad) {
+      expect(normalizeFilters({ format: value, genre: value, year: value, season: value, release: value }, MAX_YEAR)).toEqual(NO_FILTERS);
+    }
+  });
+
+  it("takes the first value only, and ignores unknown keys", () => {
+    expect(normalizeFilters({ format: ["movie", "tv"] }, MAX_YEAR).format).toBe("movie");
+    expect(normalizeFilters({ format: ["", "tv"] }, MAX_YEAR).format).toBeNull();
+    expect(normalizeFilters({ sort: "x", utm_source: "y" } as never, MAX_YEAR)).toEqual(NO_FILTERS);
+  });
+
+  it("reads URLSearchParams and FormData", () => {
+    const source = readFilterParams(new URLSearchParams("format=tv&format=movie&genre="));
+    expect(source).toMatchObject({ format: "tv", genre: "" });
+    expect(normalizeFilters(source, MAX_YEAR)).toEqual({ ...NO_FILTERS, format: "tv" });
+    const data = new FormData();
+    data.append("format", new Blob(["tv"]), "file.txt");
+    expect(readFilterParams(data).format).toBeNull();
+  });
+});
+
+describe("filter URLs and keys", () => {
+  it("builds canonical URLs", () => {
+    expect(searchResultsPath("frieren", 2, FULL)).toBe(
+      "/search?q=frieren&format=tv&genre=slice-of-life&year=2026&season=fall&release=RELEASING&page=2"
+    );
+    expect(searchResultsPath("frieren", 1, { ...NO_FILTERS, year: 1998 })).toBe("/search?q=frieren&year=1998");
+    expect(searchResultsPath("", 3, { ...NO_FILTERS, format: "tv" })).toBe("/search");
+    expect(searchResultsPath("frieren", 2)).toBe("/search?q=frieren&page=2");
+    expect(filtersQuery(NO_FILTERS)).toBe("");
+  });
+
+  it("round-trips through the query string and the URL", () => {
+    const sets: SearchFilters[] = [
+      NO_FILTERS,
+      FULL,
+      { ...NO_FILTERS, format: "music", year: 2026 },
+      { ...NO_FILTERS, season: "winter" },
+      { ...NO_FILTERS, genre: "mahou-shoujo", release: "NOT_YET_RELEASED" },
+      { ...NO_FILTERS, year: 1940 },
+      { format: "tv-short", genre: "sci-fi", year: 2027, season: "summer", release: "HIATUS" },
+    ];
+    for (const filters of sets) {
+      expect(parseFiltersQuery(filtersQuery(filters), MAX_YEAR)).toEqual(filters);
+      const url = new URL(searchResultsPath("x", 1, filters), "http://h");
+      expect(normalizeFilters(readFilterParams(url.searchParams), MAX_YEAR)).toEqual(filters);
+    }
+  });
+
+  it("gives every search its own key", () => {
+    expect(searchKey("frieren", 1, { ...NO_FILTERS, format: "tv" })).not.toBe(searchKey("frieren", 1, { ...NO_FILTERS, format: "movie" }));
+    expect(searchKey("frieren", 1, normalizeFilters({ format: ["tv", "movie"] }, MAX_YEAR))).toBe(
+      searchKey("frieren", 1, normalizeFilters({ format: "tv" }, MAX_YEAR))
+    );
+    expect(searchKey("frieren", 1, normalizeFilters({ format: "TV" }, MAX_YEAR))).toBe(searchKey("frieren", 1));
+  });
+
+  it("lists the years newest first", () => {
+    const years = searchYearOptions(2027);
+    expect(years[0]).toBe(2027);
+    expect(years.at(-1)).toBe(1940);
+    expect(years).toHaveLength(88);
+  });
+});
+
+describe("searchVariables", () => {
+  it("sends only what is set", () => {
+    expect(Object.entries(searchVariables("frieren", 2, NO_FILTERS))).toEqual([
+      ["search", "frieren"],
+      ["page", 2],
+      ["perPage", 30],
+    ]);
+  });
+
+  it("maps a full set to AniList's spelling", () => {
+    expect(searchVariables("x", 1, { format: "tv-short", genre: "slice-of-life", year: 2027, season: "fall", release: "NOT_YET_RELEASED" })).toEqual({
+      search: "x",
+      page: 1,
+      perPage: 30,
+      format: "TV_SHORT",
+      genre: "Slice of Life",
+      season: "FALL",
+      seasonYear: 2027,
+      status: "NOT_YET_RELEASED",
+    });
+  });
+
+  it("sends a year alone as the start-date range, and a season alone as the season", () => {
+    expect(searchVariables("x", 1, { ...NO_FILTERS, year: 2026 })).toEqual({
+      search: "x",
+      page: 1,
+      perPage: 30,
+      startAfter: 20251231,
+      startBefore: 20270000,
+    });
+    expect(searchVariables("x", 1, { ...NO_FILTERS, season: "fall" })).toEqual({ search: "x", page: 1, perPage: 30, season: "FALL" });
+  });
+
+  it("never mixes the season filing with the start-date range", () => {
+    const seasons = [null, ...SEASONS];
+    const years = [null, 1998, 2026];
+    for (const season of seasons) {
+      for (const year of years) {
+        for (const format of [null, "music" as const]) {
+          const v = searchVariables("x", 1, { ...NO_FILTERS, season, year, format });
+          if ("seasonYear" in v) expect(v.season).toBeDefined();
+          if ("startAfter" in v || "startBefore" in v) {
+            expect(v.season).toBeUndefined();
+            expect("startAfter" in v && "startBefore" in v).toBe(true);
+          }
+          for (const value of Object.values(v)) {
+            expect(value).not.toBeNull();
+            expect(value).not.toBeUndefined();
+            expect(value).not.toBe("Hentai");
+          }
+        }
+      }
+    }
   });
 });

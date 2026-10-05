@@ -2,8 +2,8 @@ import Link from "next/link";
 import LinkPendingGlyph from "@/components/theme/LinkPendingGlyph";
 import SagePanel from "@/components/theme/SagePanel";
 import { GHOST_BUTTON, PRIMARY_BUTTON } from "@/components/theme/tokens";
-import { SEASON_DOORWAY, errorCopy, noResultsCopy, pastEndCopy } from "@/lib/anime/searchCopy";
-import { searchResultsPath } from "@/lib/search";
+import { CLEAR_FILTERS, SEASON_DOORWAY, errorCopy, noResultsCopy, pastEndCopy } from "@/lib/anime/searchCopy";
+import { NO_FILTERS, hasFilters, searchResultsPath, type SearchFilters } from "@/lib/search";
 import { SearchPageLink } from "./SearchPagination";
 
 /*
@@ -24,25 +24,44 @@ function BrowseSeasonLink() {
   );
 }
 
-/** No primary: the search box above is the way forward (a different spelling). */
-export function NoResultsPanel({ query }: { query: string }) {
-  const copy = noResultsCopy(query);
+/**
+ * No primary without filters: the search box above is the way forward (a
+ * different spelling). With filters, Clear filters is the primary.
+ */
+export function NoResultsPanel({ query, filters }: { query: string; filters: SearchFilters }) {
+  const copy = noResultsCopy(query, filters);
   return (
-    <SagePanel kind="Report" mood="worried" title={copy.title} actions={<BrowseSeasonLink />}>
+    <SagePanel
+      kind="Report"
+      mood="worried"
+      title={copy.title}
+      actions={
+        hasFilters(filters) ? (
+          <>
+            <SearchPageLink query={query} page={1} filters={NO_FILTERS} target="title" className={PRIMARY_BUTTON}>
+              {CLEAR_FILTERS}
+            </SearchPageLink>
+            <BrowseSeasonLink />
+          </>
+        ) : (
+          <BrowseSeasonLink />
+        )
+      }
+    >
       {copy.text}
     </SagePanel>
   );
 }
 
-export function PastEndPanel({ query, page }: { query: string; page: number }) {
-  const copy = pastEndCopy(query, page);
+export function PastEndPanel({ query, page, filters }: { query: string; page: number; filters: SearchFilters }) {
+  const copy = pastEndCopy(query, page, filters);
   return (
     <SagePanel
       kind="Report"
       mood="idle"
       title={copy.title}
       actions={
-        <SearchPageLink query={query} page={1} className={PRIMARY_BUTTON}>
+        <SearchPageLink query={query} page={1} filters={filters} className={PRIMARY_BUTTON}>
           <span aria-hidden="true">←</span>
           Back to page 1
         </SearchPageLink>
@@ -56,11 +75,13 @@ export function PastEndPanel({ query, page }: { query: string; page: number }) {
 export function SearchErrorPanel({
   query,
   page,
+  filters,
   rateLimited,
   retryAfterSeconds,
 }: {
   query: string;
   page: number;
+  filters: SearchFilters;
   rateLimited: boolean;
   retryAfterSeconds: number | null;
 }) {
@@ -74,7 +95,7 @@ export function SearchErrorPanel({
         <>
           {/* A full document request (the owner's choice): it re-runs searchAnime
               (cache: "no-store"), never re-shows a cached failure, and works without JS. */}
-          <a href={searchResultsPath(query, page)} className={PRIMARY_BUTTON}>
+          <a href={searchResultsPath(query, page, filters)} className={PRIMARY_BUTTON}>
             Try again
           </a>
           <BrowseSeasonLink />

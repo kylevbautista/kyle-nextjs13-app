@@ -13,12 +13,8 @@ import { resolveListOwner, type ListOwnerLookup } from "./userList";
  * calls it again to get the lookup — React cache() makes that free.
  */
 
-/**
- * How a list owner is named to other people: first name only (lists are public
- * by link and names come from the OAuth profile). Owners see their full name.
- */
-export const publicOwnerName = (name: string | null | undefined): string | null =>
-  name?.trim().split(/\s+/)[0] || null;
+/** First name only, for other people (lib/anime/listCopy.ts). */
+export { publicOwnerName } from "@/lib/anime/listCopy";
 
 /** ObjectId hex, or a legacy base64url(email) — anything else can't be a list URL. */
 const LIST_PARAM_RE = /^[A-Za-z0-9_-]{1,512}$/;
