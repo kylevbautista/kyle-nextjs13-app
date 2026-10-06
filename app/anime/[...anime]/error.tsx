@@ -9,7 +9,8 @@ import SagePanel from "@/components/theme/SagePanel";
 import { APP_CONTAINER, GHOST_BUTTON, PRIMARY_BUTTON } from "@/components/theme/tokens";
 import { SEASON_EYEBROW, seasonLabelOf } from "@/lib/anime/seasonCopy";
 import { searchPath } from "@/lib/routes";
-import { SEASON_MONTHS, isSeasonName, type SeasonName } from "@/lib/season";
+import { SEASON_MONTHS } from "@/lib/season";
+import { parseSeasonShape } from "@/lib/seasonSort";
 
 /**
  * A failed retry mounts a fresh error page, which would drop keyboard focus
@@ -17,13 +18,6 @@ import { SEASON_MONTHS, isSeasonName, type SeasonName } from "@/lib/season";
  * button to mount within 10 s takes focus back (a ref callback, not render).
  */
 let retryFocusAt = 0;
-
-/** The URL's season, by shape only (proxy.ts already enforces the year window). */
-function parseSeasonShape(segments: string[] | string | undefined): { year: number; season: SeasonName } | null {
-  const parts = Array.isArray(segments) ? segments : [];
-  if (parts.length !== 2 || !/^\d{4}$/.test(parts[0]) || !isSeasonName(parts[1])) return null;
-  return { year: Number(parts[0]), season: parts[1] };
-}
 
 /**
  * AniList failed and there is no earlier good render to serve (ISR keeps

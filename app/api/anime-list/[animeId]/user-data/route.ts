@@ -11,15 +11,16 @@ import { BUSY_ERROR, CHANGED_ERROR, REQUIRED_ERROR, parseUserDataRequest } from 
  * - `{ userData }`: an absolute write (the Edit dialog)
  * - `{ userData, expect }`: Undo; applies only while the entry still equals `expect`
  * - `{ increment: 1–100 }`: +1 taps, added to the stored progress
- * - `{ catchUpTo }`: "Log N new", never past what has aired by the server's clock
+ * - `{ catchUpTo }`: "Log N new"
+ * Neither logs past what has aired by the server's clock.
  * Validation and tracker rules (auto-complete, start/finish dates) live in
  * lib/anime/normalize.ts#normalizeUserData; the write is a compare-and-set on
  * the stored entry (server/lib/userDataWrite.ts).
  *
  * 200 `{ message, userData, previous }`: `previous` is the stored value the
- * write replaced (equal to `userData` when nothing changed). A catch-up's
- * response adds `snapshot`, the stored airing fields it counted from, so the
- * card's "Log N new" agrees with the server. 409 `{ error,
+ * write replaced (equal to `userData` when nothing changed). An increment's or
+ * a catch-up's response adds `snapshot`, the stored airing fields it counted
+ * from, so the card's +1 and "Log N new" agree with the server. 409 `{ error,
  * code: "changed", userData }` when an Undo's entry changed (userData = stored),
  * 409 `{ error, code: "busy" }` after losing the race three times.
  */
@@ -56,7 +57,7 @@ export async function PATCH(
           message: "Successfully Updated User Anime Data",
           userData: result.userData,
           previous: result.previous,
-          ...(parsed.request.kind === "catchUp" ? { snapshot: result.snapshot } : {}),
+          ...(parsed.request.kind !== "set" ? { snapshot: result.snapshot } : {}),
         });
       case "not-found":
         return NextResponse.json({ error: "Anime is not in your list" }, { status: 404 });

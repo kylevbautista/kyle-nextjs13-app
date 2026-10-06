@@ -15,8 +15,10 @@ const CONSOLE_TOAST_ID = "tracker-console";
  * freshly inserted toast, and so nothing is said twice.
  */
 export function consoleToast(message: ConsoleMessage, { celebrate = false }: { celebrate?: boolean } = {}) {
-  // A Warning (a failed save) gets the worried slime and stays as long as a celebration.
+  // A Warning (a failed save) gets the worried slime and stays as long as a celebration, and so
+  // does a long line (a long title, or a refused +1's "Watched it early? Use Edit."), so it can be read.
   const warning = message.kind === "Warning";
+  const long = message.text.length > 90;
   toast.success(
     <span className="font-mono text-[13px] leading-5">
       <SageTag kind={message.kind} />
@@ -24,7 +26,7 @@ export function consoleToast(message: ConsoleMessage, { celebrate = false }: { c
     </span>,
     {
       id: CONSOLE_TOAST_ID,
-      duration: celebrate || warning ? 5_000 : 3_000,
+      duration: celebrate || warning || long ? 5_000 : 3_000,
       icon: <Slime size={26} mood={warning ? "worried" : celebrate ? "happy" : "idle"} animated={false} />,
       ariaProps: { role: "status", "aria-live": "off" },
     }

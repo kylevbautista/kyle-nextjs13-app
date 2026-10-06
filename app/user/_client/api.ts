@@ -32,7 +32,7 @@ async function fetchJson(resource: string, init: RequestInit): Promise<{ res: Re
   }
 }
 
-/** A catch-up response's stored airing fields, sanitized like any stored media. */
+/** A progress response's stored airing fields (+1 or catch-up), sanitized like any stored media. */
 function parseSnapshot(animeId: number, value: unknown): SaveOutcome["snapshot"] {
   if (typeof value !== "object" || value === null) return undefined;
   const media = normalizeMedia({ ...(value as object), id: animeId });

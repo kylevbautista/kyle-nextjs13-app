@@ -24,7 +24,7 @@ tracker demo and a post-sign-in Quest Log. Production: https://kylevb.com (Verce
 ```bash
 npm ci               # install exactly what package-lock.json pins
 npm run dev          # next dev on :3000 (also re-adds the Next.js agent-rules block at the end of this file)
-npm run build        # prerenders 28 season pages, /topanime and / by calling AniList/MyAnimeList (needs network)
+npm run build        # prerenders 56 season pages (28 × both sorts), /topanime and / by calling AniList/MyAnimeList (needs network)
 npm start            # serve the production build
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint . (flat config; includes React Compiler rules, see §9)
@@ -58,7 +58,7 @@ throwaway DB (e.g. `mongodb-memory-server`). Insert a `users` doc and a
 
 ```
  Browser ── HTML/RSC ──►  Next.js 16 (Vercel, Node runtime)
-   │                       proxy.ts ............ request-time season redirects (/anime → current season)
+   │                       proxy.ts ............ request-time season redirects (/anime → current season) + remembered-sort rewrites
    │                       / (landing) ......... ISR 600s ── server/lib/landing ─ ≤ 2 req (1 h data cache) ─► AniList
    │                       /anime/[...anime] ... ISR 300s ── getAniListData ─────────────► AniList
    │                       /topanime ........... ISR 3600s ─ server/lib/myanimelist ─────► MyAnimeList
@@ -88,7 +88,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 |---|---|---|---|---|
 | `/` | `app/(home)/{page,opengraph-image}.tsx`, `components/home/*`, `server/lib/landing.ts`, `lib/landing.ts` | **ISR 600s**, live AniList data | – | Landing (§5.7): hero with a live "Next episodes" card, Magic Sense countdowns, tracker demo, schedule preview, search console, Tempest Archive, FAQ, #quests (sign-up pitch / Quest Log), the "I / am / atomic" post-credits. Session UI is client-only; `?add=<id>&as=<status>` finishes a sign-in intent |
 | `/anime`, `/anime/<year>` | `proxy.ts` (fallback: `app/anime/page.tsx`, force-dynamic) | 307 | – | → current season, computed **per request** |
-| `/anime/<year>/<season>` | `app/anime/layout.tsx` (`<main>` + `HeaderProvider` only), `app/anime/[...anime]/{page,Boundary,error}.tsx`, `components/animev3/{PageBase,season/*}`, `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeDetailsDialog}.ts(x)` | **ISR 300s**; 28 paths prebuilt (UTC year−5…year+1 × 4); no `loading.tsx` (§9.15) | – | Season browser (§5.1). `proxy.ts` 307s bad/out-of-range slugs and `Fall` → `fall` |
+| `/anime/<year>/<season>` | `app/anime/layout.tsx` (`<main>` + `HeaderProvider` only), `app/anime/[...anime]/{page,Boundary,error}.tsx`, `components/animev3/{PageBase,season/*}`, `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeDetailsDialog}.ts(x)` | **ISR 300s**; 56 paths prebuilt (UTC year−5…year+1 × 4 seasons × both sort orders); no `loading.tsx` (§9.15) | – | Season browser (§5.1). `proxy.ts` 307s bad/out-of-range slugs, `Fall` → `fall` and any extra segment, then rewrites a reader whose `kv-season-sort` cookie holds a non-default sort to the static variant `/anime/<year>/<season>/countdown` (the URL stays canonical; the variant is never addressable) |
 | `/search?q=&format=&genre=&year=&season=&release=&page=` | `app/search/{layout,page,SearchBanner,FilteredSearchConsole,SearchResults,SearchPagination,SearchPanels,SearchPending,SearchPendingStatus,SearchArrival,SearchStatus,SearchTitle}.tsx`, `components/theme/{SearchConsole,ConsoleFrame,SageDoorway,FilterSelect}.tsx`, `lib/{search,searchFilters}.ts`, `lib/anime/{searchCopy,searchConsoleCopy,releaseStatus}.ts` | dynamic; deliberately no `loading.tsx` (§5.4) | – | Search (Skill 04 · Great Sage): AniList title search, narrowed by optional filters (format, genre, year, season, release status), 30/page, up to page 50 (§5.4) |
 | `/topanime` | `app/topanime/{page,TopAnimeShell,TopAnimeBanner,GlanceStats,CrownConsole,AboutRanking,TopAnimeList,TopAnimeRow,ranking,rankingStore,loadTopAnimePage,error}.ts(x)`, `lib/topAnime.ts`, `server/lib/myanimelist.ts` | **ISR 3600s**; no `loading.tsx` (§9.15) | – | MyAnimeList's ranking (official API): the Octagram (ranks 1–8) + the ranking; "Show more" appends; Back restores loaded pages; "Track" → `/search?q=` |
 | `/auth` | `app/auth/page.tsx`, `components/auth/SignOutButton.tsx`, `components/theme/CardPage.tsx` | dynamic; no `loading.tsx` in `app/auth` (§9.6, §9.15) | session | Account card (a Tempest card page): avatar (the photo over the owner's initial), 《Notice》 Signed in as + name, "Your lists" link cards (My List, Airing Schedule), Sign out (without JavaScript: NextAuth's own sign-out page). Signed out → `/auth/signin` (307, before streaming) |
@@ -101,7 +101,7 @@ before it is stored, and descriptions are sanitized again when rendered.
 | `/mylist/og/<id>/<v>` | `app/mylist/og/[id]/[v]/route.ts`, `components/og/{ScheduleShareImage,OgSky,parts,fonts,shareCard}.ts(x)` | runtime ISR 3600 s | public | The Airing Schedule's link-preview image (§5.8); same 404s |
 | `/api/anime-list` | `app/api/anime-list/route.ts` | – | session | `POST {data: media, status?}` add · `DELETE {data:{id}}` remove |
 | `/api/anime-list/ids` | `app/api/anime-list/ids/route.ts` | – | session | `GET` → `{ids}` on the caller's list (401 signed out) |
-| `/api/anime-list/<animeId>/user-data` | `app/api/anime-list/[animeId]/user-data/route.ts`, `server/lib/userDataWrite.ts`, `lib/anime/userDataRequest.ts` | – | session | `PATCH` one of four bodies: `{userData}` (Edit: absolute) · `{userData, expect}` (Undo: only while the entry still equals `expect`) · `{increment: 1–100}` (+1 taps, added to the **stored** progress) · `{catchUpTo}` ("Log N new": never past what has aired by the server's clock). → `{message, userData, previous}` (`previous` = the stored value it replaced); 409 `{error, code: "changed", userData}` (Undo's entry changed) or `{error, code: "busy"}` (lost the compare-and-set 3 times) |
+| `/api/anime-list/<animeId>/user-data` | `app/api/anime-list/[animeId]/user-data/route.ts`, `server/lib/userDataWrite.ts`, `lib/anime/userDataRequest.ts` | – | session | `PATCH` one of four bodies: `{userData}` (Edit: absolute) · `{userData, expect}` (Undo: only while the entry still equals `expect`) · `{increment: 1–100}` (+1 taps, added to the **stored** progress) · `{catchUpTo}` ("Log N new"); neither logs past what has aired by the server's clock (`airedEpisodes` on the stored snapshot, any list status). → `{message, userData, previous}` (`previous` = the stored value it replaced; a +1 or catch-up adds `snapshot`, the stored airing fields it counted from); 409 `{error, code: "changed", userData}` (Undo's entry changed) or `{error, code: "busy"}` (lost the compare-and-set 3 times) |
 | `/api/anime-list/user/<userId>` | `app/api/anime-list/user/[userParam]/route.ts` | – | public | `GET` → `{list}` (refreshes stale airing data) |
 | `/api/top-anime?page=` | `app/api/top-anime/route.ts` | – | public | `GET` → `{page}`: one 25-show page of MAL's ranking for "Show more" (the browser can't call MAL: no CORS, and the Client ID stays server-side). Cached 1 h at the CDN only (Next's data cache would serve a stale page of any age); one MAL attempt per request, and the instance pauses after a failure; 400 bad page, 429 (MAL's wait in Retry-After), 502 |
 | `/api/auth/*` | `app/api/auth/[...nextauth]/route.ts` | – | – | NextAuth |
@@ -141,23 +141,24 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 
 | Feature | User sees | Implementation | Key files |
 |---|---|---|---|
-| Season browser | Night-sky banner (Skill 01 · Magic Sense) with a phase-aware Great Sage line, the months, Previous/Next season tiles (+ "Current season" off-season) and, from 1024px for current/upcoming seasons, the Next-episodes card; a controls panel; "Fall 2026 shows 72 · 21 continuing" (`50+` until every page loads); a 1–3 column grid (classic card; 2–5 for the poster) of every non-adult TV/movie/OVA/special/music entry (not TV_SHORT/ONA); a Great Sage divider + **Re-sort** when shows below the pinned cards air sooner; an inline load error with Retry; the landing's dashed end card ("All 72 Fall 2026 shows sensed, excluding ONAs, TV shorts and adult titles.", data time, next season, back to the top) | Server fetches page 1 (50) → client reveals 12 at a time (IntersectionObserver sentinel) and fetches pages 2–6 from the browser right after hydration, one request at a time. All copy in `lib/anime/seasonCopy.ts`, ordering/pinning in `lib/anime/seasonOrder.ts` (both unit-tested) | `components/animev3/PageBase.tsx`, `components/animev3/season/*`, `utils/useLazyLoad.tsx`, `utils/getAniListData.ts` |
-| Continuing series | Shows that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; a "✓ Continuing series 21" toggle (default on; `21+` when a carry-over list hit AniList's 50-item cap); a season with only continuing series says so ("No new Fall 2026 shows here yet…"), or offers "Show continuing series" when they're hidden; "Continuing series didn't load from AniList." when the page-1 request fell back without them | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1); `carryOverIncluded` / `carryOverCapped` from `getAniListData` | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx`, `season/SeasonEmpty.tsx` |
-| Sort | "Sort by Countdown (default) / Popularity" chips, and a line saying what the order means for this season (past seasons: "Summer 2026 has ended, so countdown order matches popularity.") | `HeaderContext.sort` (layout-level, survives season nav); countdown uses absolute `airingAt` within the season (`countdownComparator`), stable so ties keep popularity order | `layoutSelector/HeaderProvider.tsx`, `season/SeasonControls.tsx`, `lib/anime/seasonOrder.ts` |
+| Season browser | Night-sky banner (Skill 01 · Magic Sense) with a phase-aware Great Sage line, the months, Previous/Next season tiles (+ "Current season" off-season) and, from 1024px for current/upcoming seasons, the Next-episodes card; a controls panel with the format chips; "Fall 2026 shows 96 · 21 continuing" (`50+` until every page loads; " · 26 hidden" when formats are hidden); a 1–3 column grid (classic card; 2–5 for the poster) of every non-adult entry AniList files under the season, in every format (TV, TV short, movie, special, OVA, ONA, music video, none); a Great Sage divider + **Re-sort** when shows below the pinned cards air sooner; an inline load error with Retry; the landing's dashed end card ("All 96 of AniList's Fall 2026 shows sensed, excluding adult titles.", a line for shows in hidden formats, data time, next season, back to the top) | Server fetches page 1 (50) → client reveals 12 at a time (IntersectionObserver sentinel) and fetches pages 2–6 from the browser right after hydration, one request at a time (a season of 101–150 shows, e.g. Summer 2026's 107, takes 3 pages). All copy in `lib/anime/seasonCopy.ts`, ordering/pinning in `lib/anime/seasonOrder.ts` (both unit-tested) | `components/animev3/PageBase.tsx`, `components/animev3/season/*`, `utils/useLazyLoad.tsx`, `utils/getAniListData.ts` |
+| Continuing series | TV series that premiered in an earlier season and are still airing (2-cour, long runners) appear in the season too, with a "Continuing" badge; they are TV only (AniList lists 80–115 "still airing" TV shorts and ONAs from earlier seasons, mostly stale), so every count says "TV series"; a "✓ Continuing series 21" toggle (dashed and aria-disabled while TV is hidden: they're TV) (default on; `21+` when a carry-over list hit AniList's 50-item cap); a season with only continuing series says so ("No new Fall 2026 shows here yet…"), or offers "Show continuing series" when they're hidden; "Continuing series didn't load from AniList." when the page-1 request fell back without them | Page-1 request also returns two carry-over lists; `selectCarryOver()` merges/filters them (§5.1); `carryOverIncluded` / `carryOverCapped` from `getAniListData` | `lib/anime/carryOver.ts`, `components/utils/anilist-queries/allCurrAnimeTag.ts`, `PageBase.tsx`, `season/SeasonEmpty.tsx` |
+| Formats | A "Formats" row under the sort hint: AniList's seven anime formats as ✓/+ toggle chips with counts ("✓ TV 56", "+ ONA 13", "✓ Music 0"; "+" while counts are lower bounds), always in AniList's order, plus "Other" once a show has no format (Winter 2027 has 4); every format on by default; hiding one re-sorts (only when it changes the list: "Music 0" doesn't), hides the continuing series too when it's TV (their chip stays, dashed and aria-disabled, and a press says "Show TV to list them" or, with their toggle off, "Show TV, then turn them on"), adds " · N hidden" to the heading and a line to the end card, and speaks "ONA hidden. 83 Fall 2026 shows listed, plus 21 continuing series."; nothing listed → "No shows listed in these formats" + "Show every format" above the empty grid (the sort hint and the banner's fixed-height Next-episodes card stay, so the chips never move under a finger). Each count sits in a 2ch box with its lower-bound "+" outside the layout, so the row never rewraps when later pages land. The row, once shown, stays for the page's life (and shows while a format is hidden, even on a season with no season shows). Phones: the label above one sideways-scrolling row (My List's shelves) | `HeaderContext.hiddenFormats` (canonical order, session only, survives season nav; the static HTML renders every format); `lib/anime/seasonFormats.ts` (pure: keys, counts, chips, filter; tested); claims about the season ("no shows here") use every loaded show, what's listed uses the filter; continuing series are chosen (popularity floor) before the filter; labels are the cards' (`lib/landing.ts#formatLabel`) | `season/SeasonControls.tsx`, `season/SeasonEmpty.tsx`, `PageBase.tsx`, `lib/anime/{seasonFormats,seasonCopy}.ts` |
+| Sort | "Sort by Countdown / Popularity (default)" chips, and a line saying what the order means for this season (past seasons: "Summer 2026 has ended, so countdown order matches popularity."); the choice is remembered per browser: the next visit's first paint is already in that order (no reshuffle after load) | A `kv-season-sort` cookie (`lib/seasonSort.ts`: Path=/anime, a year, SameSite=Lax, Secure on https; both choices stored) written by the chip (`season/seasonSortStore.ts#setSeasonSort`) and re-issued by `proxy.ts` on every full load of a season page (server-set, so Safari's 7-day cap on script-set cookies doesn't apply; never on a client navigation or prefetch, whose request can predate a press and would put the old choice back: `renewsSortCookie`). `proxy.ts` rewrites cookie holders of a non-default sort to the static variant `/anime/<y>/<s>/countdown`; `page.tsx` parses it (`parseSeasonRoute`) and passes `initialSort`; `useSeasonSort` = this tab's pick (module memory, survives leaving the season pages) ?? the rendered order. The client never reads the live cookie, so a pick in another tab applies to this tab's next fresh page, never in place. Countdown uses absolute `airingAt` within the season (`countdownComparator`), stable so ties keep popularity order | `lib/seasonSort.ts`, `proxy.ts`, `season/{seasonSortStore,SeasonControls}.ts(x)`, `app/anime/[...anime]/page.tsx`, `lib/anime/seasonOrder.ts` |
 | Season banner | "Fall 2026 Anime", the Great Sage line (current: the landing's "Magic Sense active. Incoming episodes detected."; upcoming: "Winter 2027 starts January 1. …"; past: "…has ended. Magic Sense is reading the archive."), months, the lineup's scope (640px+), season tiles, Next-episodes card | Rendered by `PageBase` (the layout has no data). A per-minute clock leaf (`useSeasonPhase`: the data's fetch time until it runs). Tiles prefetch on intent only (hover/focus/touch) and show a `useLinkStatus` spinner while pending; keyboard focus follows to the same tile on the new page (`season/seasonFocus.ts`). Tiles outside the valid year window are omitted | `season/{SeasonBanner,SeasonHeader,SeasonNav,useSeasonPhase,seasonFocus}.ts(x)`, `components/theme/LinkPendingGlyph.tsx`, `lib/season.ts` |
 | Anime card + details sheet | **Classic layout** (the owner's original organization, default): a gel card warmed by the cover's color; the title (sage, 2 lines) over genre chips; the cover with the Magic Sense HUD across its top ("PREMIERE / 1h 28m 56s": violet for a premiere, amber in the last hour, emerald + a card rim while airing, or the release status "FINISHED / 28 eps"), a Continuing / Premiere badge, a "★ 8.2 · TV" pill and a slime perched on shows on your list (it gulps when you add one); beside it a Great Sage readout (Studio, Premiere date/time PT, Source, Episodes "12 × 24 min" / "25 min each", a numbering note when AniList numbers past the count) and the synopsis well (scrolls with a swipe on touch, on hover with a mouse); a footer with the pill add button and the MAL / AniList / Crunchyroll glyphs. Tapping the card (anywhere but the footer and the synopsis) opens a 《Analyze》 sheet (bottom sheet on phones): premiere, format, episodes, length, source, studios, score, genres, sanitized synopsis, the add button, links. Unknown fields are left off the card; the sheet says "TBA" (unaired) or "Not listed on AniList". **Poster layout** (`AnimeCard`, Oct 2026 redesign): cover with a countdown chip, title, "★ 7.6 · TV · Studio", genres, add button | One constant picks the layout for the season page, `/search` and the landing's Magic Sense: `ANIME_CARD_LAYOUT` in `components/theme/cardLayout.ts` (`CARD_LAYOUT` = card, skeleton, add control, grid, cover sizes, skeleton fill, end-card span, landing grid). Cards are memo'd; the page injects its add control as a module-level `Action`; one `useAnimeDetails()` sheet per page (a native modal `<dialog>` outside the grid, with its own sr-only status). The classic card's CSS half is the "Classic anime card" section of `styles/globals.css` (gel surface, HUD tones, well, perch, `site-glyphs.webp` masks); its class strings live in `tokens.ts`. The Quest Log always uses the compact poster. My List, the Airing Schedule and Top Anime have their own cards and rows | `components/theme/{AnimeInfoCard,AnimeInfoCardSkeleton,cardLayout,AnimeCard,AnimeCardSkeleton,AnimeDetailsDialog}.ts(x)`, `lib/anime/cardLabels.ts` |
 | Live countdown | "EP 13 · 1d 7h 14m 52s", "Airing now", or a status ("Finished · 12 eps") | `CountdownText` on one shared 1 s clock (`useNow`, null during SSR, so no hydration mismatch); "Pause live timers" in the controls | `components/home/CountdownText.tsx`, `components/utils/useNow.ts`, `lib/anime/airing.ts` |
 | List toggle | "+ Add to list" / "✓ On my list" (hover: "✕ Remove") / "Sign in to track" | `ListToggle` (shared by every card: `ListToggleFillAction` is the classic card's `fill` pill, `ListToggleAction` the poster's full-width `block`, both 44px on phones; in-list buttons carry `data-in-list`, and `data-just-added` for 0.9 s after your own add (the classic card's perched slime); landing options: add status/label, sign-in intent; `onResult` reports each add/remove to the details sheet) on `useMyList()`: SWR key `[/api/anime-list/ids, userId]` (a 401 is an error, never an empty list), optimistic with rollback, toasts; `count` = list size incl. in-flight changes, `confirmedCount` = server-confirmed | `components/animev3/ListToggle.tsx`, `components/utils/useMyList.ts` |
 | Search | Night-sky banner (Skill 04 · Great Sage), the owner's layout. Home: 《Question》 "What anime are you looking for?", "Search anime", the landing's framed console (visible label, Analyze, "Try:" chips Tensura / Sousou no Frieren / Cowboy Bebop / Kimi no Na wa / Mushishi, the 《Question》 "Just want what's airing?" doorway to `/anime`). Results: the compact box on top with a Filters toggle (count badge; with filters applied, from 1024px the panel is always shown instead): My List's selects for Format · Genre · Year · Season · Release status, Apply filters, Clear filters; a literally true 《Report》 ("54 results, excluding adult titles. This is the last page." / "More than 30 results. The closest come first." / "Page 2: results 31–60. More follow."; with filters every count and "none" names them: "2 TV results from Fall 2026, excluding adult titles."), "Results for “q”", a sub that lists the filters ("Filters: TV, Fall 2026."), the Results row (count, Pause timers), the season page's card + details sheet, ← Previous · Page N · Next →, a visible page-50 note; SagePanels for no results, past the last page, AniList down, rate limited (AniList's Retry-After when sent). While AniList answers: "《Analyze》 Searching AniList… The closest matches come first." and skeleton cards; text typed into the box meanwhile survives | One `searchAnime` per render (`cache()`d for the report and the results; asks `hasNextPage` only, so exact totals exist only on the last page: `lib/search.ts#resultWindow`); every line in `lib/anime/searchCopy.ts` (truth-swept); one status line in the layout + a one-shot focus token (`components/utils/searchArrival.ts`, keyed by the canonical URL); nothing prefetches a search (consoles, chips, pager, results); the console, chips and frame are the landing's (§9.18). Filters: `?format=&genre=&year=&season=&release=` matched exactly in `lib/searchFilters.ts` (slugs; My List's season and release values; bad values dropped, never sent); optional GraphQL variables on the same one request (year + season = AniList's season filing, a year alone = the start year); never a search without `q`; no auto-submit; `FilteredSearchConsole` fills `SearchConsole`'s `toggle`/`children`/`hrefFor` slots | `app/search/*`, `components/theme/{SearchConsole,ConsoleFrame,SageDoorway,FilterSelect}.tsx`, `lib/{search,searchFilters}.ts`, `lib/anime/{searchCopy,searchConsoleCopy}.ts`, `server/lib/anilist.ts` |
-| My List | Night-sky banner (Skill 02 · Predator): "N still airing, M with new episodes", stats (shows, watching, episodes seen with "≈ N days of runtime" from 640px, mean score), copy link, the owner's Evolution slime (gulps when a show completes); shelves All/Watching/Plan to Watch/Completed/Paused/Dropped with counts (one scrolling row on phones); search + "Sort & filter" (phones) / sort + filters (text, year, season, airing day PT, release status); sort (next episode, new episodes, title, my score, progress, recently added); the landing tracker demo's card; +1 never blocks: taps made while a save is in flight keep counting and go out as one request, with one Great Sage line per burst ("Episodes 14–16 logged for … 10 to go."); the owner's "N new" chip (aired, not logged; Watching/Paused) is a "Log N new" button; after a confirmed change "↶ Undo +N" takes the date · score line's place for 10 s (paused while a mouse or pen is over the card, focus is anywhere in the card or the tab is hidden; restores the exact previous status, progress, dates and score, even after an auto-complete; afterwards keyboard focus goes to the card's Edit); a card being tapped holds its place (and section) until the shelf, sort or filters change; a Great Sage console toast for every burst, undo and save (a worried slime for a failure) | One client root with local state; the view lives in the URL (`?shelf=&sort=&q=&year=&season=&day=&release=`, read with `useSearchParams`, written with `replaceState`); owner-only +1, catch-up, Undo and the Edit dialog (status pills, progress, score, start/finish dates, remove; sticky Cancel/Save); the +1 engine is `lib/anime/trackQueue.ts` (one `TrackQueue` per page: confirmed value, one request in flight, a merged queue, bursts, Undo streaks; relative requests only); `placeHeld` files held cards by their held userData; PATCH → server-normalized `userData`; tracker lines from `lib/anime/trackerConsole.ts` (toast visual only, spoken through one sr-only status); background `router.refresh()` 2 s after edits. No profile photo | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)`, `lib/anime/{trackQueue,userDataRequest}.ts`, `components/theme/{UndoButton,NewEpisodesChip}.tsx` |
-| Tracker rules | +1 on Plan to Watch/Paused moves the show to Watching; auto-complete at the last episode; dates auto-filled; score rounded; a +1 or catch-up is applied to the stored value, and a catch-up never logs past what has aired | Enforced on the server (compare-and-set write) | `lib/anime/normalize.ts#normalizeUserData`, `lib/anime/userDataRequest.ts`, `server/lib/userDataWrite.ts` |
+| My List | Night-sky banner (Skill 02 · Predator): "N still airing, M with new episodes", stats (shows, watching, episodes seen with "≈ N days of runtime" from 640px, mean score), copy link, the owner's Evolution slime (gulps when a show completes); shelves All/Watching/Plan to Watch/Completed/Paused/Dropped with counts (one scrolling row on phones); search + "Sort & filter" (phones) / sort + filters (text, year, season, airing day PT, release status); sort (next episode, new episodes, title, my score, progress, recently added); the landing tracker demo's card; +1 never blocks: taps made while a save is in flight keep counting and go out as one request, with one Great Sage line per burst ("Episodes 14–15 logged for … Caught up."); +1 stops at the last aired episode: the button becomes a dashed sage box with a clock ("+1: caught up on …. Episode 15 airs Oct 8, 2026, 8:26 AM PDT") until the next episode airs, and a press says why ("Nothing logged: caught up on …. Episode 15 airs …. Watched it early? Use Edit."); the owner's "N new" chip (aired, not logged; Watching/Paused) is a "Log N new" button; after a confirmed change "↶ Undo +N" takes the date · score line's place for 10 s (paused while a mouse or pen is over the card, focus is anywhere in the card or the tab is hidden; restores the exact previous status, progress, dates and score, even after an auto-complete; afterwards keyboard focus goes to the card's Edit); a card being tapped holds its place (and section) until the shelf, sort or filters change; a Great Sage console toast for every burst, undo and save (a worried slime for a failure) | One client root with local state; the view lives in the URL (`?shelf=&sort=&q=&year=&season=&day=&release=`, read with `useSearchParams`, written with `replaceState`); owner-only +1, catch-up, Undo and the Edit dialog (status pills, progress, score, start/finish dates, remove; sticky Cancel/Save); the +1 engine is `lib/anime/trackQueue.ts` (one `TrackQueue` per page: confirmed value, one request in flight, a merged queue, bursts, Undo streaks; relative requests only); the +1 button is `components/theme/PlusOneButton.tsx` (a 1 s clock leaf; one element in all states); `placeHeld` and the filters file held cards by the entry as held (userData and airing fields); PATCH → server-normalized `userData`; tracker lines from `lib/anime/trackerConsole.ts` (toast visual only, spoken through one sr-only status); background `router.refresh()` 2 s after edits. No profile photo | `app/user/_client/{MyList,ListCard,EditEntryDialog,listFilters,editForm,api}.ts(x)`, `lib/anime/{trackQueue,userDataRequest}.ts`, `components/theme/{PlusOneButton,UndoButton,NewEpisodesChip}.tsx` |
+| Tracker rules | +1 on Plan to Watch/Paused moves the show to Watching; auto-complete at the last episode; dates auto-filled; score rounded; a +1 or catch-up is applied to the stored value, and neither logs past what has aired (any status; no cap when the count is unknown); Edit stays absolute and uncapped (watched early) | Enforced on the server (compare-and-set write); the page refuses only what it knows can't log (§5.3) | `lib/anime/normalize.ts#normalizeUserData`, `lib/anime/userDataRequest.ts`, `lib/anime/airing.ts#airedCount`, `server/lib/userDataWrite.ts` |
 | Airing Schedule | Night-sky banner (Skill 03 · Thought Acceleration) with the hero's Next-episodes card; the landing demo's week panel: tabs All + Mon…Sun (count dots, today ringed), opening on today or the next day with shows ("The whole week" on the Next-episodes card opens All); countdown rows with list status/progress and the "N new" chip (visitors see whose, and get + Add); a day-aware Great Sage line ("Now airing…", "Today: 2 episodes left, the next at 7:30 AM PT."); share strip and "Not airing right now" in a side column for the owner, below the panel for visitors | SWR `/mylist/<id>` (fallbackData from SSR, poll 60 s); dropped/completed excluded from the schedule; `renderedAt` from the server picks "today" and the banner line until the per-minute clock (`useMinuteNow`) hydrates; the selected tab lives in `?day=` | `components/mylist/{AiringSchedule,NextEpisodes,NotAiringList,schedule}.ts(x)` |
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
 | Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. MAL's ranking has one show per rank; its list ends where the unranked entries begin (about #22,900), and Rx (adult) entries are left out. Pages are cached separately, so a show that crosses a page boundary is deduped and nothing on the page calls two shows at one rank a tie | Page 1 server-rendered from MAL's API (`server/lib/myanimelist.ts`; fresh in every ISR render, but `next build` may reuse a copy cached by a build up to 1 h earlier, so the banner's "fetched" time is MAL's own Date header; throws on failure); later pages from the browser one at a time through `/api/top-anime` (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status; errors say whether MAL or the reader's connection failed, with MAL's Retry-After); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. MAL's response is parsed in `lib/topAnime.ts` (ranking position, not the show's lagging `rank` field; WebP covers; tested). Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `app/api/top-anime/route.ts`, `lib/topAnime.ts`, `server/lib/myanimelist.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Share images | A shared `/user` or `/mylist` link unfurls with the visitor banner at 1200×630: My List's Sage line, h1, sub, four stats and the evolving slime on its magic circle; the schedule's week strip (All + Mon…Sun counts) with the tier slime perched on it. First name only (Arabic, Hebrew, Indic and Thai names: "Anime list" / "this list") | Stored data only (one projected `findOne`, no session, no AniList, no clock); the card's hash (`v`) is in the path, so a changed list gets a new URL; runtime ISR 1 h; preview bots' page views skip the AniList refresh; fonts bundled in `assets/og` | `components/og/*`, `lib/anime/listCopy.ts`, `lib/previewBots.ts`, `server/lib/userList.ts#readListCard`, `app/{user,mylist}/og/[id]/[v]/route.ts` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 5 live countdown cards (the season page's card via `CARD_LAYOUT`, opening the same details sheet; 7 in the poster layout) with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
-| Tracker demo | "+1" to the finale auto-completes, statuses, score, dates, "Log 2 new", "↶ Undo +N"; one console line per burst; nothing is saved | My List's own engine (`TrackQueue`) against an in-memory `DemoServer` that applies `lib/anime/userDataRequest.ts` (the route's rules); the pills and score adopt `normalizeUserData`'s result; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the chip and countdown line use the real show's schedule | `components/home/TrackerDemo.tsx` |
+| Tracker demo | "+1" to the finale auto-completes, statuses, score, dates, "Log 2 new", "↶ Undo +N"; one console line per burst; nothing is saved | My List's own engine (`TrackQueue`) against an in-memory `DemoServer` that applies `lib/anime/userDataRequest.ts` (the route's rules); the pills and score adopt `normalizeUserData`'s result; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the countdown line uses the real show's schedule, and the engine and chip do only once it has FINISHED (`lib/landing.ts#demoTrackMedia`: an airing show's schedule would cap the demo's +1 short of its finale); its +1 shares `PlusOneButton`'s tokens | `components/home/TrackerDemo.tsx` |
 | Sign-in intent | Signed-out "+ Add to list" / "+ Plan to Watch" opens "Sign in to add {title}"; after Google the show is already on the list | `ListToggle` `onSignedOutAdd` → `LandingProvider` dialog → sessionStorage `kv:add-intent` (15 min) → `/?add=<id>#quests` → `QuestLog`'s `AddIntentHandler` adds once; a bare link only asks | `components/home/{LandingProvider,LandingAddButton,QuestLog}.tsx`, `lib/landing.ts#parseAddIntent` |
 | Quest Log | #quests after sign-in: add 3 shows inline, open the Airing Schedule, copy the list link; the slime evolves (Named Slime → Demon Slime at 3 → Demon Lord at 10) | Real list count only; Quest 2/3 flags in localStorage per user, also set by opening your own Airing Schedule and by any list-link copy (`components/theme/ShareLink.tsx`); status messages derived from state | `components/home/{QuestSection,QuestLog,questStore}.ts(x)`, `lib/landing.ts#evolutionTier` |
 | Errors | Card pages on the night sky (`CardPage`: the owner's centered card as a Great Sage console): the 404 (a worried slime perched on "404", "This page got isekai'd", 《Warning》, This season / Search / Home); the error page (the worried slime over the owner's table flip, 《Warning》, Error ID, Try again / Home, its own `<title>`); the fatal error (a self-contained night-sky document: worried slime, 《Warning》, Error ID, Try again, Home as a full load). The season and Top Anime errors are themed inside their banners ("《Warning》 Couldn't load Fall 2026.", Retry / Current season / Search) | Retry is Next 16.3's `retry()` (`reset()` alone re-shows the error; or `router.refresh()` + `reset()`). `RetryButton` ("Try again" / "Trying again…", `aria-disabled`) returns focus after a failed retry (a 10 s module token). `error.tsx` and `global-error.tsx` ship on every page: the error page's sky and slime load lazily (`ErrorDecor`; a failed import renders nothing), and global-error inlines its CSS and slime (slimeArt). Both render in the browser only (the server sends an empty `__next_error__` shell). The error page keeps its `<title>` first in `<head>` while mounted (React hoists the newest title first, and a client navigation's metadata title mounts after it). The list routes title their 404 "Page not found" | `app/{not-found,error,global-error}.tsx`, `components/theme/{CardPage,RetryButton,ErrorDecor}.tsx`, per-route `error.tsx` (season, top anime) |
@@ -169,13 +170,25 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 ## 5. Data flows
 
 ### 5.1 Season page `/anime/2026/fall`
-1. `proxy.ts` validates the slug with `seasonRouteRedirect()` (pure, `lib/season.ts`) and 307s if needed.
+1. `proxy.ts` validates the slug with `seasonRouteRedirect()` (pure, `lib/season.ts`) and 307s if needed,
+   then (`lib/seasonSort.ts#seasonProxyAction`) rewrites a reader whose `kv-season-sort` cookie holds
+   a non-default sort to the static variant `/anime/<y>/<s>/countdown`, and re-issues the cookie on
+   full page loads.
+   Documents and client navigations alike (the RSC response carries `x-nextjs-rewritten-path`); a
+   typed variant path 307s to the canonical URL, so it is never addressable and never loops.
    The page is static ISR like `/` and `/topanime`: no request APIs and **no `loading.tsx`** (§9.15);
-   `app/anime/layout.tsx` is only `<main>` + `HeaderProvider` (sort + continuing toggle, so they
-   survive season navigation). Everything else, banner included, is `PageBase`.
-2. `Boundary.tsx` → `getAniListData({page:1, withCarryOver: true})`. It returns
+   both orders of all 28 seasons are prebuilt (56 pages) at no extra AniList cost: the build's
+   fetch cache serves each variant the request its default page just made. `page.tsx`,
+   `generateMetadata` and `error.tsx` parse the variant themselves (ISR regenerates it without the
+   proxy). `app/anime/layout.tsx` is only `<main>` + `HeaderProvider` (continuing toggle and hidden
+   formats, so they survive season navigation; the sort is remembered per browser instead, §4 Sort).
+   Everything else, banner included, is `PageBase`.
+2. `Boundary.tsx` → `getAniListData({page:1, withCarryOver: true})`. The season list is
+   `SEASON_LIST_FILTER` ("type: ANIME, isAdult: false": every format, no adult titles), sorted
+   `[POPULARITY_DESC, ID]` so the low-popularity tail keeps one order across page requests; the
+   landing's exact count uses the same constant (a test pins both). It returns
    `{ok, media, hasNextPage, carryOver, carryOverIncluded, carryOverCapped}` and never throws. The same single request also asks for
-   TV series that started before the season (`seasonStartMs`, app convention) and either ended
+   TV series (only TV: see "Continuing series" in §4) that started before the season (`seasonStartMs`, app convention) and either ended
    after it began (`ended`) or are still RELEASING (`airing`). AniList's `endDate_greater` skips
    null end dates, hence two lists. `lib/anime/carryOver.ts#selectCarryOver` dedupes them, drops
    the season's own shows (page 1, or anything AniList files under that season), and sorts by
@@ -190,8 +203,11 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
    a first-day finale is usually the previous evening in UTC. If the combined request fails,
    `getAniListData` retries once without the carry-over lists (never after a 429). Known limit:
    for a past season, a long runner that was on a break then but is airing today still counts.
-   On `ok:false`, Boundary **throws**, so ISR keeps serving the last good page and a first-ever
-   failure shows `error.tsx` (themed, Next 16.3 `retry()`). A successful empty result (e.g. a
+   On `ok:false`, Boundary **throws**, so ISR keeps serving the last good page. A page that has
+   never rendered (every season and both orders are prebuilt, so only a season new to the year
+   window) has no good copy: under `next start` a failed first render is Next's bare "Internal
+   Server Error" (verified, also on client navigation), not `error.tsx`, and the next request
+   retries. `error.tsx` (themed, Next 16.3 `retry()`) shows when the render reaches the boundary. A successful empty result (e.g. a
    far-future season) renders the "No shows here yet" panel. `carryOverIncluded: false` (the
    season-only fallback ran) makes the page claim nothing about continuing series and re-fetch them
    once from the browser (step 4); `carryOverCapped` (a carry-over list hit 50) turns counts into "21+".
@@ -210,6 +226,16 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
    Continuing series merge into both sorts ("By Popularity" uses AniList's `popularity` count).
    They are deduped against later season pages and hidden by the `showContinuing` toggle in
    `HeaderContext`, which also re-sorts.
+   **Formats.** `HeaderContext.hiddenFormats` filters season shows and continuing series alike
+   (`filterByFormat`), after `selectContinuing` (whose popularity floor and dedupe see every loaded
+   show). Counts: N = every loaded season show (empty, onlyContinuing, the end card's report), n =
+   listed, hidden = N − n, and the continuing series in shown formats. `formatsHideAll` (shows
+   exist, none listed) puts a panel above the empty grid inside the section, so the heading and a
+   failed page's Retry stay; the sort hint and the banner's fixed-height Next-episodes card stay too
+   (the card says "No shows are listed in the chosen formats."), so the chips never move.
+   `hasCountdowns` uses every loaded show, so Pause live timers never comes and goes with a chip.
+   A format press resets the pins only when it changes what's listed, and its status line is
+   computed from the next state.
    Countdown order counts only episodes airing **within the browsed season**, ties broken by
    popularity, so past and upcoming seasons don't open with today's long runners. In popularity
    mode, carry-overs less popular than every loaded season show wait until the season's later
@@ -267,6 +293,18 @@ go through `TrackQueue` (`lib/anime/trackQueue.ts`, created in state, connected 
 - Per show: the server-confirmed value, at most one request in flight, and a queue of taps made
   meanwhile, merged into one `{increment: k}` (or `{catchUpTo}`). The card shows the confirmed value
   with every unsent op applied by the server's own rules (`applyProgressRequest`).
+- **The aired cap.** The server never logs past `airedEpisodes` (the stored snapshot, its clock, any
+  status). `airedCount` says whether the count is exact: the stored next episode is still ahead (or
+  the show finished). Once that episode's air time passes, the snapshot knows of no later one, so
+  the count is a lower bound until a refresh. `tap()` returns whether it took the tap and refuses
+  (changing nothing: no track created, no queue, no squish, no hold) only what can't log: the last
+  episode (silently) and an exact aired cap, with one `notAiredMessage` on an idle card (no
+  `settled`, so no refresh; repeats within 700 ms are silent) and none mid-burst (the burst stays
+  open and its line says "Caught up."). Past the horizon the tap is sent, the card shows no step past
+  what the page knows aired, and the server's snapshot decides; every +1 response carries
+  `snapshot`, which the card adopts (the media handler skips unchanged fields), so a stale page
+  catches up on its first tap. The button turns capped only once the burst's line is said
+  (`CardActivity.burst`), so a focused button's name never changes before the save is confirmed.
 - One line per burst, 700 ms after the last action with nothing in flight (at once at the finale).
 - Undo restores the server's `previous` from the first response of the streak, sent with `expect` =
   the latest response: a 409 `changed` (another tab or device moved it) adopts the stored value.
@@ -274,8 +312,12 @@ go through `TrackQueue` (`lib/anime/trackQueue.ts`, created in state, connected 
   streak and says the stale line ("It had changed since this page last checked: now Ep 16 / 26.");
   an Undo waiting on that save goes back to the other writer's value and says so ("Undone, but it
   had changed since this page last checked: …").
-- "Caught up" only when a burst ends exactly on the last aired episode. A catch-up's response
-  carries the stored airing fields, and the card adopts them, so its chip agrees with the server.
+- "Caught up." only when a burst ends exactly on the last aired episode and that count is exact
+  (read from the airing fields the response brought); past the horizon the line says "N to go." A
+  burst that logged nothing below the last episode was stopped by the server's aired count: "no new
+  episode has aired yet"; "caught up … as far as this page knows. Reload to check." when that
+  schedule is past its horizon; "the server doesn't count a new episode as aired yet" when the page
+  counts more (the browser's clock is ahead of the server's).
 - Requests and their bodies share one 8 s deadline (`api.ts#fetchJson`); unknown-outcome re-reads
   made in the same tick share one list GET.
 - Rejected saves (401, 400, 404) roll back to the confirmed value. A save with **no answer** (network,
@@ -390,7 +432,9 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
 2. **Season request** (1 AniList request, 2 after a 429 retry): exactly `/anime`'s page 1
    (`getAniListData`, carry-over on, no fallback, 6 s), default fetch cache, so the route stays ISR.
    `pickAiringCandidates()` keeps up to 12 shows whose next episode airs within
-   [now − 30 min, now + 7 days] (16 in preview): the 30 most popular, soonest first.
+   [now − 30 min, now + 7 days] (16 in preview): the 30 most popular, soonest first, from every
+   format (the season page's default). Its stat line is `seasonCopy.ts#landingSeasonStat`
+   ("AniList lists 96 Fall 2026 shows, excluding adult titles, plus 21 TV series continuing …").
 3. **Extras request** (0 on a data-cache hit, else 1; skipped when step 2 spent 2): the Tensura
    franchise + banners, the Rimuru character and the season's id pages for an exact show count
    (`landingExtrasQuery`), with `cache: "force-cache"`, `next.revalidate` 3600, tag
@@ -464,8 +508,9 @@ UserAnimeData
 // completing fills progress; start/finish dates auto-fill once. The edit dialog always sends a
 // status, so the +1 move never applies to its saves; auto-complete still does when the status it
 // sends is unchanged. A +1 batch or catch-up is applied server-side to the STORED value through
-// normalizeUserData (lib/anime/userDataRequest.ts) and written with a field-by-field
-// compare-and-set (server/lib/userDataWrite.ts, at most 3 tries).
+// normalizeUserData (lib/anime/userDataRequest.ts), never past the episodes aired by the server's
+// clock (airedEpisodes; the Edit dialog's absolute write is uncapped), and written with a
+// field-by-field compare-and-set (server/lib/userDataWrite.ts, at most 3 tries).
 ```
 `accounts`, `sessions` and `verification_tokens` belong to NextAuth. There are no custom indexes
 (lookups are by `_id`). Reads go through `normalizeEntry()`, which fills defaults for legacy entries,
@@ -487,11 +532,12 @@ drops duplicates, re-sanitizes, and bounds dates.
 | React cache | `lookupListOwner`, `readEntriesCached` | Per request, shared by `generateMetadata` and the page |
 | Next data cache | `landing-extras` (Tensura, Rimuru, season id pages), 3600 s · `next build`'s implicit copy of `/topanime`'s page 1 (the segment's 3600 s) | `revalidateTag("landing-extras", "max")` refreshes it (Next 16 requires the profile argument); only 200s are cached. A build within an hour of the last reuses page 1, so its banner time comes from MAL's Date header |
 | CDN | `/api/top-anime?page=N`: `s-maxage=3600, stale-while-revalidate=300` | The only cache for "Show more" pages (errors are `no-store`) |
-| Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time) |
+| Proxy | `proxy.ts` | Season redirects at request time (never in `next.config.js` `redirects()`, which are build-time), and the remembered-sort rewrite to the static variant (the CDN/ISR cache is keyed by the rewritten path) |
+| Cookie | `kv-season-sort` (Path=/anime, 1 year, SameSite=Lax, Secure on https; not HttpOnly: the chip writes it) | The season page's remembered sort. Re-issued by the proxy on each full load of a season page, so it slides. No account data, per browser |
 | SWR | `[/api/anime-list/ids, userId]` (list membership, all cards; per user so an account switch in another tab never shows the old ids) · `/mylist/<id>` (Airing Schedule, poll 60 s) | No root `SWRConfig` |
-| React context | `HeaderContext` (season sort mode + continuing toggle), under `app/anime/layout.tsx` | |
-| Local state | My List (`MyList.tsx`: items, `activities`, `held`, and one `TrackQueue` in state), Top Anime list, season `PageBase` (pins, cursor, refresh state), the details sheet (`useAnimeDetails`) | |
-| Module memory | `app/topanime/rankingStore.ts` · `components/animev3/utils/seasonFreshness.ts` · `components/animev3/season/seasonFocus.ts` · `components/utils/searchArrival.ts` · `components/theme/RetryButton.tsx` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) · a season's browser refresh, so Back/Forward doesn't refresh again · a one-shot focus token for season navigation (10 s) · /search's one-shot arrival token (30 s, matched on the canonical key `searchKey`: query, filters and page; dropped on popstate) and its status line's text · the error pages' focus-return token after a failed retry (`retryFocusAt`, 10 s) |
+| React context | `HeaderContext` (continuing toggle, hidden formats), under `app/anime/layout.tsx` | Session only: the static ISR HTML renders the defaults |
+| Local state | My List (`MyList.tsx`: items, `activities`, `held` (entries as held), and one `TrackQueue` in state), Top Anime list, season `PageBase` (pins, cursor, refresh state), the details sheet (`useAnimeDetails`) | |
+| Module memory | `components/animev3/season/seasonSortStore.ts` (this tab's sort pick, over the rendered order) · `app/topanime/rankingStore.ts` · `components/animev3/utils/seasonFreshness.ts` · `components/animev3/season/seasonFocus.ts` · `components/utils/searchArrival.ts` · `components/theme/RetryButton.tsx` | Top Anime's loaded pages for the tab, keyed by page 1's ids; restored on the next client visit (Back from Track) · a season's browser refresh, so Back/Forward doesn't refresh again · a one-shot focus token for season navigation (10 s) · /search's one-shot arrival token (30 s, matched on the canonical key `searchKey`: query, filters and page; dropped on popstate) and its status line's text · the error pages' focus-return token after a failed retry (`retryFocusAt`, 10 s) |
 | Shared clocks | `useNow()` (1 s, countdown leaves only) · `useMinuteNow()` (per minute: "today", season phase) | `useSyncExternalStore`; one interval each for the page. `useMinuteNow` reads null again once nothing subscribes, so a later mount renders its fallback first |
 | Mongo | `listRefreshedAt` | Refresh lock/throttle |
 | sessionStorage | `kv:add-intent` | Landing sign-in intent `{id, status?, at, media}`; auto-add only within 15 min, consumed once |
@@ -503,11 +549,13 @@ drops duplicates, re-sanitizes, and bounds dates.
 ## 8. Directory map
 
 ```
-proxy.ts                    request-time /anime season redirects
+proxy.ts                    request-time /anime season redirects + the remembered-sort rewrite (lib/seasonSort.ts)
 lib/                        pure, shared by server + client (unit-tested)
   season.ts                   season math: current season, valid years, route validation, shiftSeason, landingSeason
+  seasonSort.ts               the remembered season sort: the cookie (name, string; renewsSortCookie: full loads only), DEFAULT_SEASON_SORT, the variant segment,
+                              parseSeasonRoute / parseSeasonShape (page, metadata, error page), seasonProxyAction (proxy.ts)
   landing.ts                  landing constants/types + pure helpers (airing candidates, extras parsing, Tempest,
-                              tiers, schedule grouping, add-intent parse/serialize)
+                              tiers, schedule grouping, add-intent parse/serialize, demoTrackMedia: the tracker demo's show)
   routes.ts                   myListPath, airingSchedulePath, searchPath, signInPath, isCurrentPath (nav + menu current page),
                               listShareImagePath, scheduleShareImagePath
   previewBots.ts              ROBOTS_PREVIEW_BOTS (robots.ts's second group), isPreviewBot (no AniList refresh for unfurls)
@@ -526,18 +574,24 @@ lib/                        pure, shared by server + client (unit-tested)
   anime/normalize.ts          normalizeMedia/Entry/UserData — whitelist, coercion, tracker rules
   anime/sanitize.ts           sanitizeDescription (allow-list <br><i><b><em><strong>, balanced), descriptionToText
   anime/airing.ts             nextAiring, countdown formatting, premiereAiring/premiereLabel (AniList's earliest schedule node
-                              counts only when it is EP 1 or the show hasn't aired), isPremiereNext, airingWeekday (PT), compareByNextAiring
+                              counts only when it is EP 1 or the show hasn't aired), isPremiereNext, airingWeekday (PT), compareByNextAiring,
+                              airedCount/airedEpisodes (episodes aired so far, exact or a lower bound; the +1 cap, catch-up and
+                              the chip), unloggedAired
   anime/seasonOrder.ts        the season page's ordering: countdown (within the season) / popularity, continuing series,
                               orderSeason (pinned prefix + pinnedCount), soonerBelow (the divider), pinnedPrefixLength
+  anime/seasonFormats.ts      the season page's format filter: FORMAT_KEYS (AniList's order + OTHER), formatKeyOf, formatCounts,
+                              chipFormats, filterByFormat, canonicalFormats, hiddenWithShows, toggleFormat
   anime/seasonCopy.ts         every season-page line and its condition (Sage lines, scope, counts, hint, divider, end card,
                               empty states, status messages, meta description); SEASON_EYEBROW, MAGIC_SENSE_LINE
   anime/cardLabels.ts         AnimeCard / details-sheet labels (status chip, meta line, genres, facts, links, sheet results)
   anime/statusBadge.ts        STATUS_BADGE_CLASS / STATUS_DOT_CLASS (list-status colors)
-  anime/trackerConsole.ts     the Great Sage tracker lines (+1 and burst ranges, stale, nothing logged, undo, failures, status,
-                              score, edit diff; the catch-up chip's and Undo's labels), shared by TrackerDemo and My List
+  anime/trackerConsole.ts     the Great Sage tracker lines (+1 and burst ranges, "Caught up.", stale, nothing logged, a refused
+                              +1, undo, failures, status, score, edit diff; the catch-up chip's, Undo's and the capped +1's
+                              labels), shared by TrackerDemo and My List
   anime/userDataRequest.ts    the user-data PATCH's four bodies: parseUserDataRequest, applyProgressRequest (increment /
-                              catch-up on the stored value), applyUserDataRequest (Undo's expect), isUserAnimeData, sameUserData
-  anime/trackQueue.ts         the +1 engine (TrackQueue, SaveError): queue, bursts, Undo streaks, re-read on unknown outcomes;
+                              catch-up on the stored value, never past airedEpisodes), applyUserDataRequest (Undo's expect), isUserAnimeData, sameUserData
+  anime/trackQueue.ts         the +1 engine (TrackQueue, SaveError): queue, bursts, Undo streaks, the aired cap's refusals,
+                              re-read on unknown outcomes;
                               shared by My List and TrackerDemo (no React, no DOM; transport, clock and timers injected)
   anime/searchCopy.ts         every /search line and its condition, filters included (truth-swept); the filter panel's
                               labels and options; re-exports anime/searchConsoleCopy.ts
@@ -566,7 +620,8 @@ app/
 components/
   animev3/                    season browser: PageBase (the page's client root), layoutSelector/HeaderProvider (sort +
                               continuing context), utils/ (getAniListData, useLazyLoad, seasonFreshness)
-    season/                     SeasonBanner (minute-clock leaf) → SeasonHeader (PageBanner + SeasonNav, also error.tsx),
+    season/                     seasonSortStore (useSeasonSort / setSeasonSort: the remembered sort),
+                                SeasonBanner (minute-clock leaf) → SeasonHeader (PageBanner + SeasonNav, also error.tsx),
                                 SeasonNav + SeasonLink (intent prefetch, focus token), SeasonControls (+ SortHint),
                                 SeasonGridNotices (OrderDivider, LoadMoreError, SeasonEndCard), SeasonEmpty, useSeasonPhase
   mylist/                     Airing Schedule UI (week panel, NextEpisodes card) + schedule.ts (grouping)
@@ -577,7 +632,8 @@ components/
   animev3/ListToggle.tsx      the shared add/remove toggle (every card); ListToggleAction = AnimeCard's full-width version
   theme/                      the Tempest design kit for every page (guide: .claude/skills/tempest-theme):
     tokens.ts                   class tokens (focus rings, containers, ANIME_GRID / INFO_GRID + cover sizes, the classic card's INFO_*,
-                                type, panels, cards, buttons, fields, shelves, the site chrome's NAV_* / MENU_* / FOOTER_*)
+                                type, panels, cards, buttons, fields, shelves, the tracker card's PLUS_ONE* / CATCH_UP_CHIP /
+                                UNDO_*, the site chrome's NAV_* / MENU_* / FOOTER_*)
     cardLayout.ts               ANIME_CARD_LAYOUT ("classic" | "poster"): the one switch for the season page, /search and
                                 the landing's Magic Sense (CARD_LAYOUT bundles card, skeleton, action, grid, sizes, spans)
     AnimeInfoCard, AnimeInfoCardSkeleton  the classic card (owner's layout, gel surface, Magic Sense HUD, readout, synopsis well,
@@ -603,6 +659,9 @@ components/
     EvolutionCard, SagePanel    the evolving slime card; themed empty/error states
     ShareLink, LiveTimersToggle share strip (owner, or a signed-out placeholder) + useCopyListLink; the timers pause button
     NextEpisodeLine             a tracker card's countdown / release-status line (ListCard and TrackerDemo)
+    PlusOneButton               My List's +1: "+1" · capped (a dashed sage box with a clock, while every aired episode is logged
+                                and the next is known to be ahead) · ✓; one element, a 1 s clock leaf (renderedAt until it
+                                hydrates); presses go to the engine, which decides (PLUS_ONE* tokens, shared with the demo)
     NewEpisodesChip             "2 new": aired episodes not logged (lib/anime/airing.ts#unloggedAired); with onCatchUp (the
                                 owner's card, the demo) the "Log N new" button
     UndoButton                  a tracker card's timed "↶ Undo +N" (10 s drain, paused on hover / its own focus / a hidden tab)
@@ -627,7 +686,8 @@ components/
   auth/                       sign-in (signIn/SignInActions: the client island; signIn/SignInSlime: the CSS-switched slime),
                               GoogleButton (Google's light pill; also the landing's sign-in dialog), GoogleIcon (the kit's G,
                               a client leaf importing ./google-g.png), SignOutButton
-  utils/                      anilist-queries/ (mediaFields fragment + queries, landingExtrasQuery), fetchWithTimeout,
+  utils/                      anilist-queries/ (mediaFields fragment + queries, SEASON_LIST_FILTER shared by the season list and
+                              landingExtrasQuery's count pages), fetchWithTimeout,
                               useMyList, useNow (1 s), useMinuteNow (per minute: "today" labels), searchArrival (/search's
                               focus token + status store)
 components/og/              the list share images (next/og): fonts (assets/og), OgSky (sky, stars, aurora, treeline), parts,
@@ -692,7 +752,8 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     `loading.tsx` to `app/(home)`: the page is async, so the static HTML would ship the fallback and
     hide the whole landing in a `<div hidden>` until JavaScript swaps it in (no-JS visitors and the
     H1's LCP both suffer). `/topanime` and the season pages are the same (static ISR, async page):
-    no `loading.tsx` there either (`npm run build`, then every `.next/server/app/anime/*/*.html` has
+    no `loading.tsx` there either (`npm run build`, then every `.next/server/app/anime/*/*.html` and
+    `.next/server/app/anime/*/*/countdown.html` has
     one `<h1>`, no `<div hidden id="S:` and no `<!--$?-->`). Their client roots render the whole
     page, and a root element that Next would focus after a navigation must stay non-focusable.
     `/auth/signin` is the same: a static shell whose only Suspense boundary is the action slot
@@ -719,11 +780,15 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     highest-ranked shows, each with a Track shortcut). Change both sides together. In-page jump links use next/link or a button, never a
     plain `<a href="#…">`: a native fragment entry has no router state, so a later Back changes the
     URL but not the page.
-19. **Season counts and "none" claims carry the lineup's scope.** The season query leaves out ONAs,
-    TV shorts and adult titles, so a total says so in the same sentence ("All 72 Fall 2026 shows
-    sensed, excluding ONAs, TV shorts and adult titles.") and an empty state is about the page ("No
-    shows here yet. This page skips …"), never "AniList lists no …". Counts that may be partial say
-    "50+" / "at least 50". `lib/anime/seasonCopy.ts` holds them all, with a truth-sweep test.
+19. **Season counts and "none" claims carry the lineup's scope.** The season list is every format of
+    AniList's filing for the season minus adult titles, and continuing series are TV only. So a
+    season total says so in the same sentence and names AniList's filing ("All 96 of AniList's Fall
+    2026 shows sensed, excluding adult titles."; AniList files some ONAs under no season), every
+    continuing count says "TV series", and an empty state is about the page ("No shows here yet.
+    Adult titles are skipped; continuing series are TV only."), never "AniList lists no …". Shows in
+    hidden formats are counted apart ("26 of them are in hidden formats: TV Short and ONA.").
+    Counts that may be partial say "50+" / "at least 50". `lib/anime/seasonCopy.ts` holds them all,
+    with a truth-sweep test.
     `/search` follows the same rule: the search covers every format but never adult titles, so an
     exact total says "excluding adult titles" and "none" says "This search skips adult titles."
     (`lib/anime/searchCopy.ts`). Filtered totals and none lines also name every filter ("No movie
@@ -769,10 +834,12 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     when a nav link gets focus while scrolled. The landing's fixed StickyCta is kept off focused
     content by `scroll-padding-bottom` (globals.css: 5rem below 1024px, 6rem for the pill above).
 23. **+1 writes are relative.** A tap sends `{increment}` (or the chip `{catchUpTo}`) through
-    `TrackQueue`, never an absolute progress, and the server applies it to the stored value. Only the
-    Edit dialog sends absolute userData (after `whenIdle()`), and only Undo sends `expect`. Cards on My
-    List never move while you tap: holds release only on a shelf, sort or filter change, an Edit save
-    or a removal. Keep the response's `previous` (Undo and the stale line need it).
+    `TrackQueue`, never an absolute progress, and the server applies it to the stored value, never
+    past what has aired. Only the Edit dialog sends absolute userData (after `whenIdle()`; uncapped: it
+    is the way to log an episode watched early), and only Undo sends `expect`. Cards on My List never
+    move while you tap: holds release only on a shelf, sort or filter change, an Edit save or a
+    removal, and a held card is placed by the entry as held (a +1's `snapshot` can't move it). Keep
+    the response's `previous` (Undo and the stale line need it) and its `snapshot`.
 
 24. **Share images (`components/og/`).** Satori's dialect: every div with more than one child is
     `display:flex`; a text div that wraps or clamps is `display:block` with one string child;
@@ -786,6 +853,16 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     regenerate `GEIST_ADVANCE` if the Geist file changes. Magic-circle numbers live only in
     `skyArt.ts`; the slime's tier styles are written in `Slime.tsx` and `slimeArt.ts`: keep them in
     sync. No raw bidi control characters in source (write them as `\u` escapes).
+
+25. **The season variant is a rewrite.** For a cookie holder the server renders
+    `/anime/<y>/<s>/countdown` while the browser's URL is canonical: server `usePathname()` and
+    `useParams().anime` (3 entries) differ from the client's. Markup the server renders must not
+    depend on them (today's consumers are safe: the nav's prefix match, and sign-in links that render
+    only after the session resolves). Parse route params with `lib/seasonSort.ts`, never
+    `seasonRouteRedirect` (it 307s a third segment), and keep the variant out of every link.
+    The proxy can't see Next's RSC headers (`rsc`, `next-router-prefetch` are stripped before it
+    runs; `_rsc` too): tell a full load apart by the browser's `sec-fetch-dest` / `Accept`
+    (`renewsSortCookie`), and never answer a client fetch with `Set-Cookie`.
 
 ---
 
@@ -855,9 +932,20 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 - Treelines are drawn on wide viewBoxes (banners and the finale 7360, the footer 7000, the hero
   3000), so their tallest pines stay pointed up to ≈ 4400px wide (the finale ≈ 6600px, the footer
   ≈ 4200px, the hero ≈ 3900px); past that they are cut flat.
-- Catch-up counts aired episodes from the stored AniList snapshot (server and chip alike), so an
-  episode AniList postpones still counts as aired until the snapshot's next refresh (a list read at
-  least 10 minutes after the previous one, later while AniList throttles).
+- Catch-up and the +1 cap count aired episodes from the stored AniList snapshot (server, button and
+  chip alike), so an episode AniList postpones still counts as aired until the snapshot's next
+  refresh (a list read at least 10 minutes after the previous one, later while AniList throttles).
+  Once the stored next episode has aired, the server caps at it until that refresh: a back-to-back
+  double premiere, a multi-episode drop or a daily show can be held one episode short (the line says
+  "as far as this page knows. Reload to check."; the router refresh after that burst starts the
+  snapshot refresh). Early streams, Netflix drops and advance screenings need Edit.
+- The console toast sits top-center, so on a phone it can cover a card's +1 near the top of the
+  screen while it shows (5 s for lines over 90 characters, such as a refused +1's). It is visual only
+  (the status line speaks), but a bottom placement on phones would keep the tapped card visible.
+- A second cour that AniList numbers from 13 with no episode count counts as 0 aired until its
+  premiere time, then as 13 aired, as it did before the cap (the "N new" chip says "13 new").
+- The refused-+1 lines and the capped button's name speak the time as formatAirDate writes it
+  ("Oct 8, 2026, 8:26 AM PDT", like the countdown's sr-only text), so screen readers say "P D T".
 - A burst line that settles while the Edit dialog is open goes to the page's status line, which the
   modal makes inert (§9.20); the toast still shows it.
 - A held card that a +1 completed stays under its old heading (with its Completed badge; the heading
@@ -877,6 +965,20 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
 - `useMyList`'s add/remove toasts render dimmed behind an open details sheet and aren't spoken
   (the sheet says "Couldn't add it to your list. Try again." itself; a specific reason such as
   "list is full" is only in that toast). A top-layer or visual-only toaster would fix it site-wide.
+- The remembered sort is per browser (a cookie): not shared across devices, lost with cleared site
+  data, and only the sort (the continuing toggle and hidden formats are session state: a variant per
+  combination would multiply pages). A pick in another tab applies to this tab's next fresh page,
+  and a tab whose reader picked keeps its own pick until it reloads. A document the browser replays
+  from its cache (Back without the bfcache) shows the order it was fetched in. Each season's ISR
+  budget doubles in the worst case (one AniList request per variant per 5 minutes, only for orders
+  people use).
+- A remembered Countdown paints page 1's countdown order (the 50 most popular shows), as Countdown
+  did when it was the default: when later pages land, cards below the fold reorder, and wide
+  screens show the Re-sort divider on most current-season loads.
+- Continuing series are TV only: a series continuing as an ONA or TV short (e.g. Link Click Season 3)
+  isn't listed. ONAs AniList files under no season (several low-popularity donghua each season)
+  don't appear on any season page. Hidden formats last for the session (not across visits: the
+  static HTML can only render every format).
 - The landing's Next-episodes card picks from the season's 30 most popular shows, so it can differ
   from the season banner's (which uses every show).
 - Season tiles prefetch only on intent, so a first tap on a phone waits for the fetch (the pending

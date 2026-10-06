@@ -5,7 +5,7 @@
  */
 import { isSeasonName, type SeasonName } from "@/lib/season";
 import { WEEKDAYS, airingWeekday, compareByNextAiring, unloggedAired } from "@/lib/anime/airing";
-import type { Weekday } from "@/lib/anime/airing";
+import type { AiringFields, Weekday } from "@/lib/anime/airing";
 import { LIST_STATUSES, displayTitle } from "@/lib/anime/types";
 import type { ListEntry, ListStatus, UserAnimeData } from "@/lib/anime/types";
 import { isReleaseStatus, type ReleaseStatus } from "@/lib/anime/releaseStatus";
@@ -227,25 +227,28 @@ export function groupByStatus(entries: MyListEntry[]): ListSection[] {
   })).filter((section) => section.entries.length > 0);
 }
 
+/** A response's airing fields already equal the entry's (plain stored JSON, compared as such). */
+export function sameAiringFields(entry: MyListEntry, fields: Partial<AiringFields>) {
+  return (Object.keys(fields) as (keyof AiringFields)[]).every(
+    (key) => JSON.stringify(entry[key]) === JSON.stringify(fields[key])
+  );
+}
+
 /**
  * The cards to render, by section (one section on a status shelf). A held card
- * (one being tapped: +1, catch-up, Undo) is sorted and filed by its held
- * userData, so it stays where it was while its live values change; the live
+ * (one being tapped: +1, catch-up, Undo) is sorted and filed as the entry it
+ * was when held (its userData and its airing fields, which a +1's response can
+ * update), so it stays where it was while its live values change; the live
  * entry is returned (live values, and the same object for ListCard's memo).
  * With nothing held this is the plain sort + grouping.
  */
 export function placeHeld(
   entries: MyListEntry[],
-  held: ReadonlyMap<number, UserAnimeData>,
+  held: ReadonlyMap<number, MyListEntry>,
   { sort, tab, nowMs }: { sort: SortKey; tab: StatusTab; nowMs: number | null }
 ): ListSection[] {
   const live = new Map(entries.map((entry) => [entry.id, entry]));
-  const placed = held.size
-    ? entries.map((entry) => {
-        const userData = held.get(entry.id);
-        return userData ? { ...entry, userData } : entry;
-      })
-    : entries;
+  const placed = held.size ? entries.map((entry) => held.get(entry.id) ?? entry) : entries;
   const sorted = sortEntries(placed, sort, nowMs);
   const sections =
     tab === "all"

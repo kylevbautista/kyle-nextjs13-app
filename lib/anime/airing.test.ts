@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  airedCount,
+  airedEpisodes,
   airingStatusLabel,
   airingWeekday,
   compareByNextAiring,
@@ -170,5 +172,69 @@ describe("unloggedAired", () => {
     // A split cour numbered continuously: "EP 14" of a 12-episode entry.
     expect(unloggedAired(show({ episode: 14, airingAt: THU_MORNING }, 0, { episodes: 12 }), null)).toBeNull();
     expect(unloggedAired(show({ episode: 12, airingAt: THU_MORNING }, 5, { episodes: 12 }), null)).toBe(6);
+  });
+});
+
+describe("airedEpisodes", () => {
+  const schedule = (next: { episode: number; airingAt: number } | null, extra = {}) => ({
+    status: "RELEASING" as const,
+    episodes: null as number | null,
+    upComingAirDate: { episode: next ? [{ ...next, timeUntilAiring: 0 }] : [] },
+    ...extra,
+  });
+
+  it("counts from the next scheduled episode, whatever the list status", () => {
+    expect(airedEpisodes(schedule({ episode: 15, airingAt: THU_MORNING }), null)).toBe(14);
+    expect(airedEpisodes(schedule({ episode: 15, airingAt: THU_MORNING }), (THU_MORNING - 1) * 1000)).toBe(14);
+    expect(airedEpisodes(schedule({ episode: 15, airingAt: THU_MORNING }), THU_MORNING * 1000)).toBe(15);
+    // A premiere that hasn't aired.
+    expect(airedEpisodes(schedule({ episode: 1, airingAt: THU_MORNING }, { status: "NOT_YET_RELEASED" }), null)).toBe(0);
+  });
+
+  it("is the episode count once a show has finished", () => {
+    expect(airedEpisodes(schedule(null, { status: "FINISHED", episodes: 12 }), null)).toBe(12);
+    expect(airedEpisodes(schedule(null, { status: "FINISHED" }), null)).toBeNull();
+  });
+
+  it("is exact while the next episode is ahead, and a lower bound once its air time passes", () => {
+    const show = schedule({ episode: 15, airingAt: THU_MORNING }, { episodes: 26 });
+    expect(airedCount(show, null)).toEqual({ aired: 14, exact: true });
+    expect(airedCount(show, (THU_MORNING - 1) * 1000)).toEqual({ aired: 14, exact: true });
+    // The stored schedule knows of no later episode: more may have aired since.
+    expect(airedCount(show, THU_MORNING * 1000)).toEqual({ aired: 15, exact: false });
+    expect(airedCount(schedule(null, { status: "FINISHED", episodes: 12 }), THU_MORNING * 1000)).toEqual({ aired: 12, exact: true });
+  });
+
+  it("counts nothing aired before a premiere, whatever the episode's number", () => {
+    // A second cour numbered from 13, total unknown: not "12 aired".
+    const part2 = schedule({ episode: 13, airingAt: THU_MORNING }, { status: "NOT_YET_RELEASED" });
+    expect(airedCount(part2, null)).toEqual({ aired: 0, exact: true });
+    expect(airedCount(part2, (THU_MORNING - 60) * 1000)).toEqual({ aired: 0, exact: true });
+    expect(airedCount(part2, THU_MORNING * 1000)).toEqual({ aired: 13, exact: false });
+    expect(
+      unloggedAired({ ...part2, userData: { listType: "watching", episodeProgressNumber: 0 } }, (THU_MORNING - 60) * 1000)
+    ).toBe(0);
+    // Its schedule's earliest node is the next airing itself: still unaired.
+    const sameNode = { ...part2, firstEpisode: { episode: [{ airingAt: THU_MORNING, episode: 13 }] } };
+    expect(airedCount(sameNode, null)).toEqual({ aired: 0, exact: true });
+  });
+
+  it("trusts the schedule over a status that lags the premiere", () => {
+    // AniList still says NOT_YET_RELEASED, but EP 1 aired a week ago and EP 2 is next.
+    const lagging = schedule(
+      { episode: 2, airingAt: THU_MORNING },
+      { status: "NOT_YET_RELEASED", episodes: 12, firstEpisode: { episode: [{ airingAt: THU_MORNING - 7 * 86_400, episode: 1 }] } }
+    );
+    expect(airedCount(lagging, (THU_MORNING - 60) * 1000)).toEqual({ aired: 1, exact: true });
+  });
+
+  it("is unknown without a numbered next episode, or when the total contradicts it", () => {
+    // A 12-episode Part 2 numbered from 13, before its premiere: not "12 aired".
+    expect(airedEpisodes(schedule({ episode: 13, airingAt: THU_MORNING }, { episodes: 12 }), null)).toBeNull();
+    expect(airedEpisodes(schedule(null), null)).toBeNull();
+    expect(airedEpisodes(schedule(null, { status: "HIATUS", episodes: 12 }), null)).toBeNull();
+    expect(airedEpisodes(schedule({ episode: 14, airingAt: THU_MORNING }, { episodes: 12 }), null)).toBeNull();
+    expect(airedEpisodes(schedule({ episode: 13, airingAt: THU_MORNING }, { episodes: 12 }), THU_MORNING * 1000)).toBeNull();
+    expect(airedEpisodes(null, null)).toBeNull();
   });
 });

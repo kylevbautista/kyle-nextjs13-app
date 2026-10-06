@@ -35,7 +35,7 @@ const airingShow = (userData: UserAnimeData, next: number, airingAt: number, epi
   upComingAirDate: { episode: [{ airingAt, episode: next, timeUntilAiring: null }] },
   userData,
 });
-const finishedShow = (userData: UserAnimeData, episodes = 24): TrackEntry => ({
+const finishedShow = (userData: UserAnimeData, episodes: number | null = 24): TrackEntry => ({
   status: "FINISHED",
   episodes,
   upcomingEpisode: null,
@@ -133,8 +133,9 @@ describe("isUserAnimeData / sameUserData / progressBody", () => {
 });
 
 describe("applyProgressRequest: increments", () => {
+  // A finished show: every episode has aired, so only the episode count bounds a +1.
   const apply = (userData: UserAnimeData, req: ProgressRequest, episodes: number | null = 12) =>
-    applyProgressRequest(airingShow(userData, 8, LATER, episodes), req, NOW);
+    applyProgressRequest(finishedShow(userData, episodes), req, NOW);
 
   it("adds to the stored value", () => {
     expect(apply(data(), inc(1))).toEqual({ ok: true, value: data({ episodeProgressNumber: 6 }), changed: true });
@@ -164,10 +165,75 @@ describe("applyProgressRequest: increments", () => {
     expect(applyProgressRequest(finishedShow(legacy), inc(1), NOW)).toEqual({ ok: true, value: legacy, changed: false });
   });
   it("handles unknown totals and the progress ceiling", () => {
+    // A finished show with no episode count: nothing bounds it but the ceiling.
     const result = apply(data({ episodeProgressNumber: 1105 }), inc(2), null);
     expect(result.ok && result.value.episodeProgressNumber).toBe(1107);
     const top = apply(data({ episodeProgressNumber: 99_999 }), inc(100), null);
     expect(top.ok && top.value.episodeProgressNumber).toBe(100_000);
+  });
+});
+
+describe("applyProgressRequest: increments stop at what has aired", () => {
+  it("caps a batch at the last aired episode", () => {
+    // EP 8 airs in an hour: 7 have aired.
+    const capped = applyProgressRequest(airingShow(data(), 8, LATER), inc(5), NOW);
+    expect(capped).toEqual({ ok: true, value: data({ episodeProgressNumber: 7 }), changed: true });
+    const caughtUp = airingShow(data({ episodeProgressNumber: 7 }), 8, LATER);
+    expect(applyProgressRequest(caughtUp, inc(1), NOW)).toEqual({ ok: true, value: caughtUp.userData, changed: false });
+  });
+  it("counts the next episode from its exact air time (the server's clock)", () => {
+    const at = Math.floor(NOW / 1000);
+    const aired = applyProgressRequest(airingShow(data({ episodeProgressNumber: 7 }), 8, at), inc(3), NOW);
+    expect(aired.ok && aired.value.episodeProgressNumber).toBe(8);
+    const notYet = applyProgressRequest(airingShow(data({ episodeProgressNumber: 7 }), 8, at + 1), inc(3), NOW);
+    expect(notYet.ok && notYet.changed).toBe(false);
+  });
+  it("applies to every status", () => {
+    const planned = data({ listType: "planning", episodeProgressNumber: 0, startDate: null });
+    // EP 1 hasn't aired: nothing to log, and the show stays in Plan to Watch.
+    const premiere = applyProgressRequest(airingShow(planned, 1, LATER), inc(1), NOW);
+    expect(premiere).toEqual({ ok: true, value: planned, changed: false });
+    // Aired episodes still start a planned show.
+    const started = applyProgressRequest(airingShow(planned, 8, LATER), inc(2), NOW);
+    expect(started).toEqual({ ok: true, value: data({ episodeProgressNumber: 2, startDate: TODAY }), changed: true });
+    for (const listType of ["paused", "dropped", "completed"] as const) {
+      const show = airingShow(data({ listType, episodeProgressNumber: 7 }), 8, LATER);
+      expect(applyProgressRequest(show, inc(1), NOW)).toEqual({ ok: true, value: show.userData, changed: false });
+    }
+  });
+  it("never lowers progress logged ahead of the schedule", () => {
+    const ahead = airingShow(data({ episodeProgressNumber: 9 }), 8, LATER);
+    expect(applyProgressRequest(ahead, inc(1), NOW)).toEqual({ ok: true, value: ahead.userData, changed: false });
+  });
+  it("doesn't cap when the aired count is unknown", () => {
+    // Next episode TBA.
+    const tba: TrackEntry = { ...airingShow(data(), 8, LATER), upcomingEpisode: null, upComingAirDate: { episode: [] } };
+    const tbaResult = applyProgressRequest(tba, inc(10), NOW);
+    expect(tbaResult.ok && tbaResult.value.episodeProgressNumber).toBe(12);
+    // A split cour numbered continuously ("EP 14" of 12): only the episode count bounds it.
+    const split = applyProgressRequest(airingShow(data(), 14, LATER, 12), inc(10), NOW);
+    expect(split.ok && split.value.episodeProgressNumber).toBe(12);
+  });
+  it("stays strict past the stored schedule's horizon (the server's count)", () => {
+    // EP 8's air time has passed: 8 aired at least; the server logs no further.
+    const result = applyProgressRequest(airingShow(data(), 8, EARLIER), inc(5), NOW);
+    expect(result.ok && result.value.episodeProgressNumber).toBe(8);
+  });
+  it("completes an airing show once its finale has aired", () => {
+    const result = applyProgressRequest(airingShow(data({ episodeProgressNumber: 11 }), 12, EARLIER), inc(1), NOW);
+    expect(result).toEqual({
+      ok: true,
+      value: data({ listType: "completed", episodeProgressNumber: 12, finishDate: TODAY }),
+      changed: true,
+    });
+  });
+  it("caps long runners with an unknown total", () => {
+    // EP 1110 airs in an hour: 1109 have aired.
+    const show = airingShow(data({ episodeProgressNumber: 1105 }), 1110, LATER, null);
+    const two = applyProgressRequest(show, inc(2), NOW);
+    expect(two.ok && two.value.episodeProgressNumber).toBe(1107);
+    const many = applyProgressRequest(show, inc(10), NOW);
+    expect(many.ok && many.value.episodeProgressNumber).toBe(1109);
   });
 });
 
@@ -221,8 +287,9 @@ describe("Undo round trip", () => {
     ["+1", airingShow(data(), 8, LATER), inc(1)],
     ["planned show started", airingShow(data({ listType: "planning", episodeProgressNumber: 0, startDate: null }), 8, LATER), inc(1)],
     ["paused show resumed", airingShow(data({ listType: "paused" }), 8, LATER), inc(2)],
-    ["finale", airingShow(data({ episodeProgressNumber: 11 }), 8, LATER), inc(1)],
-    ["paused to the finale", airingShow(data({ listType: "paused", episodeProgressNumber: 10 }), 8, LATER), inc(2)],
+    ["finale", finishedShow(data({ episodeProgressNumber: 11 }), 12), inc(1)],
+    ["paused to the finale", finishedShow(data({ listType: "paused", episodeProgressNumber: 10 }), 12), inc(2)],
+    ["capped batch", airingShow(data(), 8, LATER), inc(5)],
     ["catch-up to the finale", finishedShow(data({ episodeProgressNumber: 22 })), upTo(24)],
     ["legacy progress without a start date", airingShow(data({ startDate: null, episodeProgressNumber: 3 }), 8, LATER), inc(1)],
     ["rewatch keeps its finish date", airingShow(data({ finishDate: day, episodeProgressNumber: 2, score: 9 }), 8, LATER), inc(1)],

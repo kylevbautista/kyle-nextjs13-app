@@ -76,7 +76,7 @@ export default function AiringGrid({
           >
             <Slime size={56} lookLeft className="absolute -top-3 left-1/2 -translate-x-1/2 sm:-top-5" />
             <span className="text-sm font-semibold text-white">{allLabel}</span>
-            <span className="text-xs text-[rgb(164,164,164)]">Sort by countdown or popularity</span>
+            <span className="text-xs text-[rgb(164,164,164)]">Sort by countdown or popularity, filter by format</span>
             <span
               aria-hidden="true"
               className="mt-1 text-lg text-[#95ccff] transition-transform group-hover:translate-x-1"

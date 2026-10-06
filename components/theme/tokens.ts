@@ -150,6 +150,22 @@ export const SHELF_OFF = "text-[rgb(164,164,164)] hover:bg-white/5 hover:text-wh
 /* ------------------------------------------------------------------------- */
 /* Tracker card (My List's ListCard and the landing's TrackerDemo)             */
 
+/**
+ * The +1 box (My List's PlusOneButton; the landing demo's +1 uses it too). Every state has a real
+ * 1px border, so forced colors keeps the edge (a ring is a box-shadow and vanishes there).
+ */
+export const PLUS_ONE = `relative inline-flex h-11 w-16 shrink-0 touch-manipulation items-center justify-center rounded-lg border text-sm font-bold transition-colors md:h-10 ${FOCUS_RING_PANEL}`;
+/** "+1": log the next episode. */
+export const PLUS_ONE_READY = "border-transparent bg-blue-600 text-white hover:bg-blue-500";
+/**
+ * Caught up with what has aired: a dashed sage box (the site's "not yet", like the unknown-total
+ * bar) around a clock, so it differs from ✓ by shape and glyph, not hue alone.
+ */
+export const PLUS_ONE_CAPPED =
+  "cursor-default border-dashed border-[#95ccff]/60 bg-transparent text-[#95ccff] forced-colors:border-[color:GrayText] forced-colors:text-[color:GrayText]";
+/** ✓: every episode watched. */
+export const PLUS_ONE_DONE =
+  "cursor-default border-emerald-400/40 bg-emerald-500/15 text-emerald-300 forced-colors:border-[color:GrayText] forced-colors:text-[color:GrayText]";
 /** +1 while a save is in flight: a small aria-hidden dot (the button is never disabled or pulsing). */
 export const PLUS_ONE_SAVING_DOT =
   "pointer-events-none absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-white/90 animate-dot-flow forced-colors:bg-[color:CanvasText]";

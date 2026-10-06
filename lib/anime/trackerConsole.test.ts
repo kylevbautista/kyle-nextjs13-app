@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { formatAirDate } from "./airing";
 import {
   burstMessage,
+  cappedPlusOneLabel,
   catchUpLabel,
   editMessage,
   failedMessage,
   noChangeMessage,
+  notAiredMessage,
   plusOneMessage,
   PROMPT_MESSAGE,
   scoreMessage,
@@ -76,13 +79,30 @@ describe("tracker console lines", () => {
   });
 
   it("says caught up when the last aired episode is logged", () => {
+    expect(plusOneMessage({ prev: data(), next: data({ episodeProgressNumber: 23 }), episodes: 24, caughtUp: true }).text).toBe(
+      "Episode 23 logged. Caught up."
+    );
+    // Not known to be caught up: the usual line.
+    expect(plusOneMessage({ prev: data(), next: data({ episodeProgressNumber: 23 }), episodes: 24 }).text).toBe(
+      "Episode 23 logged. 1 to go."
+    );
+    // Every branch: a Plan to Watch show started, and a long runner.
     expect(
-      plusOneMessage({ prev: data(), next: data({ episodeProgressNumber: 23 }), episodes: 24, unlogged: { before: 1, after: 0 } }).text
-    ).toBe("Episode 23 logged. Caught up.");
-    // Nothing was waiting: the usual line.
+      plusOneMessage({
+        prev: data({ listType: "planning", episodeProgressNumber: 0 }),
+        next: data({ episodeProgressNumber: 1 }),
+        episodes: 12,
+        title: "Red River",
+        caughtUp: true,
+      }).text
+    ).toBe("Episode 1 logged. Red River moved to Watching. Caught up.");
     expect(
-      plusOneMessage({ prev: data(), next: data({ episodeProgressNumber: 23 }), episodes: 24, unlogged: { before: 0, after: 0 } }).text
-    ).toBe("Episode 23 logged. 1 to go.");
+      plusOneMessage({ prev: data({ episodeProgressNumber: 1353 }), next: data({ episodeProgressNumber: 1355 }), episodes: null, title: "Shin Chan", caughtUp: true }).spoken
+    ).toBe("Episodes 1354 and 1355 logged for Shin Chan. Caught up.");
+    // At the last episode (a Dropped show isn't completed), "That's every episode." says more.
+    expect(
+      plusOneMessage({ prev: data({ listType: "dropped", episodeProgressNumber: 23 }), next: data({ listType: "dropped", episodeProgressNumber: 24 }), episodes: 24, caughtUp: true }).text
+    ).toBe("Episode 24 logged. That's every episode.");
   });
 
   it("picks one line for an edit, most important change first", () => {
@@ -178,35 +198,39 @@ describe("burst lines", () => {
 
   it("picks the finale, then stale, then nothing logged, then the range", () => {
     const done = p(24, { listType: "completed", finishDate: day + 1 });
-    expect(burstMessage({ first: p(22), last: done, stale: true, catchUp: false, episodes: 24 }).text).toBe(
+    const exact = (aired: number) => ({ aired, exact: true });
+    const behind = (aired: number) => ({ aired, exact: false });
+    expect(burstMessage({ first: p(22), last: done, stale: true, episodes: 24, aired: exact(24) }).text).toBe(
       "Final episode reached. Moved to Completed. Finish date set to today."
     );
-    expect(burstMessage({ first: p(12), last: p(13), stale: true, catchUp: false, episodes: 24, title: "Frieren" }).text).toBe(
+    expect(burstMessage({ first: p(12), last: p(13), stale: true, episodes: 24, title: "Frieren", aired: exact(13) }).text).toBe(
       "Episode 13 logged for Frieren. It had changed since this page last checked: now Ep 13 / 24."
     );
-    expect(burstMessage({ first: p(7), last: p(7), stale: false, catchUp: true, episodes: 12, title: "X" }).text).toBe(
+    // Nothing logged, read against the airing fields the server sent back.
+    expect(burstMessage({ first: p(7), last: p(7), stale: false, episodes: 12, title: "X", aired: exact(7) }).text).toBe(
       "Nothing logged: no new episode has aired yet. X is at Ep 7 / 12."
     );
-    expect(burstMessage({ first: p(7), last: p(7), stale: false, catchUp: false, episodes: 12, title: "X" }).text).toBe(
-      "Nothing logged: X is already at Ep 7 / 12."
+    expect(burstMessage({ first: p(7), last: p(7), stale: false, episodes: 12, title: "X", aired: behind(7) }).text).toBe(
+      "Nothing logged: caught up on X as far as this page knows. Reload to check."
     );
-    expect(burstMessage({ first: p(12), last: p(12), stale: false, catchUp: true, episodes: 12, title: "X" }).text).toBe(
+    // No airing fields came back (an older server): below the last episode, only the aired count stops it.
+    expect(burstMessage({ first: p(7), last: p(7), stale: false, episodes: 12, title: "X", aired: null }).text).toBe(
+      "Nothing logged: no new episode has aired yet. X is at Ep 7 / 12."
+    );
+    expect(burstMessage({ first: p(12), last: p(12), stale: false, episodes: 12, title: "X", aired: exact(12) }).text).toBe(
       "Nothing logged: X is already at Ep 12 / 12."
     );
-    expect(burstMessage({ first: p(5), last: p(7), stale: false, catchUp: false, episodes: 12, title: "X" }).text).toBe(
+    expect(burstMessage({ first: p(5), last: p(7), stale: false, episodes: 12, title: "X", aired: exact(9) }).text).toBe(
       "Episodes 6–7 logged for X. 5 to go."
     );
     expect(
-      burstMessage({
-        first: p(1212),
-        last: p(1215),
-        stale: false,
-        catchUp: true,
-        episodes: null,
-        title: "Detective Conan",
-        unlogged: { before: 3, after: 0 },
-      }).spoken
+      burstMessage({ first: p(1212), last: p(1215), stale: false, episodes: null, title: "Detective Conan", aired: exact(1215) })
+        .spoken
     ).toBe("Episodes 1213 to 1215 logged for Detective Conan. Caught up.");
+    // Past the schedule's horizon "caught up" is only as far as the page knows: no claim.
+    expect(burstMessage({ first: p(13), last: p(14), stale: false, episodes: 26, title: "Knight", aired: behind(14) }).text).toBe(
+      "Episode 14 logged for Knight. 12 to go."
+    );
   });
 
   it("says a stale save plainly", () => {
@@ -227,12 +251,94 @@ describe("burst lines", () => {
   });
 
   it("says what nothing-logged means", () => {
-    expect(noChangeMessage({ current: p(1214), episodes: null, title: "Detective Conan", notAired: true }).spoken).toBe(
+    expect(noChangeMessage({ current: p(1214), episodes: null, title: "Detective Conan", why: "notAired" }).spoken).toBe(
       "Nothing logged: no new episode has aired yet. Detective Conan is at episode 1214."
     );
-    expect(noChangeMessage({ current: p(24), episodes: 24, notAired: false }).text).toBe(
+    expect(noChangeMessage({ current: p(24), episodes: 24, why: "already" }).text).toBe(
       "Nothing logged: it is already at Ep 24 / 24."
     );
+    expect(noChangeMessage({ current: p(14), episodes: 26, why: "pageBehind" }).text).toBe(
+      "Nothing logged: caught up as far as this page knows. Reload to check."
+    );
+    expect(noChangeMessage({ current: p(14), episodes: 26, title: "Knight", why: "serverBehind" }).spoken).toBe(
+      "Nothing logged: the server doesn't count a new episode as aired yet. Knight is at episode 14 of 26."
+    );
+  });
+});
+
+describe("refused +1 lines and the capped button", () => {
+  // Thu Oct 8 2026 16:30 UTC = 9:30 AM PDT
+  const AT = Date.UTC(2026, 9, 8, 16, 30) / 1000;
+  const date = formatAirDate(AT);
+  const cap = (progress: number, aired: number, episode = aired + 1) => ({ progress, aired, next: { episode, airingAt: AT } });
+
+  it("says why nothing was logged, caught up first", () => {
+    expect(date).toBe("Oct 8, 2026, 9:30 AM PDT");
+    expect(notAiredMessage({ cap: cap(14, 14), title: "Knight" })).toEqual({
+      kind: "Notice",
+      text: "Nothing logged: caught up on Knight. Episode 15 airs Oct 8, 2026, 9:30 AM PDT. Watched it early? Use Edit.",
+      spoken: "Nothing logged: caught up on Knight. Episode 15 airs Oct 8, 2026, 9:30 AM PDT. Watched it early? Use Edit.",
+    });
+    expect(notAiredMessage({ cap: cap(0, 0), title: "Knight" }).text).toBe("Nothing logged: Knight premieres Oct 8, 2026, 9:30 AM PDT.");
+    // A second cour numbered from 13 that hasn't premiered.
+    expect(notAiredMessage({ cap: cap(0, 0, 13), title: "Knight" }).text).toBe(
+      "Nothing logged: Knight premieres Oct 8, 2026, 9:30 AM PDT."
+    );
+    expect(notAiredMessage({ cap: cap(16, 14), title: "Knight" }).text).toBe(
+      "Nothing logged: episode 17 of Knight hasn't aired yet. Watched it early? Use Edit."
+    );
+    // Logged ahead before the premiere.
+    expect(notAiredMessage({ cap: cap(2, 0), title: "Knight" }).text).toBe(
+      "Nothing logged: episode 3 of Knight hasn't aired yet. Watched it early? Use Edit."
+    );
+  });
+
+  it("leaves the Edit hint out without a title (the demo has no Edit)", () => {
+    expect(notAiredMessage({ cap: cap(14, 14) }).text).toBe("Nothing logged: caught up. Episode 15 airs Oct 8, 2026, 9:30 AM PDT.");
+    expect(notAiredMessage({ cap: cap(0, 0) }).text).toBe("Nothing logged: it premieres Oct 8, 2026, 9:30 AM PDT.");
+    expect(notAiredMessage({ cap: cap(16, 14) }).text).toBe("Nothing logged: episode 17 hasn't aired yet.");
+  });
+
+  it("names the capped button like the enabled one, with the state in its tooltip", () => {
+    expect(cappedPlusOneLabel({ cap: cap(14, 14), title: "Knight" })).toEqual({
+      label: "+1: caught up on Knight. Episode 15 airs Oct 8, 2026, 9:30 AM PDT",
+      title: "Caught up. Watched it early? Use Edit.",
+    });
+    expect(cappedPlusOneLabel({ cap: cap(0, 0), title: "Knight" })).toEqual({
+      label: "+1: Knight premieres Oct 8, 2026, 9:30 AM PDT",
+      title: "Not aired yet. Watched it early? Use Edit.",
+    });
+    expect(cappedPlusOneLabel({ cap: cap(16, 14), title: "Knight" })).toEqual({
+      label: "+1: episode 17 of Knight hasn't aired yet",
+      title: "Logged ahead of the schedule. Watched it early? Use Edit.",
+    });
+  });
+
+  it("stays short and speakable for every capped state", () => {
+    const TITLE = "Frierenfrier"; // 12 characters
+    for (const [progress, aired, episode] of [
+      [0, 0, 1],
+      [0, 0, 13],
+      [3, 0, 1],
+      [9, 9, 10],
+      [12, 9, 10],
+      [1214, 1214, 1215],
+      [1300, 1214, 1215],
+    ]) {
+      for (const title of [TITLE, undefined]) {
+        const m = notAiredMessage({ cap: cap(progress, aired, episode), title });
+        const label = `${progress}/${aired} next ${episode} ${title ?? "demo"}`;
+        expect(m.text, label).toMatch(/^Nothing logged: /);
+        expect(m.text.length, label).toBeLessThanOrEqual(120);
+        expect(m.spoken, label).not.toMatch(/[/–]|\bEP\b/);
+        expect(m.text.includes("Use Edit"), label).toBe(title !== undefined && !(progress === 0 && aired === 0));
+        // Only an episode that hasn't aired is named as not aired.
+        if (progress > aired) expect(m.text, label).toContain(`episode ${progress + 1}`);
+        else if (aired > 0) expect(m.text, label).toContain(`Episode ${episode} airs`);
+        else expect(m.text, label).toContain("premieres");
+        if (title) expect(cappedPlusOneLabel({ cap: cap(progress, aired, episode), title }).label, label).toMatch(/^\+1: /);
+      }
+    }
   });
 });
 
@@ -370,30 +476,35 @@ describe("truth sweep: burst lines", () => {
               finishDate: lastStatus === "completed" ? day : null,
             });
             for (const stale of [false, true]) {
-              for (const catchUp of [false, true]) {
-                for (const unlogged of [undefined, { before: 2, after: 0 }, { before: 2, after: 1 }]) {
-                  const m = burstMessage({ first, last, stale, catchUp, episodes: total, title: TITLE, unlogged });
-                  const label = `${status} ${from}→${to}/${total} stale=${stale} catchUp=${catchUp}`;
-                  if (lastStatus === "completed" && status !== "completed") {
-                    expect(m.text, label).toMatch(/^Final episode reached\./);
-                  } else if (to > from) {
-                    const expectedRange = to - from === 1 ? `Episode ${to}` : `Episodes ${from + 1}–${to}`;
-                    expect(m.text.startsWith(expectedRange), label).toBe(true);
-                    expect(m.text.includes("It had changed since"), label).toBe(stale);
-                    const caught = !stale && unlogged?.before === 2 && unlogged.after === 0 && moved === status && to - from === 2;
-                    expect(m.text.includes("Caught up"), label).toBe(caught);
-                    if (!stale && !caught && moved === status && total !== null && to < total) {
-                      expect(m.text, label).toContain(` ${total - to} to go.`);
-                    }
-                  } else {
-                    expect(m.text.includes("no new episode has aired"), label).toBe(
-                      !stale && catchUp && (total === null || to < total)
-                    );
-                    expect(m.text.includes("It had changed since"), label).toBe(stale);
+              for (const aired of [null, { aired: to, exact: true }, { aired: to, exact: false }, { aired: to + 1, exact: true }]) {
+                const m = burstMessage({ first, last, stale, episodes: total, title: TITLE, aired });
+                const label = `${status} ${from}→${to}/${total} stale=${stale} aired=${JSON.stringify(aired)}`;
+                const belowTotal = total === null || to < total;
+                if (lastStatus === "completed" && status !== "completed") {
+                  expect(m.text, label).toMatch(/^Final episode reached\./);
+                } else if (to > from) {
+                  const expectedRange = to - from === 1 ? `Episode ${to}` : `Episodes ${from + 1}–${to}`;
+                  expect(m.text.startsWith(expectedRange), label).toBe(true);
+                  expect(m.text.includes("It had changed since"), label).toBe(stale);
+                  // Caught up only when the burst ended exactly on an exact aired count, below the last episode.
+                  const caught = !stale && aired !== null && aired.exact && aired.aired === to && belowTotal;
+                  expect(m.text.includes("Caught up"), label).toBe(caught);
+                  if (!stale && !caught && moved === status && total !== null && to < total) {
+                    expect(m.text, label).toContain(` ${total - to} to go.`);
                   }
-                  expect(m.text.length, label).toBeLessThanOrEqual(112);
-                  expect(m.spoken, label).not.toMatch(/[/–]/);
+                } else {
+                  // Only the server's aired count stops a no-op below the last episode: say whose count.
+                  const serverBehind = aired !== null && to < aired.aired;
+                  const behind = !serverBehind && aired !== null && !aired.exact;
+                  const notAired = !serverBehind && !behind;
+                  expect(m.text.includes("no new episode has aired"), label).toBe(!stale && belowTotal && notAired);
+                  expect(m.text.includes("as far as this page knows"), label).toBe(!stale && belowTotal && behind);
+                  expect(m.text.includes("doesn't count a new episode"), label).toBe(!stale && belowTotal && serverBehind);
+                  expect(m.text.includes("is already at"), label).toBe(!stale && !belowTotal);
+                  expect(m.text.includes("It had changed since"), label).toBe(stale);
                 }
+                expect(m.text.length, label).toBeLessThanOrEqual(112);
+                expect(m.spoken, label).not.toMatch(/[/–]/);
               }
             }
           }
@@ -408,12 +519,13 @@ describe("review fixes", () => {
     data({ episodeProgressNumber, ...overrides });
 
   it("says caught up only when the burst ends on the last aired episode", () => {
-    // 13/26 with EP 14 aired: three taps log 14–16, two of them not aired yet.
-    expect(plusOneMessage({ prev: p(13), next: p(16), episodes: 26, title: "Knight", unlogged: { before: 1, after: 0 } }).text).toBe(
-      "Episodes 14–16 logged for Knight. 10 to go."
-    );
-    expect(plusOneMessage({ prev: p(13), next: p(14), episodes: 26, title: "Knight", unlogged: { before: 1, after: 0 } }).text).toBe(
+    // 13/26 with EP 14 aired: three taps log only 14 now (the server caps the rest).
+    expect(burstMessage({ first: p(13), last: p(14), stale: false, episodes: 26, title: "Knight", aired: { aired: 14, exact: true } }).text).toBe(
       "Episode 14 logged for Knight. Caught up."
+    );
+    // Logged ahead through Edit, then a +1 the server allowed past the page's lower bound: no claim.
+    expect(burstMessage({ first: p(13), last: p(16), stale: false, episodes: 26, title: "Knight", aired: { aired: 14, exact: true } }).text).toBe(
+      "Episodes 14–16 logged for Knight. 10 to go."
     );
   });
 

@@ -14,6 +14,7 @@ import {
   hasActiveFilters,
   matchesFilters,
   placeHeld,
+  sameAiringFields,
   sortEntries,
   yearOptions,
 } from "./listFilters";
@@ -246,7 +247,7 @@ describe("placeHeld", () => {
     expect(ids(before)).toEqual([[c.id, b.id, a.id]]);
     // A rises past everyone (5 taps → 7 of 12), but it is held at its old value.
     const risen = { ...a, userData: { ...a.userData, episodeProgressNumber: 7 } };
-    const held = new Map([[a.id, a.userData]]);
+    const held = new Map([[a.id, a]]);
     expect(ids(placeHeld([risen, b, c], held, { sort: "progress", tab: "all", nowMs: null }))).toEqual([[c.id, b.id, a.id]]);
     // Released: it sorts by its live value.
     expect(ids(placeHeld([risen, b, c], new Map(), { sort: "progress", tab: "all", nowMs: null }))).toEqual([
@@ -257,7 +258,7 @@ describe("placeHeld", () => {
   it("keeps a held card that completed in its section, and returns the live object", () => {
     const a = named("A", { listType: "watching", episodeProgressNumber: 11 });
     const done = { ...a, userData: { ...a.userData, listType: "completed" as const, episodeProgressNumber: 12 } };
-    const held = new Map([[a.id, a.userData]]);
+    const held = new Map([[a.id, a]]);
     const shelf = placeHeld([done], held, { sort: "next", tab: "watching", nowMs: null });
     expect(shelf).toHaveLength(1);
     expect(shelf[0].status).toBe("watching");
@@ -265,6 +266,31 @@ describe("placeHeld", () => {
     const all = placeHeld([done], held, { sort: "next", tab: "all", nowMs: null });
     expect(all.map((section) => section.status)).toEqual(["watching"]);
     expect(all[0].entries[0].userData.listType).toBe("completed");
+  });
+
+  it("keeps a held card's place when a +1's response updates its airing fields", () => {
+    const soon = (romaji: string, airingAt: number) =>
+      entry({
+        title: { romaji, english: null, native: null },
+        status: "RELEASING",
+        episodes: 24,
+        upComingAirDate: { episode: [{ airingAt, episode: 5, timeUntilAiring: null }] },
+        userData: { listType: "watching", episodeProgressNumber: 3 },
+      });
+    const a = soon("A", THU);
+    const b = soon("B", SAT);
+    expect(ids(placeHeld([a, b], new Map(), { sort: "next", tab: "all", nowMs: null }))).toEqual([[a.id, b.id]]);
+    // A's server schedule moved its next episode past B's (a stale page's first +1).
+    const moved = { ...a, upComingAirDate: { episode: [{ airingAt: SAT + 86_400, episode: 6, timeUntilAiring: null }] } };
+    expect(ids(placeHeld([moved, b], new Map([[a.id, a]]), { sort: "next", tab: "all", nowMs: null }))).toEqual([[a.id, b.id]]);
+    expect(ids(placeHeld([moved, b], new Map(), { sort: "next", tab: "all", nowMs: null }))).toEqual([[b.id, a.id]]);
+  });
+
+  it("knows when a response's airing fields change nothing", () => {
+    const a = entry({ status: "RELEASING", upComingAirDate: { episode: [{ airingAt: THU, episode: 5, timeUntilAiring: null }] } });
+    expect(sameAiringFields(a, { status: "RELEASING", upComingAirDate: { episode: [{ airingAt: THU, episode: 5, timeUntilAiring: null }] } })).toBe(true);
+    expect(sameAiringFields(a, { upComingAirDate: { episode: [{ airingAt: SAT, episode: 6, timeUntilAiring: null }] } })).toBe(false);
+    expect(sameAiringFields(a, { status: "FINISHED" })).toBe(false);
   });
 
   it("is the plain sort and grouping with nothing held", () => {

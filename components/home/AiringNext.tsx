@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LINEUP_EXCLUDING, MAGIC_SENSE_LINE, SEASON_EYEBROW } from "@/lib/anime/seasonCopy";
+import { MAGIC_SENSE_LINE, SEASON_EYEBROW, landingSeasonStat } from "@/lib/anime/seasonCopy";
 import type { LandingSeasonMeta } from "@/lib/landing";
 import AiringGrid, { LandingTimersToggle, ReportPanel } from "./AiringGrid";
 import {
@@ -28,22 +28,21 @@ export default function AiringNext({
   continuingIds: number[];
 }) {
   const sub = !season
-    ? "The season page counts down live to each show's next scheduled episode, series continuing from earlier seasons included. Times are Pacific."
+    ? "The season page counts down live to each show's next scheduled episode, TV series continuing from earlier seasons included. Times are Pacific."
     : season.preview
       ? `${season.label} starts ${season.startsLabel}. Here's what premieres first, plus the long-runners carrying on, each counting down live. Times are Pacific.`
-      : `The ${season.label} page counts down live to each show's next scheduled episode, series continuing from earlier seasons included. Times are Pacific.`;
+      : `The ${season.label} page counts down live to each show's next scheduled episode, TV series continuing from earlier seasons included. Times are Pacific.`;
 
   // The season page's lineup: the same query, so the same scope (lib/anime/seasonCopy.ts).
   const stat =
     season?.showCount != null
-      ? `AniList lists ${season.showCount} ${season.label} shows, ${LINEUP_EXCLUDING}${
-          season.continuingCount
-            ? `, plus ${season.continuingCapped ? "at least " : ""}${season.continuingCount} ${
-                // Before the season starts, which series carry on is an estimate (lib/anime/carryOver.ts).
-                season.preview ? "expected to continue from earlier seasons" : "continuing from earlier seasons"
-              }`
-            : ""
-        }.`
+      ? landingSeasonStat({
+          label: season.label,
+          showCount: season.showCount,
+          continuingCount: season.continuingCount,
+          continuingCapped: season.continuingCapped,
+          preview: season.preview,
+        })
       : null;
 
   const live = season !== null && airingIds.length > 0;

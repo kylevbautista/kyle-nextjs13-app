@@ -25,6 +25,9 @@ const media: TrackMedia = {
   upComingAirDate: { episode: [{ airingAt: Math.floor(NOW / 1000) + 3600, episode: 20, timeUntilAiring: null }] },
 };
 
+/** The same show once it has finished: all 24 episodes aired, so only the total bounds a +1. */
+const finished: TrackMedia = { id: 7, status: "FINISHED", episodes: 24, upcomingEpisode: null, upComingAirDate: { episode: [] } };
+
 interface Deferred<T> {
   resolve: (value: T) => void;
   reject: (err: unknown) => void;
@@ -122,20 +125,21 @@ describe("batching", () => {
 
   it("settles at once at the finale", async () => {
     const r = rig();
-    r.queue.tap(media, ud(23), "Knight");
+    r.queue.tap(finished, ud(23), "Knight");
     await flush();
     r.logs[0].d.resolve({ userData: ud(24, { listType: "completed", finishDate: day }), previous: ud(23) });
     await flush();
     expect(r.said.map((m) => m.text)).toEqual(["Final episode reached. Knight moved to Completed. Finish date set to today."]);
     // No more taps past the total.
-    r.queue.tap(media, ud(24), "Knight");
+    r.queue.tap(finished, ud(24), "Knight");
     await flush();
     expect(r.transport.log).toHaveBeenCalledTimes(1);
   });
 
   it("splits more than 100 queued taps", async () => {
     const r = rig();
-    const long = { ...media, episodes: null };
+    // A long runner whose next episode is TBA: nothing caps it.
+    const long: TrackMedia = { id: 7, status: "RELEASING", episodes: null, upcomingEpisode: null, upComingAirDate: { episode: [] } };
     for (let i = 0; i < 102; i++) r.queue.tap(long, ud(0), "Long");
     await flush();
     r.logs[0].d.resolve({ userData: ud(1), previous: ud(0) });
@@ -273,31 +277,34 @@ describe("stale pages", () => {
 describe("catch-up", () => {
   it("asks for what the chip showed, and keeps later taps separate", async () => {
     const r = rig();
-    r.queue.catchUp(media, ud(16), 3, "Knight");
-    expect(r.lastView().episodeProgressNumber).toBe(19);
-    r.queue.tap(media, ud(16), "Knight");
-    r.queue.catchUp(media, ud(16), 1, "Knight");
-    r.queue.catchUp(media, ud(16), 1, "Knight");
+    r.queue.catchUp(media, ud(12), 3, "Knight");
+    expect(r.lastView().episodeProgressNumber).toBe(15);
+    r.queue.tap(media, ud(12), "Knight");
+    r.queue.catchUp(media, ud(12), 1, "Knight");
+    r.queue.catchUp(media, ud(12), 1, "Knight");
     await flush();
-    expect(r.logs[0].op).toEqual({ kind: "catchUp", catchUpTo: 19 });
-    r.logs[0].d.resolve({ userData: ud(19), previous: ud(16) });
+    expect(r.logs[0].op).toEqual({ kind: "catchUp", catchUpTo: 15 });
+    r.logs[0].d.resolve({ userData: ud(15), previous: ud(12) });
     await flush();
     expect(r.logs[1].op).toEqual({ kind: "increment", increment: 1 });
-    r.logs[1].d.resolve({ userData: ud(20), previous: ud(19) });
+    r.logs[1].d.resolve({ userData: ud(16), previous: ud(15) });
     await flush();
-    // Two catch-ups queued back to back merge into one op (each asked for view + 1 = 21).
-    expect(r.logs[2].op).toEqual({ kind: "catchUp", catchUpTo: 21 });
+    // Two catch-ups queued back to back merge into one op with the larger target (view + 1 each: 17, then 18).
+    expect(r.logs[2].op).toEqual({ kind: "catchUp", catchUpTo: 18 });
     expect(r.logs).toHaveLength(3);
   });
 
-  it("says nothing aired yet when the server logs nothing", async () => {
+  it("says the server didn't count it as aired when it logs nothing the page counts", async () => {
     const r = rig();
     r.queue.catchUp(media, ud(18), 1, "Knight");
     await flush();
+    // The page counts 19 aired; the server (its clock behind) logged nothing.
     r.logs[0].d.resolve({ userData: ud(18), previous: ud(18) });
     await flush();
     vi.advanceTimersByTime(700);
-    expect(r.said.map((m) => m.text)).toEqual(["Nothing logged: no new episode has aired yet. Knight is at Ep 18 / 24."]);
+    expect(r.said.map((m) => m.text)).toEqual([
+      "Nothing logged: the server doesn't count a new episode as aired yet. Knight is at Ep 18 / 24.",
+    ]);
     expect(r.lastActivity()?.undo ?? null).toBeNull();
   });
 });
@@ -336,7 +343,7 @@ describe("undo", () => {
 
   it("restores a status after an auto-complete", async () => {
     const r = rig();
-    r.queue.tap(media, ud(23), "Knight");
+    r.queue.tap(finished, ud(23), "Knight");
     await flush();
     const done = ud(24, { listType: "completed", finishDate: day });
     r.logs[0].d.resolve({ userData: done, previous: ud(23) });
@@ -428,7 +435,7 @@ describe("undo", () => {
 describe("activity and lifecycle", () => {
   it("drops idle motion state on a view change", async () => {
     const r = rig();
-    r.queue.tap(media, ud(23), "Knight");
+    r.queue.tap(finished, ud(23), "Knight");
     await flush();
     r.logs[0].d.resolve({ userData: ud(24, { listType: "completed", finishDate: day }), previous: ud(23) });
     await flush();
@@ -451,11 +458,11 @@ describe("activity and lifecycle", () => {
     await flush();
     r.logs[0].d.resolve({ userData: ud(14), previous: ud(13) });
     await flush();
-    r.queue.adopt(media.id, ud(20));
+    r.queue.adopt(media.id, ud(17));
     vi.advanceTimersByTime(1000);
     expect(r.said).toEqual([]);
-    r.queue.tap(media, ud(20), "Knight");
-    expect(r.lastView().episodeProgressNumber).toBe(21);
+    r.queue.tap(media, ud(17), "Knight");
+    expect(r.lastView().episodeProgressNumber).toBe(18);
   });
 
   it("ignores late responses after forget, and resolves its waiters with null", async () => {
@@ -513,7 +520,10 @@ describe("activity and lifecycle", () => {
     await flush();
     vi.advanceTimersByTime(700);
     expect(r.lastActivity()?.undo ?? null).toBeNull();
-    expect(r.said.map((m) => m.text)).toEqual(["Nothing logged: Knight is already at Ep 13 / 24."]);
+    // Below the last episode, only the server's aired count stops a +1 (its clock, its schedule).
+    expect(r.said.map((m) => m.text)).toEqual([
+      "Nothing logged: the server doesn't count a new episode as aired yet. Knight is at Ep 13 / 24.",
+    ]);
   });
 });
 
@@ -612,5 +622,228 @@ describe("review fixes", () => {
     await flush();
     await expect(r.queue.whenIdle(media.id, { beforeBurst: true })).resolves.toEqual(ud(13));
     await expect(r.queue.whenIdle(media.id)).resolves.toEqual(ud(14));
+  });
+});
+
+describe("the aired cap", () => {
+  const AIRS = Math.floor(NOW / 1000) + 3600; // media's EP 20
+  /** The same show once EP 20's air time has passed but the page's schedule wasn't refreshed. */
+  const behind: TrackMedia = {
+    ...media,
+    upComingAirDate: { episode: [{ airingAt: Math.floor(NOW / 1000) - 3600, episode: 20, timeUntilAiring: null }] },
+  };
+  const nextWeek = { upComingAirDate: { episode: [{ airingAt: Math.floor(NOW / 1000) + 7 * 86_400, episode: 21, timeUntilAiring: null }] } };
+
+  it("refuses a tap that can't log an aired episode, and changes nothing", async () => {
+    const r = rig();
+    expect(r.queue.tap(media, ud(19), "Knight")).toBe(false);
+    await flush();
+    expect(r.transport.log).not.toHaveBeenCalled();
+    expect(r.views).toEqual([]);
+    expect(r.activities).toEqual([]);
+    expect(r.said.map((m) => m.text)).toEqual([
+      "Nothing logged: caught up on Knight. Episode 20 airs Oct 4, 2026, 12:00 PM PDT. Watched it early? Use Edit.",
+    ]);
+    // Nothing changed: no refresh.
+    expect(r.settled).not.toHaveBeenCalled();
+    expect(rig().queue.tap(media, ud(18), "Knight")).toBe(true);
+  });
+
+  it("says it once per pause in pressing", async () => {
+    const r = rig();
+    r.queue.tap(media, ud(19), "Knight");
+    vi.advanceTimersByTime(300);
+    r.queue.tap(media, ud(19), "Knight");
+    vi.advanceTimersByTime(600);
+    r.queue.tap(media, ud(19), "Knight");
+    expect(r.said).toHaveLength(1);
+    vi.advanceTimersByTime(700);
+    r.queue.tap(media, ud(19), "Knight");
+    expect(r.said).toHaveLength(2);
+  });
+
+  it("stays silent mid-burst, keeps the burst open, and its line says caught up", async () => {
+    const r = rig();
+    expect(r.queue.tap(media, ud(18), "Knight")).toBe(true);
+    expect(r.queue.tap(media, ud(18), "Knight")).toBe(false);
+    expect(r.lastView().episodeProgressNumber).toBe(19);
+    expect(r.lastActivity()?.taps).toBe(1);
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(19), previous: ud(18) });
+    await flush();
+    vi.advanceTimersByTime(400);
+    r.queue.tap(media, ud(19), "Knight");
+    vi.advanceTimersByTime(699);
+    expect(r.said).toEqual([]);
+    vi.advanceTimersByTime(1);
+    expect(r.said.map((m) => m.text)).toEqual(["Episode 19 logged for Knight. Caught up."]);
+    expect(r.logs).toHaveLength(1);
+    expect(r.lastActivity()?.undo).toMatchObject({ n: 1 });
+  });
+
+  it("starts a Plan to Watch show, and says caught up there too", async () => {
+    const r = rig();
+    const planned = ud(18, { listType: "planning" });
+    r.queue.tap(media, planned, "Knight");
+    r.queue.tap(media, planned, "Knight");
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(19), previous: planned });
+    await flush();
+    vi.advanceTimersByTime(700);
+    expect(r.said.map((m) => m.text)).toEqual(["Episode 19 logged. Knight moved to Watching. Caught up."]);
+  });
+
+  it("takes a tap the second the next episode airs", () => {
+    const r = rig();
+    vi.setSystemTime(AIRS * 1000 - 1000);
+    expect(r.queue.tap(media, ud(19), "Knight")).toBe(false);
+    vi.setSystemTime(AIRS * 1000);
+    expect(r.queue.tap(media, ud(19), "Knight")).toBe(true);
+    expect(r.lastView().episodeProgressNumber).toBe(20);
+  });
+
+  it("says when a show premieres, or that it's logged ahead", () => {
+    const premiere: TrackMedia = {
+      ...media,
+      status: "NOT_YET_RELEASED",
+      upComingAirDate: { episode: [{ airingAt: AIRS, episode: 1, timeUntilAiring: null }] },
+    };
+    const r = rig();
+    expect(r.queue.tap(premiere, ud(0, { listType: "planning", startDate: null }), "Knight")).toBe(false);
+    expect(r.said.at(-1)?.text).toBe("Nothing logged: Knight premieres Oct 4, 2026, 12:00 PM PDT.");
+    const ahead = rig();
+    expect(ahead.queue.tap(media, ud(21), "Knight")).toBe(false);
+    expect(ahead.said.at(-1)?.text).toBe("Nothing logged: episode 22 of Knight hasn't aired yet. Watched it early? Use Edit.");
+  });
+
+  it("refuses at the last episode silently", () => {
+    const r = rig();
+    expect(r.queue.tap(finished, ud(24, { listType: "completed" }), "Knight")).toBe(false);
+    expect(r.said).toEqual([]);
+  });
+
+  it("doesn't reopen Undo or start a burst on a refusal", async () => {
+    const r = rig();
+    r.queue.tap(media, ud(17), "Knight");
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(18), previous: ud(17) });
+    await flush();
+    vi.advanceTimersByTime(700);
+    r.queue.closeUndo(media.id);
+    expect(r.lastActivity()?.undo ?? null).toBeNull();
+    r.queue.adopt(media.id, ud(19));
+    r.queue.closeUndo(media.id);
+    expect(r.queue.tap(media, ud(19), "Knight")).toBe(false);
+    vi.advanceTimersByTime(1000);
+    expect(r.said.at(-1)?.text).toMatch(/^Nothing logged: caught up on Knight\./);
+    expect(r.transport.log).toHaveBeenCalledTimes(1);
+  });
+
+  it("past the schedule's horizon, lets the server decide and adopts its schedule", async () => {
+    const fields: unknown[] = [];
+    const r = rig();
+    r.queue.connect({
+      view: (_id, value) => r.views.push(value),
+      activity: (_id, value) => r.activities.push(value),
+      say: (_id, message) => r.said.push(message),
+      settled: r.settled,
+      media: (_id, f) => fields.push(f),
+    });
+    // EP 20's air time has passed: 20 aired at least, maybe more since.
+    expect(r.queue.tap(behind, ud(20), "Knight")).toBe(true);
+    // No step past what the page knows has aired (no new view), but the tap is on its way.
+    expect(r.views).toEqual([]);
+    expect(r.lastActivity()).toMatchObject({ saving: true, taps: 1 });
+    await flush();
+    expect(r.logs.map((l) => l.op)).toEqual([{ kind: "increment", increment: 1 }]);
+    // The server's schedule knew EP 21 had aired, and that EP 22 is next week.
+    const fresh = { upComingAirDate: { episode: [{ airingAt: Math.floor(NOW / 1000) + 7 * 86_400, episode: 22, timeUntilAiring: null }] } };
+    r.logs[0].d.resolve({ userData: ud(21), previous: ud(20), snapshot: fresh });
+    await flush();
+    expect(fields).toEqual([fresh]);
+    expect(r.lastView().episodeProgressNumber).toBe(21);
+    vi.advanceTimersByTime(700);
+    expect(r.said.map((m) => m.text)).toEqual(["Episode 21 logged for Knight. Caught up."]);
+    // Now the cap is exact again: the next tap is refused here.
+    expect(r.queue.tap({ ...behind, ...fresh }, ud(21), "Knight")).toBe(false);
+  });
+
+  it("names the server's no-op from the schedule it sent back", async () => {
+    const stillBehind = rig();
+    stillBehind.queue.tap(behind, ud(20), "Knight");
+    await flush();
+    stillBehind.logs[0].d.resolve({ userData: ud(20), previous: ud(20), snapshot: { upComingAirDate: behind.upComingAirDate } });
+    await flush();
+    vi.advanceTimersByTime(700);
+    expect(stillBehind.said.map((m) => m.text)).toEqual([
+      "Nothing logged: caught up on Knight as far as this page knows. Reload to check.",
+    ]);
+    // The server's fresher schedule says EP 21 is next week: nothing new has aired.
+    const known = rig();
+    known.queue.tap(behind, ud(20), "Knight");
+    await flush();
+    known.logs[0].d.resolve({ userData: ud(20), previous: ud(20), snapshot: nextWeek });
+    await flush();
+    vi.advanceTimersByTime(700);
+    expect(known.said.map((m) => m.text)).toEqual(["Nothing logged: no new episode has aired yet. Knight is at Ep 20 / 24."]);
+    expect(known.lastActivity()?.undo ?? null).toBeNull();
+  });
+
+  it("names only what the server logged when it capped a batch", async () => {
+    const r = rig();
+    r.queue.tap(behind, ud(19), "Knight");
+    r.queue.tap(behind, ud(19), "Knight");
+    r.queue.tap(behind, ud(19), "Knight");
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(20), previous: ud(19), snapshot: { upComingAirDate: behind.upComingAirDate } });
+    await flush();
+    expect(r.logs[1].op).toEqual({ kind: "increment", increment: 2 });
+    r.logs[1].d.resolve({ userData: ud(20), previous: ud(20), snapshot: { upComingAirDate: behind.upComingAirDate } });
+    await flush();
+    vi.advanceTimersByTime(700);
+    // EP 20 is only the latest the page knows of: no "Caught up." claim.
+    expect(r.said.map((m) => m.text)).toEqual(["Episode 20 logged for Knight. 4 to go."]);
+    expect(r.lastActivity()?.undo).toMatchObject({ n: 1 });
+  });
+});
+
+describe("the aired cap: review fixes", () => {
+  it("never creates a track on a refusal, so a later value the page shows is used", () => {
+    const r = rig();
+    // Caught up at 19: refused, and nothing is kept.
+    expect(r.queue.tap(media, ud(19), "Knight")).toBe(false);
+    // The list re-read says 18 (another device's Undo): the next tap starts from it.
+    expect(r.queue.tap(media, ud(18), "Knight")).toBe(true);
+    expect(r.lastView().episodeProgressNumber).toBe(19);
+  });
+
+  it("keeps the burst flag up until the burst's line is said", async () => {
+    const r = rig();
+    r.queue.tap(media, ud(18), "Knight");
+    expect(r.lastActivity()?.burst).toBe(true);
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(19), previous: ud(18) });
+    await flush();
+    expect(r.lastActivity()?.burst).toBe(true);
+    vi.advanceTimersByTime(700);
+    expect(r.said.map((m) => m.text)).toEqual(["Episode 19 logged for Knight. Caught up."]);
+    expect(r.lastActivity()).toMatchObject({ burst: false });
+  });
+
+  it("doesn't claim caught up when the server's clock is behind the page's", async () => {
+    const r = rig();
+    // EP 20's air time has passed by this page's clock: 20 aired (at least).
+    const behind: TrackMedia = {
+      ...media,
+      upComingAirDate: { episode: [{ airingAt: Math.floor(NOW / 1000) - 60, episode: 20, timeUntilAiring: null }] },
+    };
+    r.queue.tap(behind, ud(19), "Knight");
+    await flush();
+    r.logs[0].d.resolve({ userData: ud(19), previous: ud(19), snapshot: { upComingAirDate: behind.upComingAirDate } });
+    await flush();
+    vi.advanceTimersByTime(700);
+    expect(r.said.map((m) => m.text)).toEqual([
+      "Nothing logged: the server doesn't count a new episode as aired yet. Knight is at Ep 19 / 24.",
+    ]);
   });
 });

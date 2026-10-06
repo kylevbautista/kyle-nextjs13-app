@@ -4,6 +4,7 @@
  * so the demo and the real page can't drift (tempest-theme rule 1). Pure, no
  * clock: callers pass in what they know.
  */
+import { formatAirDate } from "./airing";
 import { LIST_STATUS_LABELS, type UserAnimeData } from "./types";
 
 /** A subset of the Great Sage's kinds (components/home/SageLine.tsx#SageKind). */
@@ -66,20 +67,21 @@ const both = (kind: ConsoleKind, build: (form: "text" | "spoken") => string): Co
  * before the first episode, `next` after the last. One episode keeps the
  * demo's words ("Episode 23 logged. 1 to go."); more name the range.
  * `title` names the show (My List; the demo has one show and omits it).
- * `unlogged` is unloggedAired() before and after, when known.
+ * `caughtUp`: the burst ended exactly on the last aired episode, and that
+ * count is exact (lib/anime/airing.ts#airedCount), so "Caught up." is true.
  */
 export function plusOneMessage({
   prev,
   next,
   episodes,
   title,
-  unlogged,
+  caughtUp = false,
 }: {
   prev: UserAnimeData;
   next: UserAnimeData;
   episodes: number | null;
   title?: string;
-  unlogged?: { before: number | null; after: number | null };
+  caughtUp?: boolean;
 }): ConsoleMessage {
   const progress = next.episodeProgressNumber;
   if (next.listType === "completed" && prev.listType !== "completed") {
@@ -90,20 +92,16 @@ export function plusOneMessage({
   }
   const logged = range(prev, next);
   const forTitle = title ? ` for ${title}` : "";
-  if (next.listType === "watching" && (prev.listType === "planning" || prev.listType === "paused")) {
-    return both("Notice", (form) => `${logged[form]} logged. ${title ? `${title} moved` : "Moved"} to Watching.`);
-  }
-  // Caught up = the burst ended exactly on the last aired episode (not past it: +1 may log unaired ones).
-  if (
-    unlogged &&
-    unlogged.before !== null &&
-    unlogged.before > 0 &&
-    unlogged.after === 0 &&
-    next.episodeProgressNumber - prev.episodeProgressNumber === unlogged.before
-  ) {
-    return both("Notice", (form) => `${logged[form]} logged${forTitle}. Caught up.`);
-  }
   const total = knownTotal(episodes);
+  // At the last episode, "That's every episode." says more than "Caught up.".
+  const caught = caughtUp && (total === null || progress < total);
+  if (next.listType === "watching" && (prev.listType === "planning" || prev.listType === "paused")) {
+    return both(
+      "Notice",
+      (form) => `${logged[form]} logged. ${title ? `${title} moved` : "Moved"} to Watching.${caught ? " Caught up." : ""}`
+    );
+  }
+  if (caught) return both("Notice", (form) => `${logged[form]} logged${forTitle}. Caught up.`);
   if (total === null) return both("Notice", (form) => `${logged[form]} logged${forTitle}.`);
   // A Dropped show isn't auto-completed: don't say "0 to go".
   const rest = progress >= total ? "That's every episode." : `${total - progress} to go.`;
@@ -140,61 +138,151 @@ export function staleMessage({
   return both("Notice", (form) => `${logged[form]} logged${forTitle}. ${CHANGED_SINCE}: now ${now(form)}.`);
 }
 
-/** A burst that logged nothing: a catch-up with nothing aired yet by the server's clock, or already at the end. */
+/**
+ * Why a burst logged nothing (the server's answer, read against the airing
+ * fields it sent back): `notAired`, the server's aired count stopped it;
+ * `pageBehind`, the same, but that schedule's next episode has already aired,
+ * so later ones may have too (airedCount isn't exact); `serverBehind`, this
+ * page counts more aired than the server did (its clock is behind the
+ * browser's); `already`, the show is at its last episode.
+ */
+export type NothingLogged = "notAired" | "pageBehind" | "serverBehind" | "already";
+
+/** A burst that logged nothing. */
 export function noChangeMessage({
   current,
   episodes,
   title,
-  notAired,
+  why,
 }: {
   current: UserAnimeData;
   episodes: number | null;
   title?: string;
-  notAired: boolean;
+  why: NothingLogged;
 }): ConsoleMessage {
   const total = knownTotal(episodes);
   const at = (form: "text" | "spoken") =>
     form === "text" ? ep(current.episodeProgressNumber, total) : epSpoken(current.episodeProgressNumber, total);
-  return notAired
-    ? both("Notice", (form) => `Nothing logged: no new episode has aired yet. ${title ?? "It"} is at ${at(form)}.`)
-    : both("Notice", (form) => `Nothing logged: ${title ?? "it"} is already at ${at(form)}.`);
+  if (why === "notAired") {
+    return both("Notice", (form) => `Nothing logged: no new episode has aired yet. ${title ?? "It"} is at ${at(form)}.`);
+  }
+  if (why === "pageBehind") {
+    return line("Notice", `Nothing logged: caught up${title ? ` on ${title}` : ""} as far as this page knows. Reload to check.`);
+  }
+  if (why === "serverBehind") {
+    return both(
+      "Notice",
+      (form) => `Nothing logged: the server doesn't count a new episode as aired yet. ${title ?? "It"} is at ${at(form)}.`
+    );
+  }
+  return both("Notice", (form) => `Nothing logged: ${title ?? "it"} is already at ${at(form)}.`);
+}
+
+/**
+ * Where a show stands against what has aired, for a refused +1 (an exact cap,
+ * lib/anime/airing.ts#airedCount): `next` is the stored next episode, still
+ * ahead. `premiere`: nothing has aired or been logged; `ahead`: logged past
+ * what has aired (through Edit); `caughtUp`: every aired episode is logged.
+ */
+export interface AiredCap {
+  progress: number;
+  aired: number;
+  next: { episode: number; airingAt: number };
+}
+
+const capState = ({ progress, aired }: AiredCap) =>
+  aired === 0 && progress === 0 ? "premiere" : progress > aired ? "ahead" : "caughtUp";
+
+/** My List's escape hatch: the Edit dialog sets any episode. The demo has no Edit, and no title. */
+const EDIT_HINT = " Watched it early? Use Edit.";
+
+/**
+ * A +1 refused because the next episode hasn't aired (an idle card; a refusal
+ * mid-burst is said by the burst's own "Caught up."). Absolute Pacific times
+ * (formatAirDate), so a line never goes stale. Without a title (the demo) the
+ * Edit hint is left out.
+ */
+export function notAiredMessage({ cap, title }: { cap: AiredCap; title?: string }): ConsoleMessage {
+  const date = formatAirDate(cap.next.airingAt);
+  const hint = title ? EDIT_HINT : "";
+  switch (capState(cap)) {
+    case "premiere":
+      return line("Notice", `Nothing logged: ${title ?? "it"} premieres ${date}.`);
+    case "ahead":
+      return line("Notice", `Nothing logged: episode ${cap.progress + 1}${title ? ` of ${title}` : ""} hasn't aired yet.${hint}`);
+    case "caughtUp":
+      return line(
+        "Notice",
+        `Nothing logged: caught up${title ? ` on ${title}` : ""}. Episode ${cap.next.episode} airs ${date}.${hint}`
+      );
+  }
+}
+
+/**
+ * The capped +1's accessible name and tooltip (the button shows only a clock).
+ * The name starts with "+1:" like the enabled button's, so voice control's
+ * "click +1" still reaches it; the tooltip (read as the description) says the
+ * state and the escape hatch, never the date again.
+ */
+export function cappedPlusOneLabel({ cap, title }: { cap: AiredCap; title: string }) {
+  const date = formatAirDate(cap.next.airingAt);
+  switch (capState(cap)) {
+    case "premiere":
+      return { label: `+1: ${title} premieres ${date}`, title: `Not aired yet.${EDIT_HINT}` };
+    case "ahead":
+      return {
+        label: `+1: episode ${cap.progress + 1} of ${title} hasn't aired yet`,
+        title: `Logged ahead of the schedule.${EDIT_HINT}`,
+      };
+    case "caughtUp":
+      return {
+        label: `+1: caught up on ${title}. Episode ${cap.next.episode} airs ${date}`,
+        title: `Caught up.${EDIT_HINT}`,
+      };
+  }
 }
 
 /**
  * One line for a finished burst (lib/anime/trackQueue.ts): the finale first,
  * then a stale save, then "nothing logged", then the +1 line for the range.
+ * `aired` is airedCount() at settle time, from the airing fields the server
+ * sent back: it decides "Caught up." and why nothing was logged.
  */
 export function burstMessage({
   first,
   last,
   stale,
-  catchUp,
   episodes,
   title,
-  unlogged,
+  aired,
 }: {
   first: UserAnimeData;
   last: UserAnimeData;
   stale: boolean;
-  catchUp: boolean;
   episodes: number | null;
   title?: string;
-  unlogged?: { before: number | null; after: number | null };
+  aired: { aired: number; exact: boolean } | null;
 }): ConsoleMessage {
   if (last.listType === "completed" && first.listType !== "completed") {
-    return plusOneMessage({ prev: first, next: last, episodes, title, unlogged });
+    return plusOneMessage({ prev: first, next: last, episodes, title });
   }
   if (stale) return staleMessage({ first, last, episodes, title });
-  if (last.episodeProgressNumber <= first.episodeProgressNumber) {
-    const total = knownTotal(episodes);
-    return noChangeMessage({
-      current: last,
-      episodes,
-      title,
-      notAired: catchUp && (total === null || last.episodeProgressNumber < total),
-    });
+  const total = knownTotal(episodes);
+  const progress = last.episodeProgressNumber;
+  if (progress <= first.episodeProgressNumber) {
+    // Below the last episode, only the server's aired count stops a +1 or a catch-up.
+    const why: NothingLogged =
+      total !== null && progress >= total
+        ? "already"
+        : aired !== null && progress < aired.aired
+          ? "serverBehind"
+          : aired !== null && !aired.exact
+            ? "pageBehind"
+            : "notAired";
+    return noChangeMessage({ current: last, episodes, title, why });
   }
-  return plusOneMessage({ prev: first, next: last, episodes, title, unlogged });
+  const caughtUp = aired !== null && aired.exact && progress === aired.aired;
+  return plusOneMessage({ prev: first, next: last, episodes, title, caughtUp });
 }
 
 /** " Start date cleared." / " Finish date cleared." / " Dates cleared." when Undo removed an auto-filled date. */

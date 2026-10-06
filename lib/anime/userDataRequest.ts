@@ -8,11 +8,12 @@
  * - `{userData, expect}`: Undo. Applies only while the stored value still
  *   equals `expect`, so it never erases another tab's or device's change.
  * - `{increment: k}`: +1 taps. Applied to the stored progress, never to the
- *   number a (possibly stale) page shows.
+ *   number a (possibly stale) page shows, and never past what has aired by
+ *   the server's clock.
  * - `{catchUpTo: E}`: the "Log N new" chip. Logs up to episode E, but never
  *   past what has aired by the server's clock.
  */
-import { unloggedAired, type AiringFields } from "./airing";
+import { airedEpisodes, unloggedAired, type AiringFields } from "./airing";
 import { MAX_EPISODES, normalizeUserData } from "./normalize";
 import { isListStatus, type UserAnimeData } from "./types";
 
@@ -113,16 +114,18 @@ export function parseUserDataRequest(
  * the server; the shown value in the demo). It carries no status, so the +1
  * rules apply unchanged: Plan to Watch or Paused → Watching, auto-complete at
  * the last episode, dates filled in. Never lowers progress (a legacy 30-of-24
- * entry stays as it is), and a catch-up never logs past what has aired at
- * `now`: unloggedAired is null for any status but Watching or Paused, so a
- * catch-up on those changes nothing.
+ * entry, or one logged ahead through Edit, stays as it is), and neither logs
+ * past what has aired at `now` (airedEpisodes, whatever the status; no cap
+ * when that count is unknown). A catch-up also needs Watching or Paused
+ * (unloggedAired is null for the others), so on those it changes nothing.
  */
 export function applyProgressRequest(entry: TrackEntry, req: ProgressRequest, now: number): ApplyResult {
   const stored = entry.userData.episodeProgressNumber;
   const total = entry.episodes && entry.episodes > 0 ? entry.episodes : null;
   let target: number;
   if (req.kind === "increment") {
-    target = stored + req.increment;
+    const aired = airedEpisodes(entry, now);
+    target = Math.min(stored + req.increment, aired ?? Number.POSITIVE_INFINITY);
   } else {
     const unlogged = unloggedAired(entry, now);
     if (!unlogged) return { ok: true, value: entry.userData, changed: false };

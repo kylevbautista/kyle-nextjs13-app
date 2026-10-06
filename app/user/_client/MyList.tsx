@@ -70,7 +70,7 @@ import {
   watchedRuntime,
   yearOptions,
 } from "./listFilters";
-import { toMyListEntry } from "./listFilters";
+import { sameAiringFields, toMyListEntry } from "./listFilters";
 import type { ListFilters, MyListEntry, SortKey, StatusTab } from "./listFilters";
 
 export interface ListOwner {
@@ -157,11 +157,12 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   /** Each card's +1 engine state (saving dot, motion, Undo); absent when idle. */
   const [activities, setActivities] = useState<ReadonlyMap<number, CardActivity>>(() => new Map());
   /**
-   * Cards being tapped keep their place (sorted and filed by this userData)
-   * until the view changes, an Edit saves them or they're removed, so nothing
-   * moves under a thumb mid-burst and Undo stays on the card.
+   * Cards being tapped keep their place (filtered, sorted and filed by the
+   * entry as it was when held: its userData and its airing fields, which a +1's
+   * response can update) until the view changes, an Edit saves them or they're
+   * removed, so nothing moves under a thumb mid-burst and Undo stays on the card.
    */
-  const [held, setHeld] = useState<ReadonlyMap<number, UserAnimeData>>(() => new Map());
+  const [held, setHeld] = useState<ReadonlyMap<number, MyListEntry>>(() => new Map());
   /**
    * The one spoken channel for tracker results (each +1 and each save): the
    * console toast mirrors it visually but is silent, so nothing is said twice.
@@ -248,9 +249,16 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
     () =>
       queue.connect({
         view: (id, userData) => setUserData(id, userData),
-        // A catch-up's response carries the stored airing fields: the chip recounts from them.
+        // A +1's or a catch-up's response carries the stored airing fields: the +1 and the chip
+        // recount from them. Unchanged fields (the usual case) leave the list as it is.
         media: (id, fields) =>
-          setItems((current) => current.map((entry) => (entry.id === id ? { ...entry, ...fields } : entry))),
+          setItems((current) => {
+            const index = current.findIndex((entry) => entry.id === id);
+            if (index === -1 || sameAiringFields(current[index], fields)) return current;
+            const next = current.slice();
+            next[index] = { ...current[index], ...fields };
+            return next;
+          }),
         activity: (id, next) => {
           const update = () =>
             setActivities((current) => {
@@ -279,8 +287,8 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
     [queue, setUserData, announce, scheduleRefresh]
   );
 
-  const hold = useCallback((animeId: number, userData: UserAnimeData) => {
-    setHeld((current) => (current.has(animeId) ? current : new Map(current).set(animeId, userData)));
+  const hold = useCallback((entry: MyListEntry) => {
+    setHeld((current) => (current.has(entry.id) ? current : new Map(current).set(entry.id, entry)));
   }, []);
 
   const release = useCallback((animeId: number) => {
@@ -299,8 +307,8 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
     (entry: MyListEntry) => {
       const last = handoff.current;
       if (last && last.id === entry.id && performance.now() - last.at < HANDOFF_GUARD_MS) return;
-      hold(entry.id, entry.userData);
-      queue.tap(entry, entry.userData, displayTitle(entry));
+      // A refused tap (nothing aired to log) changes nothing, so it holds nothing.
+      if (queue.tap(entry, entry.userData, displayTitle(entry))) hold(entry);
     },
     [hold, queue]
   );
@@ -308,7 +316,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   const catchUpProgress = useCallback(
     (entry: MyListEntry, count: number, button: HTMLButtonElement) => {
       const hadFocus = document.activeElement === button;
-      hold(entry.id, entry.userData);
+      hold(entry);
       flushSync(() => queue.catchUp(entry, entry.userData, count, displayTitle(entry)));
       // The chip is gone once nothing is left to log: keep keyboard focus on the card.
       if (hadFocus && !button.isConnected) {
@@ -401,8 +409,8 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
       : options;
   }, [items, filters.year]);
   const filtered = useMemo(
-    () => items.filter((entry) => matchesFilters(entry, deferredFilters)),
-    [items, deferredFilters]
+    () => items.filter((entry) => matchesFilters(held.get(entry.id) ?? entry, deferredFilters)),
+    [items, held, deferredFilters]
   );
   const counts = useMemo(() => countByStatus(filtered), [filtered]);
   const totals = useMemo(() => countByStatus(items), [items]);
@@ -427,7 +435,7 @@ export function MyList({ entries, isOwner, owner, renderedAt }: MyListProps) {
   const shownCount = sections.reduce((sum, section) => sum + section.entries.length, 0);
   // Held cards stay on the shelf they were on: count the shelf the way its cards are placed.
   const scopeTotal =
-    tab === "all" ? items.length : items.filter((entry) => (held.get(entry.id) ?? entry.userData).listType === tab).length;
+    tab === "all" ? items.length : items.filter((entry) => (held.get(entry.id) ?? entry).userData.listType === tab).length;
   const readout = shownActive
     ? `${shownCount} of ${showsLabel(scopeTotal)}${tab !== "all" ? ` in ${TAB_LABELS[tab]}` : ""} match.`
     : "";

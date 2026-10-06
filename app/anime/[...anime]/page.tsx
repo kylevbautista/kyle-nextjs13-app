@@ -3,6 +3,11 @@
  * capitalized season, extra segments, an out-of-range year) is redirected by
  * seasonRouteRedirect (in proxy.ts, before anything renders).
  *
+ * A third segment only arrives through proxy.ts's rewrite: the static variant
+ * in a reader's remembered sort (/anime/2026/fall/countdown, lib/seasonSort.ts),
+ * never addressable from outside. ISR regenerates it without the proxy, so this
+ * route parses it itself (parseSeasonRoute) and never redirects it.
+ *
  * Static ISR, like /topanime: no request APIs, and deliberately no
  * loading.tsx (it would ship the skeleton and hide the real page in a
  * <div hidden> until JavaScript swaps it in; CLAUDE.md §9.15).
@@ -11,7 +16,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Boundary from "./Boundary";
 import { seasonDescription } from "@/lib/anime/seasonCopy";
-import { SEASON_LABELS, SeasonName, allSeasonParams, seasonRouteRedirect } from "@/lib/season";
+import { SEASON_LABELS, allSeasonParams, currentSeasonPath, seasonRouteRedirect } from "@/lib/season";
+import { DEFAULT_SEASON_SORT, parseSeasonRoute, sortVariantSegment } from "@/lib/seasonSort";
 
 export const dynamicParams = true;
 // AniList allows ~30 requests/minute; countdowns use absolute timestamps, so 5 minutes is plenty.
@@ -21,17 +27,17 @@ interface SeasonPageProps {
   params: Promise<{ anime: string[] }>;
 }
 
-function parseSeason(segments: string[] = []): { year: number; season: SeasonName } | null {
-  if (seasonRouteRedirect(segments) !== null) return null;
-  return { year: Number(segments[0]), season: segments[1] as SeasonName };
-}
-
 export function generateStaticParams() {
-  return allSeasonParams().map(({ year, season }) => ({ anime: [String(year), season] }));
+  const params = allSeasonParams().map(({ year, season }) => ({ anime: [String(year), season] }));
+  // Every season in the other sort too (the remembered-sort variant): no extra AniList requests (the
+  // build's fetch cache serves the variant the request its default page just made), and no variant
+  // ever renders on demand after a deploy, where a failed first render would be Next's bare 500.
+  const other = sortVariantSegment(DEFAULT_SEASON_SORT === "popularity" ? "countdown" : "popularity");
+  return other ? [...params, ...params.map(({ anime }) => ({ anime: [...anime, other] }))] : params;
 }
 
 export async function generateMetadata({ params }: SeasonPageProps): Promise<Metadata> {
-  const parsed = parseSeason((await params).anime);
+  const parsed = parseSeasonRoute((await params).anime);
   if (!parsed) return { title: "Seasonal Anime" };
 
   const { year, season } = parsed;
@@ -43,8 +49,9 @@ export async function generateMetadata({ params }: SeasonPageProps): Promise<Met
 
 export default async function SeasonPage({ params }: SeasonPageProps) {
   const segments = (await params).anime ?? [];
-  const target = seasonRouteRedirect(segments);
-  if (target) redirect(target);
+  const parsed = parseSeasonRoute(segments);
+  // Only a malformed path that slipped past proxy.ts gets here.
+  if (!parsed) redirect(seasonRouteRedirect(segments) ?? currentSeasonPath());
 
-  return <Boundary year={Number(segments[0])} season={segments[1] as SeasonName} />;
+  return <Boundary year={parsed.year} season={parsed.season} sort={parsed.sort} />;
 }
