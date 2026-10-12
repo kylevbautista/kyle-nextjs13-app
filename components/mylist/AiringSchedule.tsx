@@ -36,15 +36,17 @@ import {
 } from "@/lib/anime/listCopy";
 import { STATUS_DOT_CLASS } from "@/lib/anime/statusBadge";
 import { LIST_STATUS_LABELS, displayTitle, type ListEntry } from "@/lib/anime/types";
-import { defaultScheduleDay, formatWeekdayTime, showsLabel } from "@/lib/landing";
+import { defaultScheduleDay, showsLabel } from "@/lib/landing";
 import { myListPath, searchPath } from "@/lib/routes";
 import NextEpisodes from "./NextEpisodes";
 import NotAiringList from "./NotAiringList";
+import { ScheduleDay, ScheduleWhenLine } from "./ScheduleDay";
 import {
   DAY_LABELS,
   SCHEDULE_DAYS,
   buildSchedule,
   dayParam,
+  nothingMoreTodayLine,
   parseDayParam,
   scheduleLine,
   weekdayAt,
@@ -52,6 +54,7 @@ import {
 
 type DayTab = "all" | Weekday;
 const TABS: readonly DayTab[] = ["all", ...SCHEDULE_DAYS];
+const NOTHING_MORE_TODAY = nothingMoreTodayLine("on this schedule");
 
 interface AiringScheduleProps {
   userId: string;
@@ -269,6 +272,8 @@ const PANEL_ID = "schedule-tabpanel";
  * The landing demo's weekday panel: tint dots, a tab per day (dots = shows,
  * ringed = today) plus "All", and countdown rows. Opens on today, or the next
  * day with shows (the demo's rule). The chosen tab lives in AiringSchedule.
+ * Each day lists every show whose next episode falls on that weekday, however
+ * far out; rows a week or more away sit under a dated divider (ScheduleDay).
  */
 function WeekPanel({
   days,
@@ -294,7 +299,9 @@ function WeekPanel({
   const tabRefs = useRef<Partial<Record<DayTab, HTMLButtonElement | null>>>({});
 
   // SSR and hydration use the server's render time; the live clock after.
-  const today = weekdayAt(now ?? renderedAt);
+  // One value for the today ring, the default tab and the rows' day words.
+  const nowMs = now ?? renderedAt;
+  const today = weekdayAt(nowMs);
   const selected = choice ?? defaultScheduleDay(days, today);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -322,6 +329,9 @@ function WeekPanel({
 
   const visibleDays = selected === "all" ? SCHEDULE_DAYS.filter((day) => days[day].length > 0) : [];
   const rowOwner = isOwner ? null : ownerName;
+  const renderRows = (rows: ListEntry[]) => (
+    <ScheduleRows entries={rows} ownerName={rowOwner} renderedAt={renderedAt} nowMs={nowMs} />
+  );
 
   return (
     <section
@@ -330,7 +340,7 @@ function WeekPanel({
       className={`relative scroll-mt-20 overflow-hidden ${PANEL}`}
     >
       <h2 id="schedule-panel-title" className="sr-only">
-        This week
+        Shows by weekday
       </h2>
       <div aria-hidden="true" className="absolute inset-x-0 top-1.5 flex justify-center gap-3">
         {DAY_TINTS.map((color) => (
@@ -415,11 +425,25 @@ function WeekPanel({
                   </span>
                   <span aria-hidden="true" className="h-px flex-1 bg-gradient-to-r from-[#95ccff]/25 to-transparent" />
                 </h3>
-                <ScheduleRows entries={days[day]} ownerName={rowOwner} renderedAt={renderedAt} />
+                <ScheduleDay
+                  day={day}
+                  rows={days[day]}
+                  nowMs={nowMs}
+                  heading="h4"
+                  note={NOTHING_MORE_TODAY}
+                  renderRows={renderRows}
+                />
               </section>
             ))
           ) : days[selected].length ? (
-            <ScheduleRows entries={days[selected]} ownerName={rowOwner} renderedAt={renderedAt} />
+            <ScheduleDay
+              day={selected}
+              rows={days[selected]}
+              nowMs={nowMs}
+              heading="h3"
+              note={NOTHING_MORE_TODAY}
+              renderRows={renderRows}
+            />
           ) : (
             <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
               <Slime size={44} mood="sage" />
@@ -439,15 +463,17 @@ function ScheduleRows({
   entries,
   ownerName,
   renderedAt,
+  nowMs,
 }: {
   entries: ListEntry[];
   ownerName: string | null;
   renderedAt: number;
+  nowMs: number;
 }) {
   return (
     <ol className="flex flex-col divide-y divide-[rgb(53,53,53)]">
       {entries.map((entry) => (
-        <ScheduleRow key={entry.id} entry={entry} ownerName={ownerName} renderedAt={renderedAt} />
+        <ScheduleRow key={entry.id} entry={entry} ownerName={ownerName} renderedAt={renderedAt} nowMs={nowMs} />
       ))}
     </ol>
   );
@@ -462,10 +488,13 @@ function ScheduleRow({
   entry,
   ownerName,
   renderedAt,
+  nowMs,
 }: {
   entry: ListEntry;
   ownerName: string | null;
   renderedAt: number;
+  /** The panel's clock: the day words ("Today", "Oct 22"). */
+  nowMs: number;
 }) {
   const next = nextAiring(entry);
   const title = displayTitle(entry);
@@ -494,10 +523,7 @@ function ScheduleRow({
           <span title={title}>{title}</span>
           <span className="sr-only"> (AniList, opens in a new tab)</span>
         </a>
-        <p className="break-words text-xs text-[rgb(164,164,164)]">
-          {next.episode === 1 ? "Premiere" : next.episode ? `EP ${next.episode}` : "Next EP"} ·{" "}
-          {formatWeekdayTime(next.airingAt)} PT
-        </p>
+        <ScheduleWhenLine airingAt={next.airingAt} episode={next.episode} nowMs={nowMs} />
         <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-[rgb(164,164,164)]">
           <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[listType]}`} />
           <span className="min-w-0 break-words">

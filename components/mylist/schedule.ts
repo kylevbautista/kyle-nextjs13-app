@@ -1,9 +1,12 @@
 import { calendarDayMs } from "@/lib/anime/normalize";
 import {
   DISPLAY_TIME_ZONE,
+  MONTHS,
+  WEEKDAYS,
   airingWeekday,
   compareByNextAiring,
   nextAiring,
+  type AiringFields,
   type Weekday,
 } from "@/lib/anime/airing";
 import { LIST_STATUSES, displayTitle, type ListEntry, type ListStatus } from "@/lib/anime/types";
@@ -151,6 +154,129 @@ export function scheduleLine(
   }
   return { kind: "Notice", text: fallback };
 }
+
+// ---------------------------------------------------------------------------
+// Which rows really air on their day this week
+// ---------------------------------------------------------------------------
+
+/**
+ * A weekday's rows from this many Pacific Time calendar days out are "later":
+ * past this coming occurrence of their weekday (7 = next week's, even at a
+ * 6d 23h countdown).
+ */
+export const LATER_FROM_DAYS = 7;
+
+// Whole days between two calendarDayMs values (UTC midnights, so DST can't skew them).
+const daysBetween = (fromDayMs: number, toDayMs: number) => Math.round((toDayMs - fromDayMs) / DAY_MS);
+
+/** Pacific Time calendar days from `nowMs`'s day to the episode's (negative: a day already past). */
+export const scheduleDayOffset = (airingAt: number, nowMs: number) =>
+  daysBetween(calendarDayMs(nowMs), calendarDayMs(airingAt * 1000));
+
+/** "Oct 22" for a calendarDayMs value (UTC midnight of the Pacific Time date). */
+function monthDay(dayMs: number) {
+  const date = new Date(dayMs);
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
+
+export interface ScheduleWhen {
+  kind: "today" | "tomorrow" | "yesterday" | "weekday" | "date";
+  /** "Today", "Tomorrow", "Yesterday", "Sat" (this coming one), "Oct 22", "Jan 7, 2027". */
+  day: string;
+  /** "9:30 AM" (Pacific Time). */
+  time: string;
+}
+
+/**
+ * The day a schedule row's next episode airs, relative to today (Pacific Time
+ * calendar days): Today, Tomorrow, Yesterday (an air time AniList hasn't
+ * rolled yet), the weekday 2–6 days out, else the date. The date leaves out
+ * the weekday because every row sits under its own weekday's tab or heading
+ * (add it back before reusing this elsewhere). Names come from tables, never
+ * Intl text, so the server and every browser print the same ASCII.
+ *
+ * `relative: false` (a page with no live clock yet, such as the landing's
+ * cached HTML, which can be served after PT midnight) uses absolute labels
+ * only: the weekday 0–6 days out, else the date.
+ */
+export function scheduleWhen(airingAt: number, nowMs: number, relative = true): ScheduleWhen {
+  const time = formatTime(airingAt);
+  const dayMs = calendarDayMs(airingAt * 1000);
+  const todayMs = calendarDayMs(nowMs);
+  const offset = daysBetween(todayMs, dayMs);
+  if (relative && offset === 0) return { kind: "today", day: "Today", time };
+  if (relative && offset === 1) return { kind: "tomorrow", day: "Tomorrow", time };
+  if (relative && offset === -1) return { kind: "yesterday", day: "Yesterday", time };
+  if (offset >= 0 && offset < LATER_FROM_DAYS) {
+    return { kind: "weekday", day: DAY_LABELS[WEEKDAYS[new Date(dayMs).getUTCDay()]].short, time };
+  }
+  const year = new Date(dayMs).getUTCFullYear();
+  const day = year === new Date(todayMs).getUTCFullYear() ? monthDay(dayMs) : `${monthDay(dayMs)}, ${year}`;
+  return { kind: "date", day, time };
+}
+
+/** A row's episode: "Premiere", "EP 9", or "Next EP" when AniList gives no number. */
+export const episodeLabel = (episode: number | null) =>
+  episode === 1 ? "Premiere" : episode ? `EP ${episode}` : "Next EP";
+
+/**
+ * A schedule row's time line as the units it wraps by: ["EP 9 ·", "Oct 22,",
+ * "9:30 AM PT"], ["Premiere ·", "Today", "9:45 AM PT"].
+ */
+export const scheduleTimeLine = (episode: number | null, { kind, day, time }: ScheduleWhen) =>
+  [`${episodeLabel(episode)} ·`, kind === "date" ? `${day},` : day, `${time} PT`] as const;
+
+/**
+ * One weekday's rows (soonest first) split at this coming occurrence of the
+ * day: `later` are the rows LATER_FROM_DAYS or more days out, so a suffix of
+ * a day sorted by next airing. Past air times and rows without one stay in
+ * `coming`.
+ */
+export function splitLaterWeeks<T extends Partial<AiringFields>>(
+  rows: readonly T[],
+  nowMs: number
+): { coming: T[]; later: T[] } {
+  const coming: T[] = [];
+  const later: T[] = [];
+  for (const row of rows) {
+    const next = nextAiring(row);
+    (next && scheduleDayOffset(next.airingAt, nowMs) >= LATER_FROM_DAYS ? later : coming).push(row);
+  }
+  return { coming, later };
+}
+
+/**
+ * The divider above a weekday's later rows: "Thursdays after today" on
+ * today's weekday, else "Fridays after Oct 16" (this coming Friday). True of
+ * every row below it, and it dates the rows above it. Without a live clock
+ * (`relative: false`) today is dated too ("Thursdays after Oct 15").
+ */
+export function laterHeading(day: Weekday, nowMs: number, relative = true) {
+  const plural = `${DAY_LABELS[day].long}s`;
+  const todayMs = calendarDayMs(nowMs);
+  const ahead = (WEEKDAYS.indexOf(day) - new Date(todayMs).getUTCDay() + 7) % 7;
+  return `${plural} after ${ahead === 0 && relative ? "today" : monthDay(todayMs + ahead * DAY_MS)}`;
+}
+
+/**
+ * Today's tab when nothing on it airs today (its rows are all later). It
+ * speaks of the schedule, not the list: a completed show that still airs is
+ * on the list but off the schedule.
+ */
+export const nothingMoreTodayLine = (scope: "on this schedule" | "in this preview") =>
+  `Nothing more ${scope} airs today.`;
+
+/**
+ * Whether a day opens with nothingMoreTodayLine: today's weekday, nothing
+ * coming, something later. Never without a live clock (`relative: false`):
+ * a cached page can't know what "today" is when it is read.
+ */
+export const showsNothingMoreToday = (
+  day: Weekday,
+  { coming, later }: { coming: readonly unknown[]; later: readonly unknown[] },
+  nowMs: number,
+  relative = true
+) => relative && coming.length === 0 && later.length > 0 && day === weekdayAt(nowMs);
 
 /** The week panel's tab from ?day= ("all", "mon"…"sun"), or null for the default day. */
 export function parseDayParam(value: string | null): Weekday | "all" | null {

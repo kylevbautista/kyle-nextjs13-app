@@ -91,7 +91,8 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-US", {
 export const formatAirDate = (unixSeconds: number) =>
   dateTimeFormat.format(new Date(unixSeconds * 1000)).replace(/[\u202F\u00A0]/g, " ");
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Short month names, for dates built from calendar parts (no Intl text, so every runtime matches). */
+export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
  * The show's first-episode airing, when AniList's earliest schedule node is
