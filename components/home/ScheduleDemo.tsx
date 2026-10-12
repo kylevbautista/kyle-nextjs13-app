@@ -1,13 +1,14 @@
 "use client";
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import Image from "next/image";
-import { DAY_LABELS, SCHEDULE_DAYS, weekdayAt } from "@/components/mylist/schedule";
+import { ScheduleDay, ScheduleWhenLine } from "@/components/mylist/ScheduleDay";
+import { DAY_LABELS, SCHEDULE_DAYS, nothingMoreTodayLine, weekdayAt } from "@/components/mylist/schedule";
 import ShareLink from "@/components/theme/ShareLink";
 import { DAY_TINTS } from "@/components/theme/tokens";
 import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { nextAiring, type Weekday } from "@/lib/anime/airing";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
-import { defaultScheduleDay, formatWeekdayTime, groupByWeekday } from "@/lib/landing";
+import { defaultScheduleDay, groupByWeekday } from "@/lib/landing";
 import { trackLanding } from "./analytics";
 import CountdownText from "./CountdownText";
 import { useLanding, useVisibleAiring } from "./LandingProvider";
@@ -23,6 +24,7 @@ import { SessionCta } from "./SessionCta";
 import { useLandingSession } from "./useLandingSession";
 
 const ROWS = 4;
+const NOTHING_MORE_TODAY = nothingMoreTodayLine("in this preview");
 
 const plural = (count: number) => `${count} ${count === 1 ? "show" : "shows"}`;
 
@@ -44,7 +46,12 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
   const baseId = useId();
 
   // SSR and hydration use the server's fetch time; the live clock after.
-  const today = weekdayAt(now ?? generatedAt);
+  // One value for the today ring, the default tab and the rows' day words.
+  const nowMs = now ?? generatedAt;
+  // The cached HTML can be read after PT midnight: "Today" and "after today"
+  // wait for the live clock (absolute labels until then).
+  const relative = now !== null;
+  const today = weekdayAt(nowMs);
   const selected = choice ?? defaultScheduleDay(groups, today);
   const tabId = (day: Weekday) => `${baseId}-tab-${day}`;
   const panelId = `${baseId}-panel`;
@@ -162,11 +169,24 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
                   <div key={selected} className="animate-[fade-in_150ms_ease-out]">
                     {dayShows.length ? (
                       <>
-                        <ol className="flex flex-col divide-y divide-[rgb(53,53,53)]">
-                          {dayShows.slice(0, ROWS).map((media) => (
-                            <ScheduleRow key={media.id} media={media} />
-                          ))}
-                        </ol>
+                        {/* The Airing Schedule's day: rows a week or more out (routine in the
+                            16-day preview window) sit under the same dated divider. Later rows
+                            are a suffix, so slicing first keeps the split true. */}
+                        <ScheduleDay
+                          day={selected}
+                          rows={dayShows.slice(0, ROWS)}
+                          nowMs={nowMs}
+                          relative={relative}
+                          heading="h3"
+                          note={NOTHING_MORE_TODAY}
+                          renderRows={(rows) => (
+                            <ol className="flex flex-col divide-y divide-[rgb(53,53,53)]">
+                              {rows.map((media) => (
+                                <ScheduleRow key={media.id} media={media} nowMs={nowMs} relative={relative} />
+                              ))}
+                            </ol>
+                          )}
+                        />
                         {dayShows.length > ROWS && (
                           <p className="px-1 pt-2 text-xs text-[rgb(164,164,164)]">
                             +{dayShows.length - ROWS} more
@@ -208,7 +228,7 @@ export default function ScheduleDemo({ airingIds }: { airingIds: number[] }) {
   );
 }
 
-function ScheduleRow({ media }: { media: AnimeMedia }) {
+function ScheduleRow({ media, nowMs, relative }: { media: AnimeMedia; nowMs: number; relative: boolean }) {
   const next = nextAiring(media);
   const title = displayTitle(media);
   const cover = media.coverImage.medium ?? media.coverImage.large;
@@ -227,10 +247,7 @@ function ScheduleRow({ media }: { media: AnimeMedia }) {
         <p className="line-clamp-2 break-words text-sm font-semibold text-white" title={title}>
           {title}
         </p>
-        <p className="truncate text-xs text-[rgb(164,164,164)]">
-          {next.episode === 1 ? "Premiere" : next.episode ? `EP ${next.episode}` : "Next EP"} ·{" "}
-          {formatWeekdayTime(next.airingAt)} PT
-        </p>
+        <ScheduleWhenLine airingAt={next.airingAt} episode={next.episode} nowMs={nowMs} relative={relative} />
       </div>
       <span className="min-w-[5.5rem] shrink-0 text-right text-sm font-semibold text-[#95ccff]">
         <CountdownText airingAt={next.airingAt} episode={next.episode} mode="compact" className="justify-end" />
