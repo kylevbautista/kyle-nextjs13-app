@@ -163,7 +163,7 @@ credits as a `《Report》` line, "Top anime" and "Search" (`prefetch={false}`).
 | Air-date freshness | Countdowns roll to the next episode | Server-side refresh of stale snapshots on list read (§5.5) | `server/lib/userList.ts` |
 | Top Anime | Night-sky banner (Rankings · The Octagram) with the fetch time, a "top 25 at a glance" (640px+) and #1 with its lead over rank 2 on a magic circle (1024px+); the Octagram (ranks 1–8: gold sigils, crowned #1), then one row design for every rank (rank + score rail, poster, titles, type · eps · year, members, Track); a Great Sage Show-more console; an About panel. MAL's ranking has one show per rank; its list ends where the unranked entries begin (about #22,900), and Rx (adult) entries are left out. Pages are cached separately, so a show that crosses a page boundary is deduped and nothing on the page calls two shows at one rank a tie | Page 1 server-rendered from MAL's API (`server/lib/myanimelist.ts`; fresh in every ISR render, but `next build` may reuse a copy cached by a build up to 1 h earlier, so the banner's "fetched" time is MAL's own Date header; throws on failure); later pages from the browser one at a time through `/api/top-anime` (in-flight guard, dedupe, inline Retry, focus to the first new row, sr status; errors say whether MAL or the reader's connection failed, with MAL's Retry-After); module snapshot of loaded pages (`rankingStore`); `.js-only` button + `<noscript>` MAL link. MAL's response is parsed in `lib/topAnime.ts` (ranking position, not the show's lagging `rank` field; WebP covers; tested). Every stat and sentence is computed from loaded items (`ranking.ts`, unit-tested) | `app/topanime/*`, `app/api/top-anime/route.ts`, `lib/topAnime.ts`, `server/lib/myanimelist.ts`, `components/theme/{StatGrid,icons}.tsx` |
 | Share images | A shared `/user` or `/mylist` link unfurls with the visitor banner at 1200×630: My List's Sage line, h1, sub, four stats and the evolving slime on its magic circle; the schedule's week strip (All + Mon…Sun counts) with the tier slime perched on it. First name only (Arabic, Hebrew, Indic and Thai names: "Anime list" / "this list") | Stored data only (one projected `findOne`, no session, no AniList, no clock); the card's hash (`v`) is in the path, so a changed list gets a new URL; runtime ISR 1 h; preview bots' page views skip the AniList refresh; fonts bundled in `assets/og` | `components/og/*`, `lib/anime/listCopy.ts`, `lib/previewBots.ts`, `server/lib/userList.ts#readListCard`, `app/{user,mylist}/og/[id]/[v]/route.ts` |
-| iPhone widget | A Scriptable widget in the Tempest look, each family one of the owner's layouts: **medium** is the Next-episodes card (《Notice》 Next episodes · Pacific Time, 2 rows with 40:56 covers, "EP 13 · Thu 9:30 AM PT" + a live timer within a day, "The whole week →", the tier slime on the forest floor); **large** is the Airing Schedule banner (eyebrow, the standing Sage line, the h1 with the slime perched on the card) over the card's 3 rows; **small** and **Lock Screen rectangular** are the phone ticker (NEXT UP, the title, the time and a timer); **inline** is one line ("Thu 7:30 AM PT · EP 4 · Frieren: …"); **circular** is the brand slime as a launcher. The last hour is amber with a dot; an aired row says "EP 7 · Aired Thu 6:50 AM PT" with an emerald dot for 30 min, then drops. The slime is happy while a Watching/Paused show has an aired episode not logged. States: resting (worried), nothing scheduled (sage), empty list ("Recommend: predation."), saved copy ("Saved Oct 15, 7:05 AM PT"; large: "Couldn't reach kylevb.com. Showing air times saved …", or "kylevb.com had a problem. …" when the site answered without the list; the large saved state puts "Saved …" on its own row), couldn't reach, kylevb.com had a problem, no list at that link, that isn't a list link, link your list, update this widget, an error. Glass mode (the word `glass` in the Parameter or the in-app switch) for tinted/clear Home Screens. Taps open the page each element shows (medium/large) or the week (small, Lock Screen); setup states open the script's link prompt | The server sends what stays true at any age (rows, PT labels, copy, tier, `hungrySince`); the phone decides what depends on its clock (§5.9). The script: parameter → saved copy (< 90 s: no request) → one `loadString` (5 s) → validate → render → `refreshAfterDate` at the next row boundary; an in-app menu (Link my list…, previews, glass, diagnostics, refresh, clear). Distributed by pasting from GitHub (no self-update) | `widgets/scriptable/*`, `lib/{widget,widgetArt}.ts`, `lib/anime/widgetCopy.ts`, `app/api/widget/*`, `components/og/{WidgetArt,widgetSky}.ts(x)` |
+| iPhone widget | A Scriptable widget in the Tempest look, each family one of the owner's layouts: **medium** is the Next-episodes card (《Notice》 Next episodes · Pacific Time, 2 rows with 40:56 covers, "EP 13 · Thu 9:30 AM PT" + a live timer within a day, "The whole week →", the tier slime on the forest floor); **large** is the Airing Schedule banner (eyebrow, the standing Sage line, the h1 with the slime perched on the card) over the card's 3 rows; **small** and **Lock Screen rectangular** are the phone ticker (NEXT UP, the title, the time and a timer); **inline** is one line ("Thu 7:30 AM PT · EP 4 · Frieren: …"); **circular** is the brand slime as a launcher. The last hour is amber with a dot; an aired row says "EP 7 · Aired Thu 6:50 AM PT" with an emerald dot for 30 min, then drops. The slime is happy while a Watching/Paused show has an aired episode not logged. States: resting (worried), nothing scheduled (sage), empty list ("Recommend: predation."), saved copy ("Saved Oct 15, 7:05 AM PT"; large: "Couldn't reach kylevb.com. Showing air times saved …", or "kylevb.com had a problem. …" when the site answered without the list; a large resting, nothing-scheduled or empty-list state drawn from a saved copy keeps the standing Sage line and puts "Saved …" on its own row under the card's header), couldn't reach, kylevb.com had a problem, no list at that link, that isn't a list link, link your list, update this widget, an error. Glass mode (the word `glass` in the Parameter or the in-app switch) for tinted/clear Home Screens. Taps open the page each element shows (medium/large) or the week (small, Lock Screen); setup states open the script's link prompt | The server sends what stays true at any age (rows, PT labels, copy, tier, `hungrySince`); the phone decides what depends on its clock (§5.9). The script: parameter → saved copy (< 90 s: no request) → one `loadString` (5 s) → validate → render → `refreshAfterDate` at the next row boundary; an in-app menu (Link my list…, previews, glass, diagnostics, refresh, clear). Distributed by pasting from GitHub (no self-update) | `widgets/scriptable/*`, `lib/{widget,widgetArt}.ts`, `lib/anime/widgetCopy.ts`, `app/api/widget/*`, `components/og/{WidgetArt,widgetSky}.ts(x)` |
 | Landing | Hero (H1 is the LCP), live "Next episodes" card, 5 live countdown cards (the season page's card via `CARD_LAYOUT`, opening the same details sheet; 7 in the poster layout) with exact season count, sticky CTA, FAQ, post-credits | Static ISR page + client islands; one `LandingProvider` (media by id, `useVisibleAiring`, the intent dialog); original inline-SVG slime mascot (no official art traced) | `app/(home)/page.tsx`, `components/home/*` |
 | Landing session slots | "Start my list" (straight to Google, `callbackUrl` `/#quests`) · "Open My List" · "Add my first shows", with same-size skeletons while the session loads | `useLandingSession()` (session + `useMyList().count` + tier); `SessionCta` / `SessionStatusLine` fixed boxes; `<noscript>` sign-in link | `components/home/{useLandingSession,SessionCta,StickyCta}.ts(x)` |
 | Tracker demo | "+1" to the finale auto-completes, statuses, score, dates, "Log 2 new", "↶ Undo +N"; one console line per burst; nothing is saved | My List's own engine (`TrackQueue`) against an in-memory `DemoServer` that applies `lib/anime/userDataRequest.ts` (the route's rules); the pills and score adopt `normalizeUserData`'s result; its console lines come from `lib/anime/trackerConsole.ts` (shared with My List); the countdown line uses the real show's schedule, and the engine and chip do only once it has FINISHED (`lib/landing.ts#demoTrackMedia`: an airing show's schedule would cap the demo's +1 short of its finale); its +1 shares `PlusOneButton`'s tokens | `components/home/TrackerDemo.tsx` |
@@ -340,7 +340,8 @@ For the owner, `MyList` re-reads
 payload, and without the re-read a later `+1` would write stale values back. Local edits since mount
 win. Visitors see the owner's **first name only** and no photo; page titles and link previews always
 use the first name (`publicOwnerName`: the name's first word, invisible characters stripped; a first word with
-nothing drawn, such as a blanked first name, means no name ("Anonymous"), never the next word).
+nothing drawn, such as a blanked first name or a lone mark before a space, means no name, never the next word:
+"Anonymous" in the pages' text, the share images and the widget; My List's `<title>` and og:title say "Anime list").
 
 ### 5.4 Search `/search?q=frieren&format=tv&page=2`
 1. **Params.** `lib/search.ts` normalizes `q` (whitespace collapsed, trimmed, ≤ 100 code points) and
@@ -480,9 +481,9 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
    `v` is only a cache key (in the path, since ISR ignores the query): the image always draws the
    current stored data, so a mismatch is at most an hour newer than its `v`. Cache-Control stays
    ImageResponse's default; unfurlers keep their own copies (X 7 days).
-4. **Names.** First name only (`publicOwnerName`, which strips invisible format characters first and takes the
-   first word only, so the pages and the iPhone widget agree), invisible format characters stripped again (a name
-   with nothing left to draw gets the neutral wording),
+4. **Names.** First name only (`publicOwnerName`: the name's first word, then invisible format characters
+   stripped; a first word with nothing drawn means no name, never the next word, so the pages and the iPhone widget
+   agree), invisible format characters stripped again (a name with nothing left to draw gets the neutral wording),
    NFKC-normalized ("fancy text" back to letters), emoji dropped, at most 24 graphemes
    (`drawableName`), and the h1 fitted with a measured Geist advance table (`fitTitle`:
    84 / 68 / 56 px, then the name is clipped with "…" so "'s list" never is). Scripts Satori can't
@@ -510,14 +511,14 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
    (`{schema:1,error:"not-found"|"outdated"}`): any other page (a rollback, a platform error) is a
    server error. A failure shows the saved copy (≤ 7 days old, with its server-formatted "Saved …"
    stamp) or a state: "Couldn't reach kylevb.com" (no schedule from kylevb.com: offline, a timeout, a failed
-   TLS handshake such as a captive portal's, or a 2xx web page, which the route never sends), "kylevb.com had a
+   TLS handshake such as a captive portal's, or a 2xx HTML page, which the route never sends), "kylevb.com had a
    problem" (any other HTTP reply that isn't a payload or the route's own 404/410: its 5xx `unavailable`, a
-   platform page, a rate limit, a rollback's 404, a 2xx JSON this version can't read; over HTTPS such a reply is
+   platform page, a rate limit, a rollback's 404, any other 2xx this version can't read; over HTTPS such a reply is
    normally kylevb.com's, the rare exception a TLS-inspecting filter the phone trusts); the route's 404 deletes
    the saved copy. The in-app lines name what happened and never say the phone is offline: "Couldn't reach
    kylevb.com." ("Check this phone's connection…"), "kylevb.com had a problem (HTTP 502).", "kylevb.com sent a
    reply this version of the script can't read." (paste the newest version) or "The reply wasn't kylevb.com's
-   schedule: a web page came back instead." (a network filter or a sign-in page).
+   schedule: a web page came back instead." (a network filter or security profile the phone trusts).
    `timeoutInterval` is iOS's idle timeout (it resets whenever bytes arrive), so every network wait
    also races a wall-clock budget built on Scriptable's `Timer` (`raceDeadline`, 5.5 s a run).
    Missing art is fetched only in the first 2 s and covers (≤ 3, `load()` + `Image.fromData`:
@@ -528,10 +529,13 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
    down to 48) runs after `setWidget` and never deletes a cover of the payload's or of any saved list under
    7 days old (another widget's Parameter list, the in-app link). Views drawn from a stored copy, and the
    no-payload states, ask for the latest art version a payload named (`config.json`'s `artVersion`); a picture
-   neither cached nor fetchable in that version is drawn from another cached version of the same picture. In the
-   app there is no run budget: the JSON gets 8 s, the pictures (art and covers side by side) 20 s each (8 s idle),
-   Link saves the link as soon as the payload is checked, and Link/Refresh say when art didn't finish downloading.
-   The large saved state keeps the card's own header ("Pacific Time") and puts "Saved …" on a row of its own.
+   neither cached nor fetchable in that version is drawn from the newest cached version of that same picture (an
+   in-app Link or Refresh drops a picture's older versions only once its current one arrived). In the app there is
+   no run budget: the JSON gets 8 s, the pictures (art and covers side by side) 20 s each (8 s idle), Link saves the
+   link as soon as the payload is checked, and Link/Refresh say when art didn't finish downloading. Saved rows on
+   the large widget carry the stamp in the Sage line; a large state with no rows (resting, nothing scheduled, empty
+   list) drawn from a saved copy keeps the standing Sage line and the card's own header ("Pacific Time"), and puts
+   "Saved …" on a row of its own.
 3. **The split.** The server (`lib/widget.ts#buildWidgetPayload`) picks the Airing Schedule's rows
    exactly as the card does (`buildSchedule` + `visibleAiring`, ≤ 8), labels them in PT with no
    relative words (`widgetCopy.ts#widgetWhen`: "Thu 9:30 AM PT", "Thu Oct 22, 10:00 AM PT"), and
@@ -553,7 +557,7 @@ is `lib/signIn.ts#safeCallbackPath` (same-origin only, never `/auth/signin`, no 
    `/v2`, and `WIDGET_V1_RETIRED` makes v1 answer 410 ("Update this widget") once every phone has
    re-pasted. `tuning` (timeouts, cover count, the large sky's density) changes the phone's
    behavior with a deploy. Art: `WIDGET_ART_VERSION` in the file names; the script's
-   `ART_VERSION_FALLBACK` matches it (parity), and the phone remembers the newest version a payload named
+   `ART_VERSION_FALLBACK` matches it (parity), and the phone remembers the latest version a payload named
    (`config.json`), so states with no payload ask for art the server still serves. Sprites and glyphs are
    156 px wide (the widest spot drawn at 3×), with the aura tiers' canvas cropped at the slime's base
    (`slimeArt.ts#SLIME_PERCH_AURA_VIEWBOX`), so every tier stands on the large widget's card.
@@ -886,8 +890,8 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     count, 40:56 covers, the line format) is copied in the script's renderers: change them with the
     card, bump `SCRIPT_VERSION` and re-paste. `parity.test.ts` fails on any change to the card's JSX shape
     (each element's depth, tag, `className` expression and `mode`, in order, plus `CARD`'s value: an added,
-    removed, re-tagged or moved element or any class edit), and when CountdownText's row-mode soon text or its
-    dot tones change.
+    removed, re-tagged or moved element or any class edit; a className built from any other constant fails until
+    the extraction is extended), and when CountdownText's row-mode soon text, its dot or the dot's tones change.
     Change both sides together. In-page jump links use next/link or a button, never a
     plain `<a href="#…">`: a native fragment entry has no router state, so a later Back changes the
     URL but not the page.
@@ -1156,7 +1160,7 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
   seen on a device: whether Scriptable's `Timer` fires inside a widget run (if not, a slow but steady
   download waits on iOS's idle timeout instead of the 5.5 s budget), and the minimum length of a
   flexible spacer (the layouts add a fixed 4 pt before every timer and the header note, and the Sage box's
-  budget reserves 8 pt). A first name wider than 12 monospaced columns (CJK, kana and emoji count 2) reads
+  budget reserves 8 pt). A first name wider than 12 monospaced columns (CJK, kana and emoji, flags and keycaps included, count 2) reads
   "this list's week" in the large widget's Sage line on every device: the payload is the same everywhere, and
   the narrowest large widget (305.5 pt: the iPad mini and 768 × 1024 iPads) fits 12 in two lines of SF Mono
   (1266/2048 em) at the line's 0.75 floor. On those iPads the medium saved copy's header ("Next episodes" and

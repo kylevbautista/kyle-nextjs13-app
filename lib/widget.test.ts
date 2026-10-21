@@ -448,6 +448,10 @@ describe("the phone's rules (reference implementations)", () => {
       expect(parseWidgetParameter(raw), raw).toMatchObject({ id: null, link: true });
     }
     expect(parseWidgetParameter("glass mode").link).toBe(false);
+    // The script's own name (shown right above the Parameter in Edit Widget) and the bare brand word are words;
+    // a host is a link.
+    for (const raw of ["kylevb-anime", "kylevb", "Kylevb Anime"]) expect(parseWidgetParameter(raw).link, raw).toBe(false);
+    for (const raw of ["kylevb.com", "www.kylevb.com"]) expect(parseWidgetParameter(raw).link, raw).toBe(true);
     expect(parseWidgetParameter(`${id}0`).id).toBeNull();
     expect(parseWidgetParameter(`/user/a3lsZUBleGFtcGxlLmNvbQ`).id).toBeNull();
     expect(parseWidgetParameter(`${id} 65f000000000000000000001`)).toEqual({ ...none, id, unknown: ["65f000000000000000000001"] });

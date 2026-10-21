@@ -58,9 +58,9 @@ update) and AniList cover images. Stored on this phone only. No passwords, keys 
   latest art version a payload named (`config.json`), so stored copies and the no-payload states ask for art the
   server still serves after an update (a picture not fetched yet is drawn from an older cached version).
 - The card's layout is copied here: any change to `components/mylist/NextEpisodes.tsx`'s JSX shape (each element's
-  depth, tag, `className` and `mode`, in order) fails `parity.test.ts`'s tripwire, and so does a change to
-  `CountdownText`'s row-mode soon text or dot tones, until this script has been checked against them (CLAUDE.md
-  §9.18).
+  depth, tag, `className` and `mode`, in order; a className built from a constant fails until the extraction is
+  extended) fails `parity.test.ts`'s tripwire, and so does a change to `CountdownText`'s row-mode soon text or its
+  dot, until this script has been checked against them (CLAUDE.md §9.18).
 
 ## Checking it on a phone
 

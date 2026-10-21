@@ -11,7 +11,9 @@ function runtime(mode: RuntimeOptions["mode"] = { kind: "widget", family: "mediu
   return { g: rt.globals as Record<string, any>, result: rt.result };
 }
 
-afterEach(() => {
+afterEach(async () => {
+  // Let a test's abandoned replies finish first, so none moves the shared fake clock during the next test.
+  await new Promise((resolve) => setTimeout(resolve, 30));
   vi.useRealTimers();
 });
 
@@ -176,8 +178,15 @@ describe("the mock runtime", () => {
   });
 
   it("delivers parallel replies in end order, each at its own end, and abandons every reply a fired deadline passed", async () => {
-    /** Loads raced against a 3 s Timer each (`unraced` paths are awaited plainly); `timeoutS` sets timeoutInterval. */
-    const raceAll = async (replies: Record<string, object>, order: string[], { timeoutS = 60, unraced = [] as string[] } = {}) => {
+    /**
+     * Loads raced against a 3 s Timer each (`unraced` paths are awaited plainly; `late` ones start after an await);
+     * `timeoutS` sets timeoutInterval. The clock is read once every abandoned reply has settled too.
+     */
+    const raceAll = async (
+      replies: Record<string, object>,
+      order: string[],
+      { timeoutS = 60, unraced = [] as string[], late = [] as string[] } = {}
+    ) => {
       const { g, result } = runtime(undefined, { net: Object.fromEntries(Object.entries(replies).map(([k, v]) => [`https://kylevb.com/${k}`, v])) });
       const settledAt: Record<string, number> = {};
       const raced = (path: string) => {
@@ -193,7 +202,12 @@ describe("the mock runtime", () => {
           return won;
         });
       };
-      const won = Object.fromEntries((await Promise.all(order.map(raced))).map((w, i) => [order[i], w]));
+      const started = order.map(async (path) => {
+        if (late.includes(path)) await Promise.resolve();
+        return raced(path);
+      });
+      const won = Object.fromEntries((await Promise.all(started)).map((w, i) => [order[i], w]));
+      for (let i = 0; i < 5; i++) await new Promise((resolve) => setImmediate(resolve));
       const abandoned = Object.fromEntries(result().requests.map((r) => [r.url.split("/").pop(), r.abandoned ?? false]));
       return { won, settledAt, abandoned, clock: Date.now() };
     };
@@ -203,7 +217,11 @@ describe("the mock runtime", () => {
       expect(r.settledAt, order.join()).toEqual({ fast: NOW + 40, slower: NOW + 2500 });
       expect(r.abandoned, order.join()).toEqual({ fast: false, slower: false });
     }
-    // Two slow replies past one shared deadline: both abandoned, and the clock stays at the deadline.
+    // A sibling started a microtask late (after an await) still lands at its own end, not after the deadline.
+    const lateFast = await raceAll({ slow: { body: "s", latencyMs: 9000, trickle: true }, fast: { body: "f", latencyMs: 40 } }, ["slow", "fast"], { late: ["fast"] });
+    expect(lateFast.settledAt).toEqual({ fast: NOW + 40, slow: NOW + 3000 });
+    // Two slow replies past one shared deadline: both abandoned, and the clock stays at the deadline (abandoned
+    // replies never move it, even once they have settled).
     const slow = await raceAll({ a: { body: "a", latencyMs: 9000, trickle: true }, b: { body: "b", latencyMs: 9000, trickle: true } }, ["a", "b"]);
     expect(slow.won).toEqual({ a: "deadline", b: "deadline" });
     expect(slow.abandoned).toEqual({ a: true, b: true });

@@ -134,8 +134,10 @@ describe("the script's rules equal lib/widget.ts's", () => {
       "kylevb.com/mylist",
       "glass mode",
       "( )",
+      "kylevb-anime",
+      "kylevb.com",
     ];
-    expect(inputs).toHaveLength(48);
+    expect(inputs).toHaveLength(50);
     for (const raw of inputs) expect(S.parseParameter(raw), String(raw)).toEqual(parseWidgetParameter(raw));
   });
 
@@ -236,7 +238,8 @@ describe("the script's rules equal lib/widget.ts's", () => {
     // The row mode the card renders (the last return) and the dot both modes share.
     const rowMode = countdown.slice(countdown.lastIndexOf("return ("));
     expect(rowMode, `${message}: the row mode's soon text`).toContain("inline-flex items-center gap-1.5 tabular-nums data-[soon]:text-amber-200");
-    expect(countdown, `${message}: the dot`).toContain('state === "airing" ? "bg-emerald-400" : "bg-amber-400');
+    expect(countdown, `${message}: the dot`).toContain('state === "airing" ? "bg-emerald-400" : "bg-amber-400 animate-pulse"');
+    expect(rowMode, `${message}: the row mode's dot`).toContain("{dot}");
     const tones = { soonText: colors.amber[200], soonDot: colors.amber[400], airedDot: colors.emerald[400] };
     for (const [name, hex] of Object.entries(tones)) {
       expect(S.T[name], `${message}: T.${name}`).toBe(hex);
@@ -267,7 +270,9 @@ describe("the script's rules equal lib/widget.ts's", () => {
     // Any change to the card's elements or classes trips this, so the widget's copy of its layout gets a look: every
     // JSX element's depth, tag and className expression in document order (an added, removed, re-tagged or moved
     // element, a class edit, a conditional or concatenated className, where {CARD} is used), plus CARD's value.
-    const classes = jsxShape(card);    expect(
+    expect(classNameProblems(card), "extend the tripwire's extraction (or the allowlist) so it hashes what these classes are").toEqual([]);
+    const classes = jsxShape(card);
+    expect(
       createHash("sha256").update(classes.join("\n")).digest("hex").slice(0, 16),
       "The Next-episodes card's classes changed: check widgets/scriptable/kylevb-anime.js's renderers still match it " +
         "(CLAUDE.md §9.18), then update this hash"
@@ -347,4 +352,40 @@ function jsxShape(source: string): string[] {
   };
   visit(file, 0);
   return out;
+}
+
+/** Classes are hashed as written: none may come from a value the hash can't see (only CARD, by value, is resolved). */
+const NOT_MIRRORED = new Set(["FOCUS_RING_PANEL"]); // a focus ring: nothing the widget draws
+
+/** Each className (and CARD's value) that isn't built only from literals, CARD and NOT_MIRRORED, for the tripwire. */
+function classNameProblems(source: string): string[] {
+  const file = ts.createSourceFile("NextEpisodes.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const problems: string[] = [];
+  const check = (expr: ts.Expression): void => {
+    if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) return;
+    if (ts.isParenthesizedExpression(expr)) return check(expr.expression);
+    if (ts.isIdentifier(expr) && expr.text === "CARD") return;
+    if (ts.isConditionalExpression(expr)) return (check(expr.whenTrue), check(expr.whenFalse));
+    if (ts.isBinaryExpression(expr) && expr.operatorToken.kind === ts.SyntaxKind.PlusToken) return (check(expr.left), check(expr.right));
+    if (ts.isTemplateExpression(expr)) {
+      for (const span of expr.templateSpans) {
+        if (!(ts.isIdentifier(span.expression) && NOT_MIRRORED.has(span.expression.text))) problems.push(`\${${span.expression.getText(file)}}`);
+      }
+      return;
+    }
+    problems.push(expr.getText(file));
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "CARD" && !(node.initializer && ts.isStringLiteral(node.initializer))) {
+      problems.push(`CARD = ${node.initializer?.getText(file)}`);
+    }
+    if (ts.isJsxAttribute(node) && node.name.getText(file) === "className" && node.initializer) {
+      if (ts.isJsxExpression(node.initializer)) {
+        if (node.initializer.expression) check(node.initializer.expression);
+      } else if (!ts.isStringLiteral(node.initializer)) problems.push(node.initializer.getText(file));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return problems;
 }

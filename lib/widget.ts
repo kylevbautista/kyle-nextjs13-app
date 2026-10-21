@@ -298,7 +298,7 @@ export interface WidgetParameter {
 const ID_IN_TOKEN = /(?:^|\/(?:user|mylist)\/)([0-9a-f]{24})(?=$|[/?#&])/;
 /** Punctuation a link picks up in a sentence or a chat: "(…)", "<…>", a closing period. */
 const WRAPPING = /^[(<[{"'\u201c\u2018]+|[)>\]}"'\u201d\u2019.!?:]+$/g;
-const LINK_SHAPED = /\/|kylevb|^https?:/;
+const LINK_SHAPED = /\/|kylevb\.|^https?:/;
 
 /**
  * The widget's Parameter field: `[<list link or id>] [glass]`, separated by spaces, commas or semicolons, in
@@ -326,7 +326,7 @@ export function parseWidgetParameter(raw: unknown): WidgetParameter {
   return out;
 }
 
-/** A widget run's outcome (its run log and refresh cap): "unavailable" is kylevb.com answering with an error. */
+/** A widget run's outcome (its run log and refresh cap): "unavailable" is kylevb.com answering without the list. */
 export type WidgetOutcome = "ok" | "fresh" | "saved" | "offline" | "unavailable" | "setup" | "bad-link" | "not-found" | "outdated" | "error";
 
 const OUTCOME_CAP: Record<WidgetOutcome, number> = {

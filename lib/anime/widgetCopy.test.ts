@@ -264,7 +264,10 @@ describe("the large widget's Sage line fits two lines on the narrowest large wid
     // Measured in monospaced columns: CJK, kana and emoji are two wide.
     expect(sageColumns("\u4f50\u85e4\u82b1\u5b50")).toBe(8);
     expect(widgetCopy("\u4f50\u85e4\u82b1\u5b50", "rows", NOW).sage).toContain("\u4f50\u85e4\u82b1\u5b50's week");
-    for (const wide of ["\u3042".repeat(7), "Christopher\u{1F525}", "Alexander\u{1F338}\u{1F338}"]) {
+    // Flags and keycaps draw two columns too.
+    expect(sageColumns("Kyle1\uFE0F\u20E3")).toBe(6);
+    expect(sageColumns("\u{1F1EE}\u{1F1F9}")).toBe(2);
+    for (const wide of ["\u3042".repeat(7), "Christopher\u{1F525}", "Alexander\u{1F338}\u{1F338}", "Christopher\u{1F1F5}\u{1F1ED}", "Alessandra\u{1F1EE}\u{1F1F9}\u{1F1FA}\u{1F1F8}"]) {
       expect(sageColumns(wide), wide).toBeGreaterThan(SAGE_NAME_MAX);
       expect(widgetCopy(wide, "rows", NOW).sage, wide).toContain("this list's week");
     }

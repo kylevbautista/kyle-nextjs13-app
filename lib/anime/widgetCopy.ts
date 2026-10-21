@@ -50,7 +50,7 @@ export interface WidgetCopy {
   savedNote: string;
   /** The large widget's Sage line over saved rows when the phone got no answer. */
   offline: string;
-  /** The same when kylevb.com answered without the list: any HTTP reply but a payload or the route's 404/410. */
+  /** The same when kylevb.com answered without the list: any HTTP reply but a payload, a 2xx web page or the route's 404/410. */
   unavailable: string;
   resting: WidgetLine;
   state: WidgetLine | null;
@@ -123,8 +123,9 @@ export function clipGraphemes(text: string, max: number): string {
  */
 export const SAGE_NAME_MAX = 12;
 
-/** Graphemes a monospaced font draws two columns wide: CJK, kana, Hangul, full-width forms, emoji. */
-const WIDE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Extended_Pictographic}\u3000-\u303F\uFF01-\uFF60\uFFE0-\uFFE6]/u;
+/** Graphemes a monospaced font draws two columns wide: CJK, kana, Hangul, full-width forms, emoji (flags, keycaps). */
+const WIDE =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Extended_Pictographic}\p{Regional_Indicator}\u20E3\uFE0F\u3000-\u303F\uFF01-\uFF60\uFFE0-\uFFE6]/u;
 
 /** A name's width in the Sage box's monospaced columns (a wide grapheme counts 2). */
 export const sageColumns = (name: string) => graphemes(name).reduce((sum, g) => sum + (WIDE.test(g) ? 2 : 1), 0);

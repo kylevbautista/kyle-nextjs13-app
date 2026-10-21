@@ -77,8 +77,8 @@ const CANONICAL_ID = /^[a-f0-9]{24}$/; // == CANONICAL_ID_RE
 const ID_IN_TOKEN = /(?:^|\/(?:user|mylist)\/)([0-9a-f]{24})(?=$|[/?#&])/;
 /** Punctuation a link picks up in a sentence or a chat: "(…)", "<…>", a closing period. */
 const WRAPPING = /^[(<[{"'\u201c\u2018]+|[)>\]}"'\u201d\u2019.!?:]+$/g;
-/** An unknown token that was meant as a link (cut off, or another page's). */
-const LINK_SHAPED = /\/|kylevb|^https?:/;
+/** An unknown token that was meant as a link (cut off, or another page's): not the bare word (the script's name). */
+const LINK_SHAPED = /\/|kylevb\.|^https?:/;
 const STATES = ["rows", "resting", "nothing-scheduled", "empty-list"];
 const TIERS = ["named", "demon", "lord"];
 const KINDS = ["Notice", "Report", "Warning"];
@@ -724,8 +724,8 @@ async function fetchPayload(id, timeoutS) {
       url: isObj(json) && isStr(json.url) && json.url.startsWith("https://github.com/") ? json.url : SOURCE_URL,
     };
   }
-  // `page`: not JSON at all (an HTML page), which kylevb.com's route never sends with a 2xx.
-  return { kind: "server", status, page: typeof body !== "string" || !/^\s*[{[]/.test(body) };
+  // `page`: an HTML page, which kylevb.com's route never sends with a 2xx.
+  return { kind: "server", status, page: typeof body === "string" && /^\s*</.test(body) };
 }
 
 /** A cached image, else (when allowed) load() + Image.fromData() (loadImage downscales to 500 px in widgets). */
@@ -837,7 +837,10 @@ function evictCovers(keep) {
   }
 }
 
-/** In-app: every art file this phone uses, then drop other art versions and stale temp files. */
+/**
+ * In-app: every art file this phone uses, then drop stale temp files and other versions of each picture whose
+ * current version arrived (one that didn't download keeps its older version for loadArt's fallback).
+ */
 async function prefetchArt(art, scale, largeCap) {
   const f = files();
   const p = paths();
@@ -846,7 +849,8 @@ async function prefetchArt(art, scale, largeCap) {
   const keep = new Set(names.map((name) => artFile(name, art.version)));
   for (const name of f.listContents(p.art)) {
     const path = f.joinPath(p.art, name);
-    const otherVersion = /\.v\d+\.png$/.test(name) && !name.endsWith(".v" + art.version + ".png");
+    const match = /^(.+)\.v(\d+)\.png$/.exec(name);
+    const otherVersion = Boolean(match) && Number(match[2]) !== art.version && f.fileExists(f.joinPath(p.art, artFile(match[1], art.version)));
     if (otherVersion || (!keep.has(name) && name.endsWith(".tmp") && isOld(path))) {
       try {
         f.remove(path);
@@ -1027,7 +1031,8 @@ function newWidget(view) {
 
 /**
  * The Next-episodes card's header: 《Notice》 Next episodes · Pacific Time, or the saved copy's stamp. The large
- * widget's Sage line already names the saved time, so its card keeps "Pacific Time" (`stamp` false).
+ * card always keeps "Pacific Time" (`stamp` false): its saved rows' Sage line names the saved time, and the large
+ * saved state draws the stamp on a row of its own (beside "Next episodes" it would be cut on 305.5 pt widgets).
  */
 function cardHeader(parent, view, height, padX, stamp) {
   const { copy } = view;
@@ -1129,8 +1134,8 @@ function largeBanner(w, view, line) {
   sage.borderWidth = 1;
   sage.borderColor = tone(view, "sageBorder");
   sage.setPadding(5, 8, 5, 8);
-  // The saved-copy line names air times, so only saved rows get it; a saved state keeps the standing line and
-  // its card header carries the stamp.
+  // The saved-copy line names air times, so only saved rows get it; a saved state keeps the standing line, and
+  // renderStateLarge draws its stamp on a row under the card header.
   const savedRows = view.payload && view.saved && view.kind === "rows";
   const offline = view.savedReason === "unavailable" ? copy.unavailable : copy.offline;
   const tag = view.payload ? (savedRows ? copy.tags.Report : copy.tags.Notice) : copy.tags[line.kind];
@@ -1657,9 +1662,12 @@ async function fetchInApp(id, onPayload) {
 /** Said after a link or a refresh whose pictures didn't all arrive (widgets fetch what they draw early in a run). */
 const ART_MISSING_NOTE = "Some pictures didn't finish downloading. Widgets fetch the ones they draw on later refreshes, or use Refresh now.";
 
-/** A 2xx JSON reply that isn't a payload (a server bug, an oversized body, a /v1 change this version rejects). */
+/** A 2xx reply that isn't a payload or a web page (a server bug, an oversized body, a /v1 change this version rejects). */
 const isUnreadable = (r) => r.kind === "server" && r.status >= 200 && r.status < 300 && !r.page;
-/** A 2xx web page instead of the route's JSON: a network filter or a Wi-Fi sign-in page answered. */
+/**
+ * A 2xx web page instead of the route's JSON: a filter or security profile the phone trusts answered (a Wi-Fi
+ * sign-in page can't: it fails the TLS handshake, "network").
+ */
 const isWebPage = (r) => r.kind === "server" && r.status >= 200 && r.status < 300 && Boolean(r.page);
 
 /** What an in-app fetch that failed says (kylevb.com answered or not, and whether the link was saved). */
@@ -1677,7 +1685,7 @@ function failureLine(r, saved) {
  */
 function failureNext(r, saved) {
   if (r.kind === "network") return saved ? "Check this phone's connection." : "Check this phone's connection, or try again in a few minutes.";
-  if (isWebPage(r)) return "A network filter or a Wi-Fi sign-in page can do this." + (saved ? "" : " Try again in a few minutes, or on another network.");
+  if (isWebPage(r)) return "A network filter or security profile can do this." + (saved ? "" : " Try again in a few minutes, or on another network.");
   if (isUnreadable(r)) return (saved ? "" : "Try again in a few minutes. ") + "If it keeps happening, paste the newest version from GitHub.";
   return saved ? "" : "Try again in a few minutes.";
 }
@@ -1887,7 +1895,7 @@ async function runApp() {
   if (config.runsWithSiri) return;
   const query = args.queryParameters || {};
   const kv = query.kv;
-  if (kv === "setup") await linkFlow(query.from === "param" ? (isStr(query.why) && PARAM_PROBLEM[query.why] ? query.why : "other") : null);
+  if (kv === "setup") await linkFlow(query.from === "param" ? (["words", "link", "missing"].includes(query.why) ? query.why : "other") : null);
   else if (kv === "refresh") await refreshFlow();
   else await appMenu();
 }

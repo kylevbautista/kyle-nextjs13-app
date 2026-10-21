@@ -67,7 +67,13 @@ describe("visitor lines", () => {
       expect(publicOwnerName(blank), JSON.stringify(blank)).toBeNull();
       expect(publicOwnerName(`${blank} Bautista`), JSON.stringify(blank)).toBeNull();
     }
-    // ZWJ, variation selectors and tags stay: emoji sequences and flags need them.
+    // A lone mark before a space (ZWSP, LRM, RLM, ALM, BOM) can't be told from a blanked first name: no name too.
+    for (const mark of ["\u200B", "\u200E", "\u200F", "\u061C", "\uFEFF"]) {
+      expect(publicOwnerName(`${mark} Bautista`), JSON.stringify(mark)).toBeNull();
+      expect(publicOwnerName(`${mark}Kyle Bautista`), JSON.stringify(mark)).toBe("Kyle");
+    }
+    // ZWNJ, ZWJ, variation selectors and tags stay: scripts, emoji sequences and flags need them.
+    expect(publicOwnerName("\u0639\u0644\u06CC\u200C\u0631\u0636\u0627")).toBe("\u0639\u0644\u06CC\u200C\u0631\u0636\u0627");
     expect(publicOwnerName("Kyle\u200D")).toBe("Kyle\u200D");
     expect(publicOwnerName("\u{1F469}\u200D\u{1F4BB} Kyle")).toBe("\u{1F469}\u200D\u{1F4BB}");
     expect(publicOwnerName("\u2764\uFE0F")).toBe("\u2764\uFE0F");

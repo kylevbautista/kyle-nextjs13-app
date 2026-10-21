@@ -858,8 +858,27 @@ describe("states", () => {
     fs.files.set(`${WIDGET_DIR}/config.json`, { bytes: new TextEncoder().encode(JSON.stringify({ id: USER_ID })), mtime: NOW, ctime: NOW, origin: null });
     const linked = await widgetRun("medium", { parameter: null, fs, net: siteNet(payloadAt("mixed")), patch: boom });
     expect(widgetProps(linked.tree).url).toBe(`scriptable:///run/kylevb-anime?kv=refresh&id=${USER_ID}`);
-    const typo = await widgetRun("medium", { parameter: "glas", net: artNet(), patch: boom });
-    expect(widgetProps(typo.tree).url).toBe(`${SETUP_URL}&from=param&why=words`);
+    // A Parameter that names no list: its state view throws too (the first stack), and the error's tap still opens
+    // that Parameter's problem, words or a link that isn't a list link.
+    const firstStack = (g: Record<string, any>) => {
+      const real = g.ListWidget.prototype.addStack;
+      let thrown = false;
+      g.ListWidget.prototype.addStack = function (...a: unknown[]) {
+        if (!thrown) {
+          thrown = true;
+          throw new Error("render bug");
+        }
+        return real.apply(this, a);
+      };
+    };
+    for (const [parameter, why] of [
+      ["glas", "words"],
+      ["https://kylevb.com/anime/2026/fall", "link"],
+    ] as const) {
+      const run = await widgetRun("medium", { parameter, net: artNet(), patch: firstStack });
+      expect(textsOf(run.tree), parameter).toContain("This widget hit an error");
+      expect(widgetProps(run.tree).url, parameter).toBe(`${SETUP_URL}&from=param&why=${why}`);
+    }
   });
 });
 
@@ -1054,8 +1073,9 @@ describe("review fixes", () => {
     expect(textsOf(saved.tree)).toContain("kylevb.com had a problem. Showing air times saved Oct 15, 7:05 AM PT.");
     const offline = await widgetRun("large", { net: siteNet({ error: "offline" }), fs, nowMs: NOW + 10 * MIN });
     expect(textsOf(offline.tree)).toContain("Couldn't reach kylevb.com. Showing air times saved Oct 15, 7:05 AM PT.");
-    // Any HTTP status came over kylevb.com's HTTPS (a captive portal fails the TLS handshake: "network"), so a
-    // platform page, a rollback's 404 and an unreadable 200 all say the site had a problem, as the app does.
+    // An HTTP reply over HTTPS is normally kylevb.com's (a captive portal fails the TLS handshake: "network"; a
+    // TLS-inspecting filter is the exception), so a platform page, a rate limit and an unreadable 2xx JSON say the
+    // site had a problem; the app names each (HTTP N, or can't read).
     for (const reply of [
       { status: 502, body: "<html>Bad gateway</html>", mimeType: "text/html" },
       { status: 429, body: "Too Many Requests", mimeType: "text/plain" },
@@ -1065,8 +1085,8 @@ describe("review fixes", () => {
       expect(textsOf(page.tree), String(reply.status)).toContain("kylevb.com had a problem");
       expect(textsOf(page.tree).join(" "), String(reply.status)).not.toContain("Couldn't reach");
     }
-    // A 2xx web page is never the route's (a network filter or a sign-in page answered): the schedule didn't come
-    // from kylevb.com.
+    // A 2xx web page is never the route's (a filter or security profile the phone trusts answered): the schedule
+    // didn't come from kylevb.com.
     const filtered = await widgetRun("medium", { net: siteNet({ status: 200, body: "<html>Blocked</html>", mimeType: "text/html" }) });
     expect(textsOf(filtered.tree)).toContain("Couldn't reach kylevb.com");
     const lines = async (reply: object) => {
@@ -1079,10 +1099,12 @@ describe("review fixes", () => {
       "kylevb.com sent a reply this version of the script can't read.",
       "Try again in a few minutes. If it keeps happening, paste the newest version from GitHub.",
     ]);
-    expect(await lines({ status: 200, body: "<html>Sign in to Wi-Fi</html>", mimeType: "text/html" })).toEqual([
+    expect(await lines({ status: 200, body: "<html>Blocked by policy</html>", mimeType: "text/html" })).toEqual([
       "The reply wasn't kylevb.com's schedule: a web page came back instead.",
-      "A network filter or a Wi-Fi sign-in page can do this. Try again in a few minutes, or on another network.",
+      "A network filter or security profile can do this. Try again in a few minutes, or on another network.",
     ]);
+    // An empty 2xx is no web page: it can't be read.
+    expect((await lines({ status: 200, body: "" }))[0]).toBe("kylevb.com sent a reply this version of the script can't read.");
     // Link my list gives the same advice after "The link is saved; widgets will try again."
     const link = async (reply: object) => {
       const app = await runScript({ mode: { kind: "app", queryParameters: { kv: "setup" }, alerts: [{ choose: "Link", fields: [LINK] }] }, nowMs: NOW, net: siteNet(reply) });
@@ -1092,6 +1114,14 @@ describe("review fixes", () => {
     expect(await link({ status: 200, body: '{"schema":1,"state":"party"}' })).toEqual([
       "kylevb.com sent a reply this version of the script can't read. The link is saved; widgets will try again.",
       "If it keeps happening, paste the newest version from GitHub.",
+    ]);
+    expect(await link({ status: 200, body: "<html>Blocked by policy</html>", mimeType: "text/html" })).toEqual([
+      "The reply wasn't kylevb.com's schedule: a web page came back instead. The link is saved; widgets will try again.",
+      "A network filter or security profile can do this.",
+    ]);
+    expect(await link({ status: 503, body: '{"schema":1,"error":"unavailable"}' })).toEqual([
+      "kylevb.com had a problem (HTTP 503). The link is saved; widgets will try again.",
+      "",
     ]);
     // No answer at all (offline, or slower than the app's 8 s): nothing claims the phone is offline.
     for (const reply of [{ error: "offline" }, { status: 503, body: '{"schema":1,"error":"unavailable"}', latencyMs: 8150 }]) {
@@ -1419,6 +1449,7 @@ describe("second review fixes", () => {
       return (await widgetRun(family, { net: siteNet({ error: "offline" }), fs, nowMs: NOW + 5 * MIN })).tree;
     };
     const trees = [(await widgetRun("medium", { net })).tree, await savedRun("medium", "mixed"), await savedRun("large", "empty-list")];
+    const notes: string[] = [];
     for (const tree of trees) {
       const title = nodesOf(tree, "text").find(({ node }) => node.props.text === "Next episodes");
       if (!title) throw new Error("no header");
@@ -1433,8 +1464,12 @@ describe("second review fixes", () => {
       ]);
       const note = header.children[i + 3];
       expect(note.type).toBe("text");
-      if (note.type === "text") expect(note.props.text === "Pacific Time" ? 1 : note.props.minimumScaleFactor).toBe(note.props.text === "Pacific Time" ? 1 : 0.75);
+      if (note.type === "text") {
+        notes.push(note.props.text);
+        expect(note.props.minimumScaleFactor, note.props.text).toBe(note.props.text === "Pacific Time" ? 1 : 0.75);
+      }
     }
+    expect(notes).toEqual(["Pacific Time", "Saved Oct 15, 7:05 AM PT", "Pacific Time"]);
     // The large saved state keeps the card's own header; its stamp has a full-width row of its own.
     const large = trees[2];
     expect(textsOf(large)).toEqual(expect.arrayContaining(["Pacific Time", "Saved Oct 15, 7:05 AM PT"]));
@@ -1570,6 +1605,7 @@ describe("third review fixes", () => {
     expect(await prompt("link")).toContain("has a link that isn't a list link: it may be cut off, or for another page.");
     expect(await prompt("link")).not.toContain("words");
     expect(await prompt("party")).toContain("That widget's Parameter field needs a change.");
+    for (const inherited of ["constructor", "toString", "__proto__"]) expect(await prompt(inherited), inherited).toContain("needs a change.");
     for (const parameter of [`(${LINK})`, `<${LINK}>`, `${LINK}.`, `"${LINK}", glass`]) {
       const run = await widgetRun("medium", { parameter, net });
       expect(textsOf(run.tree), parameter).toContain("Next episodes");
@@ -1607,6 +1643,61 @@ describe("third review fixes", () => {
       const left = fs.list(`${WIDGET_DIR}/covers/`);
       for (const path of bCovers) expect(left.includes(path), `${days} days: ${path}`).toBe(keeps);
     }
+  });
+});
+
+describe("fourth review fixes", () => {
+  const ART = "https://kylevb.com/api/widget/art/";
+  const art = (fs: MockFileSystem) => fs.list(`${WIDGET_DIR}/art/`).map((path) => path.split("/").pop() as string);
+  const linkApp = (reply: NetTable, fs: MockFileSystem, nowMs = NOW) =>
+    runScript({ mode: { kind: "app", queryParameters: { kv: "setup" }, alerts: [{ choose: "Link", fields: [LINK] }, "cancel"] }, nowMs, net: reply, fs });
+  const failing = (version: number) => Object.fromEntries(Object.keys(artNet(version)).map((url) => [url, { status: 404, body: "" }]));
+
+  it("caps the in-app JSON at 8 s of wall clock: a reply that keeps trickling in never holds Refresh now or Link", async () => {
+    const trickle = siteNet(payloadAt("mixed"), { [DATA_URL]: { body: JSON.stringify(payloadAt("mixed")), latencyMs: 30_000, trickle: true } });
+    const refresh = await runScript({ mode: { kind: "app", queryParameters: { kv: "refresh", id: USER_ID }, alerts: [] }, nowMs: NOW, net: trickle });
+    expect(dataRequests(refresh)[0].abandoned).toBe(true);
+    expect(refresh.elapsedMs).toBe(8000);
+    expect(refresh.alerts[0].title).toBe("Couldn't reach kylevb.com.");
+    const link = await linkApp(trickle, new MockFileSystem());
+    expect(dataRequests(link)[0].abandoned).toBe(true);
+    expect(link.elapsedMs).toBe(8000);
+    expect(link.alerts[1].title).toBe("Couldn't reach kylevb.com. The link is saved; widgets will try again.");
+  });
+
+  it("falls back to the same picture only (never its -happy sibling) and to its newest cached version", async () => {
+    const fs = new MockFileSystem();
+    const calm = (version: number) => edited("mixed", (p) => ((p.hungrySince = null), (p.art.version = version)));
+    // v1 calm, then v2 hungry past the fresh window: sky-medium-3x.v1/.v2, slime-lord.v1, slime-lord-happy.v2.
+    await widgetRun("medium", { net: { ...siteNet(calm(1)), ...artNet(1) }, fs });
+    await widgetRun("medium", { net: { ...siteNet(edited("mixed", (p) => (p.art.version = 2))), ...artNet(2) }, fs, nowMs: NOW + 2 * MIN });
+    expect(art(fs).sort()).toEqual(["sky-medium-3x.v1.png", "sky-medium-3x.v2.png", "slime-lord-happy.v2.png", "slime-lord.v1.png"]);
+    // A calm v3 copy whose JSON lands after the art window, then the same copy offline.
+    const late = await widgetRun("medium", { net: { ...artNet(3), [DATA_URL]: { body: JSON.stringify(calm(3)), latencyMs: 2500 } }, fs, nowMs: NOW + 4 * MIN });
+    const offline = await widgetRun("medium", { net: { [DATA_URL]: { error: "offline" } }, fs, nowMs: NOW + 10 * MIN });
+    for (const [label, run] of [["late", late], ["offline", offline]] as const) {
+      expect(widgetProps(run.tree).backgroundImage?.src, label).toBe(`${ART}sky-medium-3x.v2.png`);
+      expect(imageSrcs(run.tree).filter((src) => src.includes("/slime-")), label).toEqual([`${ART}slime-lord.v1.png`]);
+    }
+  });
+
+  it("keeps a picture's older version when an in-app Link or Refresh couldn't download its new one", async () => {
+    const fs = new MockFileSystem();
+    await linkApp({ ...siteNet(payloadAt("mixed")), ...artNet(1) }, fs);
+    expect(art(fs)).toHaveLength(15);
+    const v2 = edited("mixed", (p) => (p.art.version = 2));
+    const refresh = (net: NetTable, nowMs: number) =>
+      runScript({ mode: { kind: "app", queryParameters: { kv: "refresh", id: USER_ID }, alerts: [] }, nowMs, net, fs });
+    // Refresh now gets the v2 payload but none of its art: every v1 file stays for the fallback.
+    await refresh({ ...siteNet(v2), ...failing(2) }, NOW + 2 * MIN);
+    expect(art(fs).filter((name) => name.endsWith(".v1.png"))).toHaveLength(15);
+    const offline = await widgetRun("medium", { net: { [DATA_URL]: { error: "offline" } }, fs, nowMs: NOW + 10 * MIN });
+    expect(widgetProps(offline.tree).backgroundImage?.src).toBe(`${ART}sky-medium-3x.v1.png`);
+    expect(imageSrcs(offline.tree)).toContain(`${ART}slime-lord-happy.v1.png`);
+    // Once v2 arrives, its older versions go.
+    await refresh({ ...siteNet(v2), ...artNet(2) }, NOW + 20 * MIN);
+    expect(art(fs).every((name) => name.endsWith(".v2.png"))).toBe(true);
+    expect(art(fs)).toHaveLength(15);
   });
 });
 
