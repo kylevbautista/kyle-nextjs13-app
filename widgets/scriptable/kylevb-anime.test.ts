@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildWidgetPayload, type WidgetPayload } from "@/lib/widget";
+import { WIDGET_SCRIPT_VERSION, buildWidgetPayload, type WidgetPayload } from "@/lib/widget";
 import { RESTING_LINE } from "@/lib/anime/widgetCopy";
 import { runScript, scriptExports, type RunOptions } from "./harness";
 import { DEVICE_PROFILES, MockFileSystem, fakePng, type NetTable, type RunResult, type WidgetNode } from "./mockRuntime";
@@ -931,10 +931,10 @@ describe("in-app", () => {
     expect(result.quirks).toEqual([]);
     expect(result.completeCalls).toBe(1);
     expect(result.alerts.map((a) => a.title)).toEqual([
-      "kylevb Anime widget v1",
+      `kylevb Anime widget v${WIDGET_SCRIPT_VERSION}`,
       "Link your list",
       "《Notice》 Linked to Kyle's airing schedule.",
-      "kylevb Anime widget v1",
+      `kylevb Anime widget v${WIDGET_SCRIPT_VERSION}`,
     ]);
     expect(JSON.parse(fs.text(`${WIDGET_DIR}/config.json`) ?? "null")).toEqual({ id: USER_ID, glass: false, name: "Kyle", artVersion: 1 });
     expect(fs.list(`${WIDGET_DIR}/art/`)).toHaveLength(15);
@@ -989,7 +989,7 @@ describe("in-app", () => {
     const result = await runScript({ mode: { kind: "app", alerts: [{ choose: "Diagnostics" }, "cancel", "cancel"] }, nowMs: NOW + 2 * 60 * MIN, net, fs });
     const message = result.alerts[1].message;
     expect(result.alerts[1].title).toBe("Diagnostics");
-    expect(message).toContain("Script v1 (latest v1)");
+    expect(message).toContain(`Script v${WIDGET_SCRIPT_VERSION} (latest v${WIDGET_SCRIPT_VERSION})`);
     expect(message).toContain(`List ${USER_ID} (Kyle)`);
     expect(message).toContain("Art v1 @3x: 15/15");
     expect(message).toMatch(/medium: 4 runs, median gap 20 min, longest 60 min, ok 4, slowest \d+ ms/);
@@ -1008,10 +1008,10 @@ describe("in-app", () => {
 
   it("names a newer script version in the menu only, never on a widget", async () => {
     const fs = new MockFileSystem();
-    const newer = siteNet(edited("mixed", (p) => (p.script.latest = 2)));
+    const newer = siteNet(edited("mixed", (p) => (p.script.latest = WIDGET_SCRIPT_VERSION + 1)));
     await runScript({ mode: { kind: "app", queryParameters: { kv: "setup" }, alerts: [link, "cancel"] }, nowMs: NOW, net: newer, fs });
     const menu = await runScript({ mode: { kind: "app", alerts: ["cancel"] }, nowMs: NOW, net: newer, fs });
-    expect(menu.alerts[0].message).toContain("A newer version (v2) is on GitHub. Paste it over this script.");
+    expect(menu.alerts[0].message).toContain(`A newer version (v${WIDGET_SCRIPT_VERSION + 1}) is on GitHub. Paste it over this script.`);
     for (const family of FAMILIES) {
       const { tree } = await widgetRun(family, { parameter: null, net: newer, fs, nowMs: NOW + 5 * MIN });
       expect(textsOf(tree).join(" ")).not.toMatch(/newer|GitHub/);
@@ -1643,6 +1643,25 @@ describe("third review fixes", () => {
       const left = fs.list(`${WIDGET_DIR}/covers/`);
       for (const path of bCovers) expect(left.includes(path), `${days} days: ${path}`).toBe(keeps);
     }
+  });
+});
+
+describe("on a phone", () => {
+  it("saves over its own files: iOS's move never replaces one, so the old file goes first (seen on a phone)", async () => {
+    const fs = new MockFileSystem();
+    const net = siteNet(payloadAt("mixed"));
+    const data = `${WIDGET_DIR}/data-${USER_ID}.json`;
+    await widgetRun("medium", { net, fs });
+    const first = JSON.parse(fs.text(data) ?? "null").savedAt;
+    // Past the 90 s fresh window: the second run fetches and saves the copy, config.json and the run log again.
+    const again = await widgetRun("medium", { net: siteNet(edited("mixed", (p) => (p.art.version = 2))), fs, nowMs: NOW + 2 * MIN });
+    expect(textsOf(again.tree)).toContain("Next episodes");
+    expect(JSON.parse(fs.text(data) ?? "null").savedAt).toBeGreaterThan(first);
+    expect(JSON.parse(fs.text(`${WIDGET_DIR}/config.json`) ?? "null").artVersion).toBe(2);
+    const runs = JSON.parse(fs.text(`${WIDGET_DIR}/runs.json`) ?? "[]");
+    expect(runs.map((r: { out: string }) => r.out)).toEqual(["ok", "ok"]);
+    expect(runs.some((r: { err?: string }) => r.err)).toBe(false);
+    expect(fs.list(`${WIDGET_DIR}/`).filter((path) => path.endsWith(".tmp"))).toEqual([]);
   });
 });
 

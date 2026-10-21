@@ -7,6 +7,7 @@ import { WIDGET_PROJECTION, readEntries } from "@/server/lib/userList";
 import {
   WIDGET_PAYLOAD_MAX_BYTES,
   WIDGET_REFRESH,
+  WIDGET_SCRIPT_VERSION,
   buildWidgetPayload,
   clipGraphemes,
   parseWidgetParameter,
@@ -70,7 +71,7 @@ describe("buildWidgetPayload", () => {
       },
       art: { version: 1, base: "https://kylevb.com/api/widget/art/" },
       script: {
-        latest: 1,
+        latest: WIDGET_SCRIPT_VERSION,
         source: "https://github.com/kylevbautista/kyle-nextjs13-app/blob/main/widgets/scriptable/kylevb-anime.js",
       },
       tuning: { jsonTimeoutS: 5, coverFetches: 3, largeSkyMaxScale: 3 },

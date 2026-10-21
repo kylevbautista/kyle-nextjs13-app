@@ -258,7 +258,7 @@ describe("the mock runtime", () => {
     expect(widget.g.Image.fromData(data).size.width).toBe(1200);
   });
 
-  it("read, readString and readImage throw on a missing file; move replaces; copy refuses an existing destination", () => {
+  it("read, readString and readImage throw on a missing file; move and copy refuse an existing destination", () => {
     const { g } = runtime();
     const fm = g.FileManager.local();
     const path = fm.joinPath(fm.documentsDirectory(), "a.txt");
@@ -267,6 +267,10 @@ describe("the mock runtime", () => {
     expect(() => fm.readImage(path)).toThrow();
     fm.writeString(path, "one");
     fm.writeString(`${path}.tmp`, "two");
+    // iOS's message, as a phone printed it.
+    expect(() => fm.move(`${path}.tmp`, path)).toThrow("\u201ca.txt.tmp\u201d couldn\u2019t be moved to \u201cDocuments\u201d because an item with the same name already exists.");
+    expect(fm.readString(path)).toBe("one");
+    fm.remove(path);
     fm.move(`${path}.tmp`, path);
     expect(fm.readString(path)).toBe("two");
     expect(fm.fileExists(`${path}.tmp`)).toBe(false);

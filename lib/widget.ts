@@ -22,7 +22,7 @@ export { clipGraphemes } from "@/lib/anime/widgetCopy";
 /** The payload contract's version (`schema`); a breaking change ships /v2. */
 export const WIDGET_SCHEMA = 1 as const;
 /** The current script's version: SCRIPT_VERSION in kylevb-anime.js (parity). Bump both on any script change. */
-export const WIDGET_SCRIPT_VERSION = 1;
+export const WIDGET_SCRIPT_VERSION = 2;
 /** True once every widget has been re-pasted past v1: the v1 route then answers 410 ("Update this widget"). */
 export const WIDGET_V1_RETIRED: boolean = false;
 /** Every link and the only host the script fetches; never the request's host. */

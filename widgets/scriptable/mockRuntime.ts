@@ -1092,8 +1092,12 @@ export function createRuntime(opts: RuntimeOptions): { globals: Record<string, u
         } else throw missing(path);
       }
     }
+    /** iOS's moveItem: it never replaces an existing destination (seen on a phone: Scriptable 1.7.19). */
     move(src: string, dst: string) {
       const file = this.file(src);
+      if (fs.files.has(dst)) {
+        throw new Error(`\u201c${src.split("/").pop()}\u201d couldn\u2019t be moved to \u201c${parentOf(dst).split("/").pop()}\u201d because an item with the same name already exists.`);
+      }
       fs.files.delete(src);
       fs.files.set(dst, { ...file, mtime: Date.now() });
     }
