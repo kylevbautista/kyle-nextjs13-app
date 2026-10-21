@@ -44,7 +44,7 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SCRIPT_VERSION = 1; // == WIDGET_SCRIPT_VERSION (parity)
+const SCRIPT_VERSION = 2; // == WIDGET_SCRIPT_VERSION (parity)
 const SCHEMA = 1; // == WIDGET_SCHEMA
 const ORIGIN = "https://kylevb.com"; // == WIDGET_ORIGIN: the only data and art host, and every tap's host
 const API_PATH = "/api/widget/v1/list/"; // == widgetListPath("")
@@ -627,11 +627,16 @@ function readJSON(path) {
   }
 }
 
-/** Write to a temp file, then move it over the target: an interrupted run never leaves half a file. */
+/**
+ * Write to a temp file, then move it into place: an interrupted run never leaves half a file. iOS's move never
+ * replaces an existing file, so the old one goes first (stopped between the two, the file is just missing: the
+ * next run fetches it again; the temp file is swept later).
+ */
 function writeAtomic(path, write) {
   const f = files();
   const tmp = path + "." + UUID.string() + ".tmp";
   write(tmp);
+  if (f.fileExists(path)) f.remove(path);
   f.move(tmp, path);
 }
 

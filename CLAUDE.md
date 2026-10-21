@@ -992,7 +992,8 @@ styles/globals.css          Tailwind layers, scrollbar, the landing's CSS-only r
     `WIDGET_FALLBACK_COPY`. The script runs in Scriptable's JavaScriptCore: no fetch, setTimeout,
     URL or Intl (only `Timer`, for the run's wall-clock deadline); `loadString()` + `statusCode`, a
     404/410 trusted only with the route's JSON; `load()` + `Image.fromData`; `FileManager.local()`'s
-    documents only (cache and temp aren't shared with the widget), atomic writes; one `setWidget`,
+    documents only (cache and temp aren't shared with the widget), atomic writes (iOS's `move` never replaces an
+    existing file, seen on a phone: `writeAtomic` removes the old one first; the mock refuses too); one `setWidget`,
     one `complete`; no top-level `return` (ESLint can't parse it). In SwiftUI two flexible children
     of one stack split its width: a stack that already spans (its rows end in spacers) gets no
     trailing spacer. Bump `SCRIPT_VERSION` + `WIDGET_SCRIPT_VERSION` together on any script change;
