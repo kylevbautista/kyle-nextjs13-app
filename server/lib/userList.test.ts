@@ -11,7 +11,8 @@ vi.mock("./anilist", () => ({
 }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 
-const { CARD_PROJECTION, loadListEntries, readEntries, readEntriesCached, readListCard } = await import("./userList");
+const { CARD_PROJECTION, WIDGET_PROJECTION, loadListEntries, readEntries, readEntriesCached, readListCard, readWidgetOwner } =
+  await import("./userList");
 const { fetchMediaByIds } = await import("./anilist");
 const { listShareCard, scheduleShareCard, shareVersion } = await import("@/components/og/shareCard");
 
@@ -110,5 +111,56 @@ describe("loadListEntries", () => {
   it("caches nothing outside a render", () => {
     const doc = { _id: new ObjectId(ID), following: [fullEntry(1, MON)] };
     expect(readEntriesCached(doc)).toEqual(readEntries(doc));
+  });
+});
+
+describe("readWidgetOwner (the iPhone widget's read)", () => {
+  it("rejects non-canonical ids without touching Mongo", async () => {
+    for (const id of ["65F000000000000000000001", Buffer.from("a@b.c").toString("base64url"), "65f00000000000000000000", ""]) {
+      await expect(readWidgetOwner(id)).resolves.toBeNull();
+    }
+    expect(findOne).not.toHaveBeenCalled();
+  });
+
+  it("projects only WIDGET_PROJECTION and normalizes like the pages", async () => {
+    findOne.mockResolvedValueOnce({
+      _id: new ObjectId(ID),
+      name: "Kyle Bautista",
+      listRefreshedAt: 5,
+      following: [fullEntry(1, MON), fullEntry(1, MON), fullEntry(2, MON)],
+    });
+    const owner = await readWidgetOwner(ID);
+    expect(findOne).toHaveBeenCalledWith({ _id: new ObjectId(ID) }, { projection: WIDGET_PROJECTION });
+    expect(owner?.user).toEqual({ _id: new ObjectId(ID), listRefreshedAt: 5 });
+    expect(owner?.name).toBe("Kyle");
+    expect(owner?.entries.map((entry) => entry.id)).toEqual([1, 2]);
+    expect(Object.keys(WIDGET_PROJECTION).some((key) => /email|image|description|externalLinks|genres|score|startDate|finishDate/.test(key))).toBe(false);
+    expect(fetchMediaByIds).not.toHaveBeenCalled();
+  });
+
+  it("names a nameless owner Anonymous; an unknown id is null", async () => {
+    findOne.mockResolvedValueOnce({ _id: new ObjectId(ID), name: "  ", following: [] });
+    expect((await readWidgetOwner(ID))?.name).toBe("Anonymous");
+    // Bidi controls and zero-width characters never reach the widget (publicOwnerName strips them).
+    findOne.mockResolvedValueOnce({ _id: new ObjectId(ID), name: "\u202EKyle Bautista", following: [] });
+    expect((await readWidgetOwner(ID))?.name).toBe("Kyle");
+    findOne.mockResolvedValueOnce({ _id: new ObjectId(ID), name: "\u200B\u2066", following: [] });
+    expect((await readWidgetOwner(ID))?.name).toBe("Anonymous");
+    // A word joiner or a Hangul filler passes for a blank name: still Anonymous.
+    findOne.mockResolvedValueOnce({ _id: new ObjectId(ID), name: "\u2060\u3164", following: [] });
+    expect((await readWidgetOwner(ID))?.name).toBe("Anonymous");
+    findOne.mockResolvedValueOnce(null);
+    await expect(readWidgetOwner(ID)).resolves.toBeNull();
+  });
+
+  it("keeps the refresh lock's fields through the projection (refreshEntriesIfStale reads them)", async () => {
+    expect(WIDGET_PROJECTION).toMatchObject({ name: 1, listRefreshedAt: 1 });
+    findOne.mockResolvedValueOnce({ _id: new ObjectId(ID), name: "Kyle", listRefreshedAt: 1234, following: [] });
+    expect((await readWidgetOwner(ID))?.user).toEqual({ _id: new ObjectId(ID), listRefreshedAt: 1234 });
+  });
+
+  it("lets a Mongo error propagate", async () => {
+    findOne.mockRejectedValueOnce(new Error("connection reset"));
+    await expect(readWidgetOwner(ID)).rejects.toThrow("connection reset");
   });
 });

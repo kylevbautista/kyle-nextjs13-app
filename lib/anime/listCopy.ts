@@ -9,9 +9,38 @@
 import { showsLabel } from "@/lib/landing";
 import type { ListEntry } from "./types";
 
-/** How a list owner is named to other people: first name only (lists are public by link). Owners see their full name. */
-export const publicOwnerName = (name: string | null | undefined): string | null =>
-  name?.trim().split(/\s+/)[0] || null;
+/**
+ * Invisible characters a name may carry: the bidi controls (LRM, RLM, LRE…RLO, LRI…PDI), the Arabic letter mark,
+ * the zero-width space, the word joiner and invisible operators, the deprecated format controls, the BOM, the soft
+ * hyphen, the combining grapheme joiner, the Mongolian vowel separator, the Khmer inherent vowels and the Hangul
+ * fillers ("ㅤ" passes for a blank name). Written as escapes: a raw RLO can visually reorder source code ("Trojan
+ * Source"). Never strip U+200C/U+200D (ZWNJ/ZWJ), variation selectors or tag characters: emoji sequences, flags
+ * and some scripts need them.
+ */
+export const INVISIBLE_FORMAT =
+  /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\u3164\uFEFF\uFFA0]/g;
+
+/**
+ * A character something is drawn for: not whitespace, not a default-ignorable (a lone ZWJ, a tag), not a control or
+ * format character, not a blank (the braille blank, the musical null notehead).
+ */
+const VISIBLE = /[^\p{Default_Ignorable_Code_Point}\p{White_Space}\p{Cc}\p{Cf}\u2800\u{1D159}]/u;
+/** Whitespace between words (not U+FEFF: JavaScript's \s counts the zero-width no-break space, a format character). */
+const WORD_BREAK = /(?:(?!\uFEFF)[\s\p{White_Space}])+/u;
+
+/** Whether anything in `text` is drawn (a name of only invisible characters is no name). */
+export const hasVisible = (text: string) => VISIBLE.test(text);
+
+/**
+ * How a list owner is named to other people: first name only (lists are public by link). That is the name's first
+ * word, with invisible characters stripped (an RLO would flip the rest of a line). A first word with nothing drawn
+ * (a blanked first name, such as a Hangul filler) is no name: never the next word, which is usually the family
+ * name. Owners see their full name.
+ */
+export const publicOwnerName = (name: string | null | undefined): string | null => {
+  const first = name?.split(WORD_BREAK).find(Boolean)?.replace(INVISIBLE_FORMAT, "");
+  return first && hasVisible(first) ? first : null;
+};
 
 export interface ListStats {
   shows: number;
@@ -91,9 +120,12 @@ export const listEmptyBody = (name: string | null) =>
 export const scheduleStandingLine = (possessive: string) =>
   `Thought Acceleration: ${possessive} week, computed in Pacific Time.`;
 
+/** What the schedule leaves out (its sub, and the iPhone widget's nothing-scheduled line). */
+export const SCHEDULE_SKIPS_LINE = "Completed and dropped shows stay out of the way.";
+
 export const scheduleSub = (airingCount: number) =>
   airingCount > 0
-    ? `${showsLabel(airingCount)} with an upcoming episode, lined up by the day it airs. Completed and dropped shows stay out of the way.`
+    ? `${showsLabel(airingCount)} with an upcoming episode, lined up by the day it airs. ${SCHEDULE_SKIPS_LINE}`
     : "Every show on the list with an upcoming episode, lined up by the day it airs.";
 
 /** The Airing Schedule's visitor empty-state titles (SagePanel). */
@@ -106,3 +138,18 @@ export const nothingAiringTitle = (listName: string) => `Nothing on ${listName} 
  */
 export const nothingScheduledTitle = (name: string | null) =>
   name ? `Nothing on ${name}'s airing schedule` : "Nothing on this airing schedule";
+
+/**
+ * The Next-episodes card's words (components/mylist/NextEpisodes.tsx, components/home/HeroNextUp.tsx), shared with
+ * the iPhone widget (lib/anime/widgetCopy.ts), which draws the same card.
+ */
+export const NEXT_EPISODES_TITLE = "Next episodes";
+export const NEXT_EPISODES_NOTE = "Pacific Time";
+/** The phone ticker's label (shown upper-case). */
+export const NEXT_UP_LABEL = "Next up";
+/** The Airing Schedule card's footer jump (to the week panel's All tab). */
+export const WHOLE_WEEK_LABEL = "The whole week";
+/** HeroNextUp's phone ticker with no row left, and the widget's resting state. */
+export const COUNTDOWNS_RESTING = "Countdowns are resting";
+/** The running bit for an empty list (tempest-theme "Voice"): the iPhone widget's empty-list line. */
+export const PREDATION_LINE = "Recommend: predation.";

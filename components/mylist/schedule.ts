@@ -99,7 +99,7 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 /** "7:30 AM" in Pacific Time (plain spaces, so server and browser match). */
-const formatTime = (unixSeconds: number) =>
+export const formatTime = (unixSeconds: number) =>
   timeFormat.format(new Date(unixSeconds * 1000)).replace(/[\u202F\u00A0]/g, " ");
 
 const clip = (text: string, max = 40) =>

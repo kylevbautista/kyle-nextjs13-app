@@ -170,3 +170,37 @@ them, add two throwaway probes, build, verify, then delete them and rebuild befo
 
 The cheaper alternative for `error.tsx` alone: stop the rig's mongod and load `/user/<id>` (the list
 layout throws after the driver's server-selection timeout); re-seed afterwards.
+
+## The iPhone widget (no phone, no Mac)
+
+The widget is a Scriptable script, so "screenshots" come from its recorded tree. In the scratchpad
+(never the repo: vitest would collect the files):
+
+1. A `vitest.config.mts` with `root` = that folder, `resolve.alias["@"]` = the repo, `include:
+   ["*.preview.test.ts"]`, and a `node_modules` symlink to the repo's.
+2. Render the art once with the repo's own code: `widgetArtResponse(parseWidgetArtFile(widgetArtFile(name)))`
+   for each of `WIDGET_ART_NAMES`, written to `out/art/`.
+3. Per scenario × family × device (`DEVICE_PROFILES`, plus the iPad mini at 744×1133: the narrowest large widget,
+   305.5 pt), `runScript()` from
+   `widgets/scriptable/harness.ts` with `siteNet(payloadAt(...))` from `testkit.ts`/`fixtures.ts` (or an
+   error reply, `parameter: null`, a `patch` that throws). `result.widget` is the tree.
+4. Turn the tree into HTML at real point sizes (1 pt = 1 px): the widget is a flex column centered both
+   ways with its padding (default 16); stacks are flex rows/columns; a flexible spacer is `flex: 1 1 0`;
+   a stack holding a flexible spacer on its axis (or a child that does) is greedy (`flex: 1 1 0` in a
+   row, `align-self: stretch` in a column), like SwiftUI; texts with `lineLimit` 0 keep their
+   min-content width (SwiftUI lays the least flexible out first); `lineLimit` 1 is nowrap + ellipsis;
+   `minimumScaleFactor` is a shrink loop run **after `document.fonts.ready`**; a timer prints `H:MM:SS`
+   / `M:SS` at the view time and counts up past zero; sizes come from the script's `sizeRow()`.
+   Use DejaVu Sans (wider than SF Pro) and DejaVu Sans Mono with `letter-spacing: 0.016em` (DejaVu Sans Mono is
+   1233/2048 em, SF Mono 1266/2048: without it the rig's monospaced text is narrower than the phone's), so a fit
+   here is a fit on the phone. The rig's flex rows share a shortfall between texts; SwiftUI sizes the least
+   flexible text first, so check by arithmetic any row where two scalable texts share the width. Use
+   `assets/og/SageBrackets.ttf` for 《》. CSS masks (tinted images, glyphs) need data URIs, not
+   `file://`, and `url('…')` inside a `style="…"` attribute needs single quotes.
+5. Modes: full; tinted (every pixel white at its own alpha, the sky's light as white); the sky as an
+   opaque white slab (why glass exists); glass (the `glass` Parameter) on a light and a tinted Home
+   Screen; Lock Screen families grayscale on a photo-like backdrop. Plus the same render viewed 45 min
+   and 3 h later (timers count up) and the sky at `cover` vs `100% 100%`.
+6. Shoot with Playwright's Chromium (WebKit's system libraries are missing on this WSL machine) and
+   fail on: an element outside its widget, a text ending in "PT" that is cut, any text inside a filled
+   stack. Report (don't fail) truncated titles and text scaled under ~10.5 pt.

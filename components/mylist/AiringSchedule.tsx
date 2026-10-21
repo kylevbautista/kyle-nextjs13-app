@@ -27,6 +27,7 @@ import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { compareByNextAiring, nextAiring, type Weekday } from "@/lib/anime/airing";
 import {
   SCHEDULE_EYEBROW,
+  WHOLE_WEEK_LABEL,
   listOf,
   noAnimeYetTitle,
   nothingAiringTitle,
@@ -149,8 +150,8 @@ export default function AiringSchedule({
               entries={upcoming}
               jump={{
                 href: "#schedule-panel",
-                label: "The whole week",
-                srLabel: "See the whole week",
+                label: WHOLE_WEEK_LABEL,
+                srLabel: `See ${WHOLE_WEEK_LABEL.toLowerCase()}`,
                 onClick: showWholeWeek,
               }}
             />

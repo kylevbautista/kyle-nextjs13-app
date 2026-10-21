@@ -26,6 +26,19 @@ export const slimeViewBox = (tier?: EvolutionTier) => (hasAura(tier) ? SLIME_AUR
 /** Rendered height of slimeSvgMarkup({ size, tier }). */
 export const slimeMarkupHeight = (size: number, tier?: EvolutionTier) =>
   hasAura(tier) ? Math.round((size * 194) / 200) : slimeHeight(size);
+/**
+ * The iPhone widget's perch crop of the aura tiers: the canvas ends at y 170, where the plain slime's does, so a
+ * bottom-aligned PNG puts every tier's base on the same line (the ring's lowest arc passes behind the card).
+ */
+export const SLIME_PERCH_AURA_VIEWBOX = "0 -4 200 174";
+type Crop = "perch" | undefined;
+const viewBoxFor = (tier: EvolutionTier | undefined, crop: Crop) =>
+  crop === "perch" && hasAura(tier) ? SLIME_PERCH_AURA_VIEWBOX : slimeViewBox(tier);
+/** Rendered height with the widget's perch crop (the plain viewBox's for the named and plain slimes). */
+export const slimePerchHeight = (size: number, tier?: EvolutionTier) =>
+  hasAura(tier) ? Math.round((size * 174) / 200) : slimeHeight(size);
+const heightFor = (size: number, tier: EvolutionTier | undefined, crop: Crop) =>
+  crop === "perch" ? slimePerchHeight(size, tier) : slimeMarkupHeight(size, tier);
 /** From the top of slimeSvgMarkup({ size, tier }) to the slime's base (y 158): stands it on a line. */
 export const slimeBaseY = (size: number, tier?: EvolutionTier) =>
   Math.round((size * (158 + (hasAura(tier) ? 4 : 0))) / 200);
@@ -147,12 +160,13 @@ const ellipse = ({ cx, cy, rx, ry }: Ellipse, attrs: string) =>
  * A standalone `<svg xmlns>` string of the slime: no CSS variables, classes
  * or animation, so it is safe for next/og (resvg) and data URIs. `tier` adds
  * the evolution accessories (gold rim + star, aura, crown); without one (or
- * "slime") the string is exactly the plain slime's.
+ * "slime") the string is exactly the plain slime's. The worried and sage
+ * faces (the iPhone widget's art) are Slime.tsx#Face's: keep them in sync.
  */
 export function slimeSvgMarkup(
-  opts: { mood?: "idle" | "happy"; size?: number; tier?: EvolutionTier } = {}
+  opts: { mood?: "idle" | "happy" | "worried" | "sage"; size?: number; tier?: EvolutionTier; crop?: "perch" } = {}
 ): string {
-  const { mood = "idle", size = 200, tier } = opts;
+  const { mood = "idle", size = 200, tier, crop } = opts;
   const named = tier !== undefined && tier !== "slime";
   const { gloss, sparkle, reflection, shadow, bandFrom } = SLIME_DETAILS;
   const c = SLIME_COLORS;
@@ -160,8 +174,15 @@ export function slimeSvgMarkup(
     (stop) => `<stop offset="${stop.offset}" stop-color="${stop.color}"/>`
   ).join("");
 
-  const eyes =
-    mood === "happy"
+  const lines = mood === "worried" ? SLIME_FACE.worriedEyes : mood === "sage" ? SLIME_FACE.sageEyes : null;
+  const eyes = lines
+    ? lines
+        .map(
+          (d) =>
+            `<path d="${d}" fill="none" stroke="${c.eye}" stroke-width="${mood === "worried" ? 4 : 3.5}" stroke-linecap="round"/>`
+        )
+        .join("")
+    : mood === "happy"
       ? SLIME_FACE.happyEyes
           .map(
             (d) =>
@@ -188,7 +209,7 @@ export function slimeSvgMarkup(
         : "";
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${slimeViewBox(tier)}" width="${size}" height="${slimeMarkupHeight(size, tier)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxFor(tier, crop)}" width="${size}" height="${heightFor(size, tier, crop)}">`,
     `<defs>`,
     `<radialGradient id="kv-body" cx="${SLIME_GRADIENT.cx}" cy="${SLIME_GRADIENT.cy}" r="${SLIME_GRADIENT.r}">${stops}</radialGradient>`,
     `<radialGradient id="kv-gloss"><stop offset="0%" stop-color="#fff" stop-opacity="0.75"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>`,
@@ -208,13 +229,46 @@ export function slimeSvgMarkup(
     ellipse(reflection, `fill="${c.rim}" fill-opacity="0.25"`),
     `<path d="${SLIME_BODY_PATH}" fill="none" stroke="${named ? c.rimNamed : c.rim}" stroke-opacity="${named ? 0.7 : 0.5}" stroke-width="1.5"/>`,
     eyes,
-    `<path d="${SLIME_FACE.mouth}" fill="none" stroke="${c.eye}" stroke-width="2.5" stroke-linecap="round"/>`,
+    `<path d="${mood === "worried" ? SLIME_FACE.worriedMouth : SLIME_FACE.mouth}" fill="none" stroke="${c.eye}" stroke-width="2.5" stroke-linecap="round"/>`,
+    mood === "worried" ? `<path d="${SLIME_FACE.sweat}" fill="${c.sweat}" fill-opacity="0.9"/>` : "",
     SLIME_FACE.blush
       .map((blush) =>
-        ellipse(blush, `fill="${c.blush}" fill-opacity="${mood === "happy" ? 0.5 : 0.3}"`)
+        ellipse(blush, `fill="${c.blush}" fill-opacity="${mood === "happy" ? 0.5 : mood === "worried" ? 0.2 : 0.3}"`)
       )
       .join(""),
     accessories,
+    `</svg>`,
+  ].join("");
+}
+
+/**
+ * The slime as a one-color glyph: a white silhouette with the face cut out (a mask), for surfaces that recolor
+ * an image by its alpha (the iPhone widget's Lock Screen and glass mode tint it). Tier accessories stay: the
+ * star, the aura ring (gray, so it reads lighter than the body on a vibrant Lock Screen) and the crown.
+ * No gradients, blush, gloss or shadow.
+ */
+export function slimeGlyphSvgMarkup(
+  opts: { size?: number; tier?: EvolutionTier; mood?: "idle" | "worried"; crop?: "perch" } = {}
+): string {
+  const { size = 200, tier, mood = "idle", crop } = opts;
+  const { aura, star, crown } = SLIME_ACCESSORIES;
+  const black = `fill="none" stroke="#000" stroke-linecap="round"`;
+  const face =
+    mood === "worried"
+      ? SLIME_FACE.worriedEyes.map((d) => `<path d="${d}" ${black} stroke-width="4.5"/>`).join("") +
+        `<path d="${SLIME_FACE.worriedMouth}" ${black} stroke-width="3.5"/>` +
+        `<path d="${SLIME_FACE.sweat}" fill="#000"/>`
+      : SLIME_FACE.eyes.map((eye) => ellipse(eye, `fill="#000"`)).join("") +
+        `<path d="${SLIME_FACE.mouth}" ${black} stroke-width="3.5"/>`;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxFor(tier, crop)}" width="${size}" height="${heightFor(size, tier, crop)}">`,
+    `<defs><mask id="kv-glyph"><path d="${SLIME_BODY_PATH}" fill="#fff"/>${face}</mask></defs>`,
+    hasAura(tier)
+      ? `<circle cx="${aura.cx}" cy="${aura.cy}" r="${aura.r}" fill="none" stroke="#9aa4b2" stroke-width="2.5" stroke-dasharray="${aura.dash}" stroke-linecap="round"/>`
+      : "",
+    `<path d="${SLIME_BODY_PATH}" fill="#ffffff" mask="url(#kv-glyph)"/>`,
+    tier === "named" || tier === "demon" ? `<path d="${star}" fill="#ffffff"/>` : "",
+    tier === "lord" ? `<g transform="${crown.transform}"><path d="${crown.path}" fill="#ffffff"/></g>` : "",
     `</svg>`,
   ].join("");
 }

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { airingSchedulePath, isCurrentPath, myListPath, searchPath, signInPath, listShareImagePath, scheduleShareImagePath } from "./routes";
+import {
+  airingSchedulePath,
+  isCurrentPath,
+  listShareImagePath,
+  myListPath,
+  scheduleShareImagePath,
+  searchPath,
+  signInPath,
+  widgetArtPath,
+  widgetListPath,
+} from "./routes";
 
 describe("isCurrentPath", () => {
   it("exact: only the same path", () => {
@@ -48,5 +58,14 @@ describe("share image paths", () => {
   it("puts the version in the path (ISR ignores the query)", () => {
     expect(listShareImagePath("65f000000000000000000001", "0abc123")).toBe("/user/og/65f000000000000000000001/0abc123");
     expect(scheduleShareImagePath("65f000000000000000000001", "0abc123")).toBe("/mylist/og/65f000000000000000000001/0abc123");
+  });
+});
+
+describe("iPhone widget paths", () => {
+  it("builds the data and art URLs under /api (robots-disallowed, outside proxy.ts)", () => {
+    expect(widgetListPath("65f000000000000000000001")).toBe("/api/widget/v1/list/65f000000000000000000001");
+    expect(widgetListPath("")).toBe("/api/widget/v1/list/");
+    expect(widgetArtPath("sky-medium-3x.v1.png")).toBe("/api/widget/art/sky-medium-3x.v1.png");
+    expect(widgetArtPath("")).toBe("/api/widget/art/");
   });
 });
