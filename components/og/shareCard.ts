@@ -16,8 +16,10 @@ import {
   type EvolutionTier,
 } from "@/lib/landing";
 import {
+  INVISIBLE_FORMAT,
   LIST_EMPTY_TITLE,
   LIST_STAT_LABELS,
+  hasVisible,
   listEmptyBody,
   listOf,
   listStats,
@@ -61,12 +63,6 @@ const GEIST_ADVANCE = [
 /** Full-width graphemes: CJK, kana, Hangul, full-width forms, emoji. */
 const WIDE =
   /^(?:[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]|\p{Extended_Pictographic})/u;
-/**
- * Invisible format characters a name may carry: the bidi controls (LRM, RLM, LRE…RLO, LRI…PDI), the Arabic letter
- * mark and the zero-width space. Written as escapes: a raw RLO can visually reorder source code ("Trojan Source").
- * Never strip U+200C/U+200D (ZWNJ/ZWJ): emoji sequences and some scripts need them.
- */
-const INVISIBLE_FORMAT = /[\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 /** Scripts Satori draws unshaped or in the wrong order (no bidi, no complex shaping). */
 const UNSHAPED_SCRIPTS =
   /[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Devanagari}\p{Script=Bengali}\p{Script=Gurmukhi}\p{Script=Gujarati}\p{Script=Oriya}\p{Script=Tamil}\p{Script=Telugu}\p{Script=Kannada}\p{Script=Malayalam}\p{Script=Sinhala}\p{Script=Thai}\p{Script=Lao}\p{Script=Tibetan}\p{Script=Myanmar}\p{Script=Khmer}]/u;
@@ -103,7 +99,7 @@ export function drawableName(name: string): string | null {
     .join("")
     .replace(/\s+/g, " ")
     .trim();
-  if (!clean || UNSHAPED_SCRIPTS.test(clean)) return null;
+  if (!clean || !hasVisible(clean) || UNSHAPED_SCRIPTS.test(clean)) return null;
   const parts = graphemes(clean);
   return parts.length > NAME_MAX_GRAPHEMES ? `${parts.slice(0, NAME_MAX_GRAPHEMES - 1).join("")}…` : clean;
 }

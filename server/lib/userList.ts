@@ -154,6 +154,50 @@ export async function readListCard(id: string): Promise<ListCardOwner | null> {
   return doc ? { name: publicOwnerName(doc.name) ?? "Anonymous", entries: readEntries(doc) } : null;
 }
 
+/**
+ * Every field the iPhone widget's payload and its AniList refresh read (lib/widget.ts,
+ * refreshEntriesIfStale): no description, links, genres, email or photo.
+ */
+export const WIDGET_PROJECTION = {
+  name: 1,
+  listRefreshedAt: 1,
+  "following.id": 1,
+  "following.title": 1,
+  "following.coverImage": 1,
+  "following.status": 1,
+  "following.episodes": 1,
+  "following.upComingAirDate": 1,
+  "following.upcomingEpisode": 1,
+  "following.firstEpisode": 1,
+  "following.userData.listType": 1,
+  "following.userData.episodeProgressNumber": 1,
+} as const;
+
+export interface WidgetOwner {
+  /** The refresh's lock fields. */
+  user: Pick<UserDoc, "_id" | "listRefreshedAt">;
+  /** publicOwnerName(), or "Anonymous" like both list pages. */
+  name: string;
+  entries: ListEntry[];
+}
+
+/**
+ * The widget's read (/api/widget/v1/list/<id>): canonical ids only (anything else → null without touching
+ * Mongo), one projected findOne, the pages' normalization and dedupe. Skips sanitizing up to 2,000
+ * descriptions. A Mongo error propagates (the route's 503).
+ */
+export async function readWidgetOwner(id: string): Promise<WidgetOwner | null> {
+  if (!CANONICAL_ID_RE.test(id)) return null;
+  const users = await usersCollection();
+  const doc = await users.findOne({ _id: new ObjectId(id) }, { projection: WIDGET_PROJECTION });
+  if (!doc) return null;
+  return {
+    user: { _id: doc._id, listRefreshedAt: doc.listRefreshedAt },
+    name: publicOwnerName(doc.name) ?? "Anonymous",
+    entries: readEntries(doc),
+  };
+}
+
 /** AniList ids on a user's list (drives the "On my list" state of cards). */
 export async function getListIds(userId: string): Promise<number[]> {
   const objectId = toObjectId(userId);

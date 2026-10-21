@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { isPlainClick } from "@/components/utils/isPlainClick";
 import { formatAirDate, nextAiring } from "@/lib/anime/airing";
+import { COUNTDOWNS_RESTING, NEXT_EPISODES_NOTE, NEXT_EPISODES_TITLE, NEXT_UP_LABEL } from "@/lib/anime/listCopy";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { trackLanding } from "./analytics";
 import CountdownText from "./CountdownText";
@@ -83,9 +84,9 @@ export default function HeroNextUp({ ids }: { ids: number[] }) {
             <span aria-hidden="true" className="mr-1.5 text-[#95ccff]">
               《Notice》
             </span>
-            Next episodes
+            {NEXT_EPISODES_TITLE}
           </h2>
-          <span className="text-[rgb(164,164,164)]">Pacific Time</span>
+          <span className="text-[rgb(164,164,164)]">{NEXT_EPISODES_NOTE}</span>
         </header>
 
         {resting ? (
@@ -193,7 +194,7 @@ function Ticker({
     return (
       <Link href={resting?.href ?? "/anime"} className={base}>
         <Slime size={32} mood="worried" animated={false} className="shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-[rgb(200,206,218)]">Countdowns are resting</span>
+        <span className="min-w-0 flex-1 truncate text-[rgb(200,206,218)]">{COUNTDOWNS_RESTING}</span>
         <span className="shrink-0 font-medium text-[#95ccff]">{resting?.label ?? "Browse this season"}</span>
       </Link>
     );
@@ -211,7 +212,7 @@ function Ticker({
       {/* "Next up" stacks over the title so a long countdown can't squeeze it out. */}
       <span className="flex w-0 min-w-0 flex-1 flex-col">
         <span className="font-mono text-[10px] font-semibold uppercase leading-4 tracking-wider text-[#95ccff]">
-          Next up
+          {NEXT_UP_LABEL}
         </span>
         <span className="truncate font-semibold leading-5 text-white">{title}</span>
       </span>

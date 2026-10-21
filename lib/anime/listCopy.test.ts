@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  COUNTDOWNS_RESTING,
+  NEXT_EPISODES_NOTE,
+  NEXT_EPISODES_TITLE,
+  NEXT_UP_LABEL,
+  PREDATION_LINE,
+  SCHEDULE_SKIPS_LINE,
+  WHOLE_WEEK_LABEL,
   listEmptyBody,
   listStats,
   listTitle,
@@ -36,8 +43,42 @@ describe("listStats", () => {
 describe("visitor lines", () => {
   it("names the owner by first name", () => {
     expect(publicOwnerName("  Kyle  Bautista ")).toBe("Kyle");
+    expect(publicOwnerName("Kyle\tBautista")).toBe("Kyle");
+    expect(publicOwnerName("Kyle\u0085Bautista")).toBe("Kyle");
     expect(publicOwnerName("")).toBeNull();
     expect(publicOwnerName(null)).toBeNull();
+    // Invisible format characters never reach a page, a share image or the widget.
+    expect(publicOwnerName("\u202EKyle Bautista")).toBe("Kyle");
+    expect(publicOwnerName("\u2066Kyle\u2069")).toBe("Kyle");
+    expect(publicOwnerName("\u200B\u200F")).toBeNull();
+    // Each character INVISIBLE_FORMAT strips, inside and around a word.
+    const stripped = [
+      "\u00AD", "\u034F", "\u061C", "\u115F", "\u1160", "\u17B4", "\u17B5", "\u180E", "\u200B", "\u200E", "\u200F",
+      "\u202A", "\u202B", "\u202C", "\u202D", "\u202E", "\u2060", "\u2061", "\u2062", "\u2063", "\u2064", "\u2066",
+      "\u2067", "\u2068", "\u2069", "\u206A", "\u206B", "\u206C", "\u206D", "\u206E", "\u206F", "\u3164", "\uFEFF", "\uFFA0",
+    ];
+    for (const c of stripped) {
+      expect(publicOwnerName(`Ky${c}le Bautista`), JSON.stringify(c)).toBe("Kyle");
+      expect(publicOwnerName(`${c}Kyle${c}`), JSON.stringify(c)).toBe("Kyle");
+    }
+    // A first word with nothing drawn (a blanked first name, a lone ZWJ, a tag, a control) is no name, never the
+    // next word, which is usually the family name.
+    for (const blank of ["\u2060", "\u3164", "\uFFA0", "\u00AD", "\u200D", "\u{E0001}", "\u2800", "\u115F\u1160", "\u0001", "\uFFF9", "\u{1D159}"]) {
+      expect(publicOwnerName(blank), JSON.stringify(blank)).toBeNull();
+      expect(publicOwnerName(`${blank} Bautista`), JSON.stringify(blank)).toBeNull();
+    }
+    // A lone mark before a space (ZWSP, LRM, RLM, ALM, BOM) can't be told from a blanked first name: no name too.
+    for (const mark of ["\u200B", "\u200E", "\u200F", "\u061C", "\uFEFF"]) {
+      expect(publicOwnerName(`${mark} Bautista`), JSON.stringify(mark)).toBeNull();
+      expect(publicOwnerName(`${mark}Kyle Bautista`), JSON.stringify(mark)).toBe("Kyle");
+    }
+    // ZWNJ, ZWJ, variation selectors and tags stay: scripts, emoji sequences and flags need them.
+    expect(publicOwnerName("\u0639\u0644\u06CC\u200C\u0631\u0636\u0627")).toBe("\u0639\u0644\u06CC\u200C\u0631\u0636\u0627");
+    expect(publicOwnerName("Kyle\u200D")).toBe("Kyle\u200D");
+    expect(publicOwnerName("\u{1F469}\u200D\u{1F4BB} Kyle")).toBe("\u{1F469}\u200D\u{1F4BB}");
+    expect(publicOwnerName("\u2764\uFE0F")).toBe("\u2764\uFE0F");
+    const england = "\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}";
+    expect(publicOwnerName(`${england} Kyle`)).toBe(england);
   });
 
   it("matches the pages word for word", () => {
@@ -65,5 +106,20 @@ describe("visitor lines", () => {
     expect(nothingAiringTitle("Eli's list")).toBe("Nothing on Eli's list is airing right now");
     expect(listTitle(null)).toBe("Anime list");
     expect(scheduleTitle(null)).toBe("Airing schedule");
+  });
+});
+
+describe("the Next-episodes card's words (the card, the hero and the iPhone widget)", () => {
+  it("keep the card's literals", () => {
+    expect(NEXT_EPISODES_TITLE).toBe("Next episodes");
+    expect(NEXT_EPISODES_NOTE).toBe("Pacific Time");
+    expect(NEXT_UP_LABEL).toBe("Next up");
+    expect(WHOLE_WEEK_LABEL).toBe("The whole week");
+    expect(COUNTDOWNS_RESTING).toBe("Countdowns are resting");
+    expect(PREDATION_LINE).toBe("Recommend: predation.");
+    expect(SCHEDULE_SKIPS_LINE).toBe("Completed and dropped shows stay out of the way.");
+    expect(scheduleSub(3)).toBe(
+      "3 shows with an upcoming episode, lined up by the day it airs. Completed and dropped shows stay out of the way."
+    );
   });
 });

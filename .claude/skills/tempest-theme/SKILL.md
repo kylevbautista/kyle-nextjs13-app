@@ -31,7 +31,7 @@ for a one-card page (a static sign-in with one client island, its slime switched
    Next-episodes card, and the Magic Sense chapter's cards *are* the season page's card
    (`CARD_LAYOUT`: the same card, the same details sheet, the same eyebrow and Sage line
    constants). `SageSearch` is the /search home: the same `ConsoleFrame`, `SearchConsole`,
-   `SearchChips` and `SageDoorway`. The Quest Log keeps the compact poster card on purpose (a picker, not a demo). The list share images (`components/og/`) are the My List and Airing Schedule banners at 1200×630, drawn from the same copy (`lib/anime/listCopy.ts`): change them with the banners. A page that has a demo uses the demo's markup and classes. If you change
+   `SearchChips` and `SageDoorway`. The Quest Log keeps the compact poster card on purpose (a picker, not a demo). The list share images (`components/og/`) are the My List and Airing Schedule banners at 1200×630, drawn from the same copy (`lib/anime/listCopy.ts`): change them with the banners. The iPhone widget (`widgets/scriptable/kylevb-anime.js`) is a look-alike too: the medium widget and the large one's card are the Next-episodes card, small and the Lock Screen are its phone ticker, and the large widget's top is the Airing Schedule banner with the share image's perched slime (CLAUDE.md §5.9, §9.18; `parity.test.ts` fails on any change to the card's JSX shape or CountdownText's row-mode tones). A page that has a demo uses the demo's markup and classes. If you change
    one side, change the other in the same PR. The owner noticed when they drifted apart.
 2. **Real data only.** Stats, counts, tiers and messages come from actual list or AniList data.
    Never show placeholder numbers or invented "activity".
@@ -44,7 +44,9 @@ for a one-card page (a static sign-in with one client island, its slime switched
    and `[contain:inline-size]` on wide content, and keep redirects before streaming.
 5. **Motion always plays.** It ignores `prefers-reduced-motion`; the owner chose this. No
    `motion-safe:` or `motion-reduce:`. Do keep offscreen pausing (NightSky and Slime do it for
-   you), and add `<LiveTimersToggle />` to any page with per-second countdowns.
+   you), and add `<LiveTimersToggle />` to any page with per-second countdowns. One exception:
+   widgets are static by platform. The iPhone widget's sky is frozen (stars, magicules, forest);
+   only its `WidgetDate` timers tick.
 6. **Accessible by default.** Touch targets `h-11` on phones (`md:h-9`/`md:h-10` on desktop).
    Use the focus-ring tokens. Decor gets `aria-hidden`. `SageLine` and `SageTag` already read
    as "Great Sage notice: …". Tabs get arrow-key handling, like `WeekPanel`.
@@ -85,6 +87,10 @@ for a one-card page (a static sign-in with one client island, its slime switched
 Glows are gradients and box-shadows, **never `filter: blur`**. A section's ambient glow is one
 `radial-gradient(closest-side, rgba(93,174,241,.10), …, transparent)` box behind it.
 
+Tinted and Clear iPhone Home Screens repaint every pixel of a widget white at its own opacity, so the
+widget never puts text on a fill (its card and Sage box are border-only; a tree-walk test enforces it), and
+its glass mode drops the sky for the system's (CLAUDE.md §9.26).
+
 ## Type
 
 - **Eyebrow** `EYEBROW_CLASS`: mono, uppercase, wide tracking, sage. Format: `Skill 02 · Predator`.
@@ -100,7 +106,9 @@ Glows are gradients and box-shadows, **never `filter: blur`**. A section's ambie
 ## Voice: the Great Sage
 
 System messages are `《Kind》 text.`. Use `<SageLine kind>` for a framed line, `<SageTag kind/>`
-inline, and `sageText(kind, text)` for toasts.
+inline, and `sageText(kind, text)` for toasts. Cached surfaces (the share images, the iPhone widget)
+never use relative words ("today", "now", "just", "left"): they are read hours later. The widget's
+lines live in `lib/anime/widgetCopy.ts` (truth-swept by its test).
 
 | Kind | Use for | Example |
 |---|---|---|
@@ -170,6 +178,7 @@ already exist: "Recommend: predation." for an empty list, "Every legend starts a
 | `ListToggle` | `components/animev3/ListToggle.tsx` | The add/remove control. Never re-implement list writes |
 | Toasts | `app/providers.tsx` | Already themed (console navy, sage border); write messages with `sageText` |
 | Site chrome | `components/common/{NavBar,AnimeBar,NavSearch,LogInBox,SiteFooter}.tsx`; tokens `NAV_*`, `MENU_*`, `FOOTER_*` | Already themed on every page; don't restyle it per page. The nav is the top edge of the night sky and ends in `#050915`, so a `PageBanner` (with its `-mt-2`) continues it. Its box is fixed (`h-16` + `mb-2`), it can't widen the page (a size container; the link strip scrolls when it can't fit), and nothing in it may animate on its own (it is sticky over every scroll). Its focusables use `FOCUS_RING_NAV` (an inset outline: the strip clips, and forced colors paints the outline). "Skip to content" (`SkipLink`) is its first Tab stop, and `FocusNudge` keeps keyboard focus out from under it: a page needs exactly one `<main>` and nothing else. The footer is the forest floor (`Treeline`) with the `《Report》` credits and stays `body > footer` |
+| iPhone widget | `widgets/scriptable/` (+ `lib/widget.ts`, `lib/anime/widgetCopy.ts`, `lib/widgetArt.ts`, `components/og/{widgetSky,WidgetArt}.ts(x)`) | A Scriptable script, not React: its colors are the token sheet `T` in `kylevb-anime.js` (the site's hexes, parity-tested), its words come from the payload (`widgetCopy.ts`, built on `listCopy.ts`), its sky and slimes are static PNGs from `/api/widget/art/*` (bump `WIDGET_ART_VERSION` on any pixel change). Screenshots: run it in `mockRuntime.ts` and render the tree to HTML (the session scratchpad's preview; CLAUDE.md §5.9) |
 | Share images | `components/og/` | next/og art for link previews: `OgSky` (`ogStars()`/`ogAurora()`/`ogTreeline()` called as functions), `parts` (`OgEyebrow`, `OgSageBox`, `OgTitle`, `OgSub`, `OgFooter`), `ListShareImage`, `ScheduleShareImage`; fonts in `assets/og`; view models in `components/og/shareCard.ts`. Satori rules: CLAUDE.md §9.24. No clock, no covers, ≤ 300 KB |
 
 The landing-only pieces stay in `components/home` and are not for other pages: `Reveal`

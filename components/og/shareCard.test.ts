@@ -164,7 +164,9 @@ describe("names", () => {
 
   it("strips invisible format characters and refuses unshaped scripts", () => {
     expect(drawableName("Kyle")).toBe("Kyle");
-    for (const name of ["\u202EKyle", "\u2066Kyle\u2069", "\u061CKyle", "Ky\u200Ble"]) expect(drawableName(name)).toBe("Kyle");
+    for (const name of ["\u202EKyle", "\u2066Kyle\u2069", "\u061CKyle", "Ky\u200Ble", "Ky\u2060le", "Kyle\u3164"]) expect(drawableName(name)).toBe("Kyle");
+    // Nothing left to draw once the emoji are gone (a lone ZWJ, a variation selector, a tag): neutral wording.
+    for (const name of ["\u200D\u{1F525}", "\uFE0F\u{1F525}", "\u{E0001}\u{1F525}"]) expect(drawableName(name), JSON.stringify(name)).toBeNull();
     // Arabic "Muhammad", Hebrew "Dana", Devanagari "Anu", Thai "Somchai".
     for (const name of [ARABIC, "דנה", "अनु", "สมชาย"]) {
       expect(drawableName(name)).toBeNull();

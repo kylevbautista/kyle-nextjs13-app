@@ -30,3 +30,8 @@ export function isCurrentPath(pathname: string, href: string, match: PathMatch =
 export const listShareImagePath = (userId: string, v: string) => `/user/og/${userId}/${v}`;
 /** The Airing Schedule's link-preview image. */
 export const scheduleShareImagePath = (userId: string, v: string) => `/mylist/og/${userId}/${v}`;
+
+/** The iPhone widget's data (widgets/scriptable, CLAUDE.md §5.9): one list's next episodes, public by link like /mylist/<id>. */
+export const widgetListPath = (userId: string) => `/api/widget/v1/list/${userId}`;
+/** A static widget art file: widgetArtPath(widgetArtFile("sky-medium-3x")) → /api/widget/art/sky-medium-3x.v1.png. */
+export const widgetArtPath = (file: string) => `/api/widget/art/${file}`;

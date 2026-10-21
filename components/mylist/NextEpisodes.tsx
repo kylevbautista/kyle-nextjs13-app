@@ -6,6 +6,7 @@ import CountdownText from "@/components/home/CountdownText";
 import { FOCUS_RING_PANEL } from "@/components/theme/tokens";
 import { useMinuteNow } from "@/components/utils/useMinuteNow";
 import { formatAirDate, nextAiring } from "@/lib/anime/airing";
+import { NEXT_EPISODES_NOTE, NEXT_EPISODES_TITLE, NEXT_UP_LABEL } from "@/lib/anime/listCopy";
 import { displayTitle, type AnimeMedia } from "@/lib/anime/types";
 import { AIRED_GRACE_SECONDS } from "@/lib/landing";
 
@@ -29,7 +30,7 @@ export default function NextEpisodes({
   entries,
   jump,
   restingText = "Those episodes just aired. The next ones appear as soon as AniList schedules them.",
-  headerNote = "Pacific Time",
+  headerNote = NEXT_EPISODES_NOTE,
   loading = false,
 }: {
   entries: readonly AnimeMedia[];
@@ -67,7 +68,7 @@ export default function NextEpisodes({
             <span aria-hidden="true" className="mr-1.5 text-[#95ccff]">
               《Notice》
             </span>
-            Next episodes
+            {NEXT_EPISODES_TITLE}
           </h2>
           <span className="text-[rgb(164,164,164)]">{headerNote}</span>
         </header>
@@ -111,7 +112,7 @@ export default function NextEpisodes({
         >
           <span className="flex w-0 min-w-0 flex-1 flex-col">
             <span className="font-mono text-[10px] font-semibold uppercase leading-4 tracking-wider text-[#95ccff]">
-              Next up
+              {NEXT_UP_LABEL}
             </span>
             <span className="truncate font-semibold leading-5 text-white">{displayTitle(first)}</span>
           </span>
